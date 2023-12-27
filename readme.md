@@ -11,3 +11,9 @@ Set up conan
 conan profile detect --force
 conan install . --output-folder=build --build=missing
 ```
+
+Build
+```
+chmod +x build.sh
+./build.sh
+```
