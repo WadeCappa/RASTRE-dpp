@@ -37,10 +37,10 @@ TEST_CASE("Testing loading data") {
     std::istringstream inputStream(matrixToString(DATA));
 
     std::vector<std::vector<double>> data;
-    DataLoader loader(inputStream);
+    AsciiDataLoader loader(inputStream);
 
-    while (loader.next()) {
-        data.push_back(loader.getElement());
+    while (loader.loadNext()) {
+        data.push_back(loader.returnLoaded());
     }
 
     CHECK(data == DATA);

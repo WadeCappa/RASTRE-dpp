@@ -11,34 +11,9 @@
 static std::string DELIMETER = ",";
 
 class DataLoader {
-    private:
-    bool endOfFile;
-    std::vector<double> data;
-    std::istream &source;
-
     public:
-    DataLoader(std::istream &input) : endOfFile(false), source(input) {}
-
-    // Should return true when there is more data to read, otherwise false.
-    bool next() {
-        if (this->endOfFile) {
-            return false;
-        }
-
-        std::string nextLine;
-
-        if (std::getline(source, nextLine)) {
-            this->data = buildElement(nextLine);
-            return true;
-        } else {
-            this->endOfFile = true;
-            return false;
-        }
-    }
-    
-    std::vector<double> getElement() {
-        return this->data;
-    }
+    virtual bool loadNext() = 0;
+    virtual std::vector<double> getLoaded() = 0;
 
     // Visible for testing only
     static std::vector<double> buildElement(std::string &input) {
@@ -50,5 +25,33 @@ class DataLoader {
             element.push_back(std::stod(std::string(token)));
 
         return element;
+    }
+};
+
+class AsciiDataLoader : public DataLoader {
+    private:
+    bool reachedEndOfFile;
+    std::vector<double> data;
+    std::istream &source;
+
+    public:
+    AsciiDataLoader(std::istream &input) : reachedEndOfFile(false), source(input) {}
+
+    // Should return true when there is more data to read, otherwise false.
+    bool loadNext() {
+        assert(!this->reachedEndOfFile);
+        std::string nextLine;
+
+        if (std::getline(source, nextLine)) {
+            this->data = buildElement(nextLine);
+            return true;
+        } else {
+            this->reachedEndOfFile = true;
+            return false;
+        }
+    }
+    
+    std::vector<double> returnLoaded() {
+        return this->data;
     }
 };
