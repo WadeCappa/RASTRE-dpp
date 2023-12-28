@@ -5,12 +5,42 @@
 #include <sstream>
 #include <fstream>
 #include <stdio.h>
+#include <cassert>
 #include <string.h>
 
 static std::string DELIMETER = ",";
 
 class DataLoader {
     private:
+    bool endOfFile;
+    std::vector<double> data;
+    std::istream &source;
+
+    public:
+    DataLoader(std::istream &input) : endOfFile(false), source(input) {}
+
+    // Should return true when there is more data to read, otherwise false.
+    bool next() {
+        if (this->endOfFile) {
+            return false;
+        }
+
+        std::string nextLine;
+
+        if (std::getline(source, nextLine)) {
+            this->data = buildElement(nextLine);
+            return true;
+        } else {
+            this->endOfFile = true;
+            return false;
+        }
+    }
+    
+    std::vector<double> getElement() {
+        return this->data;
+    }
+
+    // Visible for testing only
     static std::vector<double> buildElement(std::string &input) {
         std::vector<double> element;
         char *token;
@@ -20,21 +50,5 @@ class DataLoader {
             element.push_back(std::stod(std::string(token)));
 
         return element;
-    }
-
-    public:
-    static std::vector<std::vector<double>> loadData(std::istream &input) {
-        std::string line; 
-        std::vector<std::vector<double>> data;
-
-        while (std::getline(input, line)) {
-            data.push_back(buildElement(line));
-        }
-
-        return data;
-    }
-
-    static std::vector<std::vector<double>> loadBinaryData(std::istream &input) {
-        return std::vector<std::vector<double>>();
     }
 };

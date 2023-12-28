@@ -27,17 +27,5 @@ int main(int argc, char** argv) {
 
     std::cout << "input file: " << appData.inputFile << ", output file: " << appData.outputFile << ", binary input? " << appData.binaryInput << std::endl;
     
-    std::ifstream inputStream(appData.inputFile);
-    std::vector<std::vector<double>> data = appData.binaryInput ? 
-        DataLoader::loadBinaryData(inputStream) : 
-        DataLoader::loadData(inputStream);
-
-    for (const auto & e : data) {
-        for (const auto & r : e) {
-            std::cout << r << ", ";
-        }
-        std::cout << std::endl;
-    }
-
     return 0;
 }
