@@ -1,16 +1,17 @@
 #include "data_tools/data_loader.h"
 #include "data_tools/data_saver.h"
+#include <sstream>
 #include "CLI/CLI.hpp"
 
 struct appData {
     std::string inputFile;
     std::string outputFile;
-    bool binaryInput;
-    bool binaryOutput;
-    bool normalizeInput;
+    bool binaryInput = false;
+    bool binaryOutput = false;
+    bool normalizeInput = false;
 } typedef AppData;
 
-void addCmdOptions(CLI::App &app, AppData appData) {
+void addCmdOptions(CLI::App &app, AppData &appData) {
     app.add_option("-i,--input", appData.inputFile, "Path to input file. Should contain data in row vector format.")->required();
     app.add_option("-o,--output", appData.outputFile, "Path to output file.")->required();
     app.add_flag("--loadBinary", appData.binaryInput, "Use this flag if you want to load a binary input file.");
@@ -23,10 +24,20 @@ int main(int argc, char** argv) {
     AppData appData;
     addCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
+
+    std::cout << "input file: " << appData.inputFile << ", output file: " << appData.outputFile << ", binary input? " << appData.binaryInput << std::endl;
     
+    std::ifstream inputStream(appData.inputFile);
     std::vector<std::vector<double>> data = appData.binaryInput ? 
-        DataLoader::loadBinaryData(appData.inputFile) : 
-        DataLoader::loadData(appData.inputFile);
+        DataLoader::loadBinaryData(inputStream) : 
+        DataLoader::loadData(inputStream);
+
+    for (const auto & e : data) {
+        for (const auto & r : e) {
+            std::cout << r << ", ";
+        }
+        std::cout << std::endl;
+    }
 
     return 0;
 }
