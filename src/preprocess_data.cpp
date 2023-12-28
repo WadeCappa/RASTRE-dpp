@@ -1,7 +1,7 @@
 #include "data_tools/data_loader.h"
 #include "data_tools/data_saver.h"
 #include <sstream>
-#include "CLI/CLI.hpp"
+#include <CLI/CLI.hpp>
 
 struct appData {
     std::string inputFile;
