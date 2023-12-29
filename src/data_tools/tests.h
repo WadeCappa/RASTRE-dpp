@@ -1,4 +1,3 @@
-#include "data_loader.h"
 #include "normalizer.h"
 
 #include <utility>
@@ -35,11 +34,14 @@ static std::string matrixToString(const std::vector<std::vector<double>> &data) 
     return output;
 }
 
-TEST_CASE("Testing buildElement") {
-    for (const auto & e : DATA) {
-        std::string row = rowToString(e);
-        CHECK(DataLoader::buildElement(row) == e);
+static void validateNormalizedVector(const std::vector<double> &data) {
+    for (const auto & e : data) {
+        CHECK(e <= 1.0);
     }
+
+    double length = Normalizer::vectorLength(data);
+    CHECK(length > 0.9);
+    CHECK(length < 1.1);
 }
 
 TEST_CASE("Testing loading data") {
@@ -48,8 +50,9 @@ TEST_CASE("Testing loading data") {
     std::vector<std::vector<double>> data;
     AsciiDataLoader loader(inputStream);
 
-    while (loader.loadNext()) {
-        data.push_back(loader.returnLoaded());
+    std::vector<double> element;
+    while (loader.getNext(element)) {
+        data.push_back(element);
     }
 
     CHECK(data == DATA);
@@ -65,8 +68,17 @@ TEST_CASE("Testing vector normalization") {
         std::vector<double> copy = e;
         Normalizer::normalize(copy);
 
-        for (const auto & e : copy) {
-            CHECK(e <= 1.0);
-        }
+        validateNormalizedVector(copy);
+    }
+}
+
+TEST_CASE("Testing the normalized data loader") {
+    std::istringstream inputStream(matrixToString(DATA));
+
+    AsciiDataLoader dataLoader(inputStream);
+    Normalizer normalizer(dataLoader);
+    std::vector<double> element;
+    while (normalizer.getNext(element)) {
+        validateNormalizedVector(element);
     }
 }

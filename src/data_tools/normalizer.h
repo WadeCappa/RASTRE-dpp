@@ -1,10 +1,24 @@
 #include <math.h>
 #include <vector>
+#include "data_loader.h"
 
-class Normalizer {
+class Normalizer : public DataLoader {
     private:
+    DataLoader &loader;
 
     public: 
+    Normalizer(DataLoader &loader) : loader(loader) {}
+
+    bool getNext(std::vector<double> &result) {
+        if (this->loader.getNext(result)) {
+            normalize(result);
+            return true;
+        }
+
+        return false;
+    }
+    
+    // Visible for testing only
     static void normalize(std::vector<double> &row) {
         double scalar = 1.0 / vectorLength(row);
         for (auto & e : row) {
