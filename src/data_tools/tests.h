@@ -1,4 +1,5 @@
 #include "normalizer.h"
+#include "data_saver.h"
 
 #include <utility>
 #include <functional>
@@ -44,6 +45,28 @@ static void validateNormalizedVector(const std::vector<double> &data) {
     CHECK(length < 1.1);
 }
 
+class DummyDataLoader : public DataLoader {
+    private: 
+    size_t count;
+
+    public:
+    DummyDataLoader() : count(0) {}
+
+    bool getNext(std::vector<double> &result) {
+        if (count > DATA.size()) {
+            return false;
+        }
+
+        result.clear();
+        for (size_t i = 0; i < DATA[count].size(); i++) {
+            result[i] = DATA[count][i];
+        }
+
+        count++;
+        return true;
+    }
+};
+
 TEST_CASE("Testing loading data") {
     std::istringstream inputStream(matrixToString(DATA));
 
@@ -81,4 +104,15 @@ TEST_CASE("Testing the normalized data loader") {
     while (normalizer.getNext(element)) {
         validateNormalizedVector(element);
     }
+}
+
+TEST_CASE("Testing saving data") {
+    std::string dataAsString = matrixToString(DATA);
+    std::ostringstream stringStream;
+
+    std::istringstream inputStream(dataAsString);
+    AsciiDataLoader dataLoader(inputStream);
+    AsciiDataSaver saver(dataLoader);
+    stringStream << saver;
+    CHECK(stringStream.str() == dataAsString);
 }
