@@ -1,4 +1,8 @@
 #include "data_loader.h"
+#include "normalizer.h"
+
+#include <utility>
+#include <functional>
 #include <doctest/doctest.h>
 
 static std::vector<std::vector<double>> DATA = {
@@ -6,6 +10,11 @@ static std::vector<std::vector<double>> DATA = {
     {5,7,31},
     {2.632125,5.12566,763}
 };
+
+static std::pair<std::vector<double>, double> VECTOR_WITH_LENGTH = std::make_pair(
+    std::vector<double>{3.0, 3.0, 3.0, 3.0},
+    6.0
+);
 
 static std::string rowToString(const std::vector<double> &row) {
     std::string output = "";
@@ -44,4 +53,20 @@ TEST_CASE("Testing loading data") {
     }
 
     CHECK(data == DATA);
+}
+
+TEST_CASE("Testing length calculation") {
+    double length = Normalizer::vectorLength(VECTOR_WITH_LENGTH.first);
+    CHECK(length == VECTOR_WITH_LENGTH.second);
+}
+
+TEST_CASE("Testing vector normalization") {
+    for (const auto & e : DATA) {
+        std::vector<double> copy = e;
+        Normalizer::normalize(copy);
+
+        for (const auto & e : copy) {
+            CHECK(e <= 1.0);
+        }
+    }
 }

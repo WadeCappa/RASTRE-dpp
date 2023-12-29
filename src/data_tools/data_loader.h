@@ -13,7 +13,7 @@ static std::string DELIMETER = ",";
 class DataLoader {
     public:
     virtual bool loadNext() = 0;
-    virtual std::vector<double> getLoaded() = 0;
+    virtual std::vector<double> returnLoaded() = 0;
 
     // Visible for testing only
     static std::vector<double> buildElement(std::string &input) {
