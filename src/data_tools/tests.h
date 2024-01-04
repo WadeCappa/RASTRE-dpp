@@ -69,9 +69,10 @@ class DummyDataLoader : public DataLoader {
 
 TEST_CASE("Testing loading data") {
     std::istringstream inputStream(matrixToString(DATA));
+    AsciiDataFormater formater;
 
     std::vector<std::vector<double>> data;
-    AsciiDataLoader loader(inputStream);
+    ConcreteDataLoader loader(formater, inputStream);
 
     std::vector<double> element;
     while (loader.getNext(element)) {
@@ -97,8 +98,9 @@ TEST_CASE("Testing vector normalization") {
 
 TEST_CASE("Testing the normalized data loader") {
     std::istringstream inputStream(matrixToString(DATA));
+    AsciiDataFormater formater;
 
-    AsciiDataLoader dataLoader(inputStream);
+    ConcreteDataLoader dataLoader(formater, inputStream);
     Normalizer normalizer(dataLoader);
     std::vector<double> element;
     while (normalizer.getNext(element)) {
@@ -109,10 +111,11 @@ TEST_CASE("Testing the normalized data loader") {
 TEST_CASE("Testing saving data") {
     std::string dataAsString = matrixToString(DATA);
     std::ostringstream stringStream;
+    AsciiDataFormater formater;
 
     std::istringstream inputStream(dataAsString);
-    AsciiDataLoader dataLoader(inputStream);
-    AsciiDataSaver saver(dataLoader);
+    ConcreteDataLoader dataLoader(formater, inputStream);
+    ConcreteDataSaver saver(formater, dataLoader);
     stringStream << saver;
     CHECK(stringStream.str() == dataAsString);
 }

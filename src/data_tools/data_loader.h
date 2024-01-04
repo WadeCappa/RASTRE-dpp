@@ -8,29 +8,21 @@
 #include <cassert>
 #include <string.h>
 
-static std::string DELIMETER = ",";
+#include "data_formater.h"
 
 class DataLoader {
     public:
     virtual bool getNext(std::vector<double> &result) = 0;
 };
 
-class AsciiDataLoader : public DataLoader {
+class ConcreteDataLoader : public DataLoader {
     private:
     bool reachedEndOfFile;
     std::istream &source;
-
-    void buildElement(std::string &input, std::vector<double> &result) {
-        result.clear();
-        char *token;
-        char *rest = input.data();
-
-        while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
-            result.push_back(std::stod(std::string(token)));
-    }
+    const DataFormater &formater;
 
     public:
-    AsciiDataLoader(std::istream &input) : reachedEndOfFile(false), source(input) {}
+    ConcreteDataLoader(const DataFormater &formater, std::istream &input) : formater(formater), reachedEndOfFile(false), source(input) {}
 
     bool getNext(std::vector<double> &result) {
         if (this->reachedEndOfFile) {
@@ -40,7 +32,7 @@ class AsciiDataLoader : public DataLoader {
         std::string nextline;
 
         if (std::getline(source, nextline)) {
-            buildElement(nextline, result);
+            this->formater.buildElement(nextline, result);
             return true;
         } else {
             this->reachedEndOfFile = true;

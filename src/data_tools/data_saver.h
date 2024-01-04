@@ -7,27 +7,19 @@ class DataSaver {
     virtual void save(std::ostream &out) = 0;
 };
 
-class AsciiDataSaver : public DataSaver {
+class ConcreteDataSaver : public DataSaver {
     private:
     DataLoader &data;
-    
-    std::string elementToString (const std::vector<double> &element) {
-        std::string output = "";
-        for (const auto & v : element) {
-            output += std::to_string(v) + ",";
-        }
-        output.pop_back();
-        return output;
-    }
+    const DataFormater &formater;
 
     public:
-    AsciiDataSaver(DataLoader &data) : data(data) {}
+    ConcreteDataSaver(const DataFormater &formater, DataLoader &data) : formater(formater), data(data) {}
 
     void save(std::ostream &out) {
         std::vector<double> element;
 
         while (this->data.getNext(element)) {
-            out << this->elementToString(element) << std::endl;
+            out << this->formater.elementToString(element) << std::endl;
         }
     }
 };
