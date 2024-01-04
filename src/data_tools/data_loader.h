@@ -13,9 +13,14 @@ static std::string DELIMETER = ",";
 class DataLoader {
     public:
     virtual bool getNext(std::vector<double> &result) = 0;
+};
 
-    // Visible for testing only
-    static void buildElement(std::string &input, std::vector<double> &result) {
+class AsciiDataLoader : public DataLoader {
+    private:
+    bool reachedEndOfFile;
+    std::istream &source;
+
+    void buildElement(std::string &input, std::vector<double> &result) {
         result.clear();
         char *token;
         char *rest = input.data();
@@ -23,13 +28,6 @@ class DataLoader {
         while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
             result.push_back(std::stod(std::string(token)));
     }
-};
-
-class AsciiDataLoader : public DataLoader {
-    private:
-    bool reachedEndOfFile;
-    std::vector<double> data;
-    std::istream &source;
 
     public:
     AsciiDataLoader(std::istream &input) : reachedEndOfFile(false), source(input) {}

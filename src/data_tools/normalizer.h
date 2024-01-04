@@ -7,7 +7,7 @@ class Normalizer : public DataLoader {
     DataLoader &loader;
 
     public: 
-    Normalizer(DataLoader &loader) : loader(loader) {}
+    Normalizer(DataLoader &inputLoader) : loader(inputLoader) {}
 
     bool getNext(std::vector<double> &result) {
         if (this->loader.getNext(result)) {
