@@ -7,13 +7,13 @@ class DataSaver {
     virtual void save(std::ostream &out) = 0;
 };
 
-class ConcreteDataSaver : public DataSaver {
+class FormatingDataSaver : public DataSaver {
     private:
     DataLoader &data;
     const DataFormater &formater;
 
     public:
-    ConcreteDataSaver(const DataFormater &formater, DataLoader &data) : formater(formater), data(data) {}
+    FormatingDataSaver(const DataFormater &formater, DataLoader &data) : formater(formater), data(data) {}
 
     void save(std::ostream &out) {
         std::vector<double> element;

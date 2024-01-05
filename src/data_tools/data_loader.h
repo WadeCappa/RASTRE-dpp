@@ -15,14 +15,14 @@ class DataLoader {
     virtual bool getNext(std::vector<double> &result) = 0;
 };
 
-class ConcreteDataLoader : public DataLoader {
+class FormatingDataLoader : public DataLoader {
     private:
     bool reachedEndOfFile;
     std::istream &source;
     const DataFormater &formater;
 
     public:
-    ConcreteDataLoader(const DataFormater &formater, std::istream &input) : formater(formater), reachedEndOfFile(false), source(input) {}
+    FormatingDataLoader(const DataFormater &formater, std::istream &input) : formater(formater), reachedEndOfFile(false), source(input) {}
 
     bool getNext(std::vector<double> &result) {
         if (this->reachedEndOfFile) {

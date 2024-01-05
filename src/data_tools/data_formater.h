@@ -30,7 +30,7 @@ class AsciiDataFormater : public DataFormater {
     std::string elementToString(const std::vector<double> &element) const {
         std::string output = "";
         for (const auto & v : element) {
-            output += std::to_string(v) + ",";
+            output += std::to_string(v) + DELIMETER;
         }
         output.pop_back();
         return output;
@@ -40,8 +40,22 @@ class AsciiDataFormater : public DataFormater {
 class BinaryDataFormater : public DataFormater {
     public:
     void buildElement(std::string &input, std::vector<double> &result) const {
+        result.clear();
+        std::istringstream stream(input);
+
+        unsigned int totalData;
+        stream.read(reinterpret_cast<char *>(&totalData), sizeof(totalData));
+        result.resize(totalData);
+        stream.read(reinterpret_cast<char *>(result.data()), totalData * sizeof(double));
     }
 
     std::string elementToString(const std::vector<double> &element) const {
+        std::stringstream stream;
+        
+        unsigned int size = element.size();
+        stream.write(reinterpret_cast<const char *>(&size), sizeof(size));
+        stream.write(reinterpret_cast<const char *>(element.data()), size * sizeof(double));
+        
+        return stream.str();
     }
 };
