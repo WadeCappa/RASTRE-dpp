@@ -8,7 +8,7 @@
 static std::vector<std::vector<double>> DATA = {
     {4,17,20},
     {5,7,31},
-    {2.632125,5.12566,763}
+    {2.63212,5.12566,763}
 };
 
 static std::pair<std::vector<double>, double> VECTOR_WITH_LENGTH = std::make_pair(
@@ -17,10 +17,11 @@ static std::pair<std::vector<double>, double> VECTOR_WITH_LENGTH = std::make_pai
 );
 
 static std::string rowToString(const std::vector<double> &row) {
-    std::string output = "";
+    std::ostringstream outputStream;
     for (const auto & v : row) {
-        output += std::to_string(v) + ",";
+        outputStream << v << ",";
     }
+    std::string output = outputStream.str();
     output.pop_back();
     return output;
 }
@@ -40,6 +41,8 @@ static void validateNormalizedVector(const std::vector<double> &data) {
         CHECK(e <= 1.0);
     }
 
+    std::cout << rowToString(data) << std::endl;
+
     double length = Normalizer::vectorLength(data);
     CHECK(length > 0.9);
     CHECK(length < 1.1);
@@ -53,6 +56,15 @@ static std::vector<std::vector<double>> loadData(DataLoader &loader) {
     }
 
     return data;
+}
+
+static void DEBUG_printData(const std::vector<std::vector<double>> &data) {
+    for (const auto & d : data) {
+        for (const auto & v : d) {
+            std::cout << v << ", ";
+        }
+        std::cout << std::endl;
+    }
 }
 
 TEST_CASE("Testing loading data") {

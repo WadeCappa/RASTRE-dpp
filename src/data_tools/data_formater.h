@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <cassert>
 #include <string.h>
+#include <fmt/core.h>
 
 static std::string DELIMETER = ",";
 
@@ -28,10 +29,11 @@ class AsciiDataFormater : public DataFormater {
     }
 
     std::string elementToString(const std::vector<double> &element) const {
-        std::string output = "";
+        std::ostringstream outputStream;
         for (const auto & v : element) {
-            output += std::to_string(v) + DELIMETER;
+            outputStream << fmt::format("{}", v) << DELIMETER;
         }
+        std::string output = outputStream.str();
         output.pop_back();
         return output;
     }
