@@ -41,8 +41,6 @@ static void validateNormalizedVector(const std::vector<double> &data) {
         CHECK(e <= 1.0);
     }
 
-    std::cout << rowToString(data) << std::endl;
-
     double length = Normalizer::vectorLength(data);
     CHECK(length > 0.9);
     CHECK(length < 1.1);
