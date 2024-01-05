@@ -1,4 +1,4 @@
-#include "data_tools/data_loader.h"
+#include "data_tools/normalizer.h"
 #include "data_tools/data_saver.h"
 #include <sstream>
 #include <CLI/CLI.hpp>
@@ -26,6 +26,45 @@ int main(int argc, char** argv) {
     CLI11_PARSE(app, argc, argv);
 
     std::cout << "input file: " << appData.inputFile << ", output file: " << appData.outputFile << ", binary input? " << appData.binaryInput << std::endl;
+
+    AsciiDataFormater asciiDataFormater;
+    BinaryDataFormater binaryDataFormater;
+
+    DataFormater* formaterCursor;
+
+    std::ifstream inputFile;
+    inputFile.open(appData.inputFile);
+
+    if (appData.binaryInput) 
+        formaterCursor = &binaryDataFormater;
+    else 
+        formaterCursor = &asciiDataFormater;
+
+    FormatingDataLoader dataLoader(*formaterCursor, inputFile);
     
+    std::ofstream outputFile;
+    outputFile.open(appData.outputFile);
+
+    if (appData.binaryOutput) {
+            formaterCursor = &binaryDataFormater;
+    } else {
+        formaterCursor = &asciiDataFormater;
+    }
+
+    DataLoader *dataLoaderCursor;
+    Normalizer normalizer(dataLoader);
+    if (appData.normalizeInput) {
+        dataLoaderCursor = &normalizer;
+    } else {
+        dataLoaderCursor = &dataLoader;
+    }
+
+    FormatingDataSaver dataSaver(*formaterCursor, *dataLoaderCursor);
+    
+
+    dataSaver.save(outputFile);
+    
+    inputFile.close();
+    outputFile.close();
     return 0;
 }

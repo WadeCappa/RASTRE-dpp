@@ -122,12 +122,5 @@ TEST_CASE("Testing loading and saving binary data") {
 
     std::vector<std::vector<double>> data = loadData(binaryDataLoader);
 
-    for (const auto & d : data) {
-        for (const auto & v : d) {
-            std::cout << v << ", ";
-        }
-        std::cout << std::endl;
-    }
-
     CHECK(data == DATA);
 }
