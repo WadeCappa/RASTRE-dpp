@@ -7,57 +7,98 @@
 #include <stdio.h>
 #include <cassert>
 #include <string.h>
+#include <optional>
 #include <fmt/core.h>
 
 static std::string DELIMETER = ",";
 
-class DataFormater {
+class DataWriter {
     public:
-    virtual void buildElement(std::string &input, std::vector<double> &result) const = 0; 
-    virtual std::string elementToString(const std::vector<double> &element) const = 0;
+    virtual void write(const std::vector<double> &element, std::ostream &out) = 0;
 };
 
-class AsciiDataFormater : public DataFormater {
+class DataReader {
     public:
-    void buildElement(std::string &input, std::vector<double> &result) const {
-        result.clear();
-        char *token;
-        char *rest = input.data();
+    virtual bool read(std::vector<double> &result, std::istream &input) = 0; 
+};
 
-        while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
-            result.push_back(std::stod(std::string(token)));
-    }
-
-    std::string elementToString(const std::vector<double> &element) const {
+class AsciiDataWriter : public DataWriter {
+    public:
+    void write(const std::vector<double> &element, std::ostream &out) {
         std::ostringstream outputStream;
         for (const auto & v : element) {
             outputStream << fmt::format("{}", v) << DELIMETER;
         }
         std::string output = outputStream.str();
         output.pop_back();
-        return output;
+        out << output << std::endl;
     }
 };
 
-class BinaryDataFormater : public DataFormater {
+class AsciiDataReader : public DataReader {
     public:
-    void buildElement(std::string &input, std::vector<double> &result) const {
+    bool read(std::vector<double> &result, std::istream &input) {
+        std::string data;
+        if (!std::getline(input, data)) {
+            return false;
+        }
+        
         result.clear();
-        std::istringstream stream(input);
 
-        unsigned int totalData;
-        stream.read(reinterpret_cast<char *>(&totalData), sizeof(totalData));
-        result.resize(totalData);
-        stream.read(reinterpret_cast<char *>(result.data()), totalData * sizeof(double));
+        char *token;
+        char *rest = data.data();
+
+        while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
+            result.push_back(std::stod(std::string(token)));
+
+        return true;
+    }
+};
+
+class BinaryDataWriter : public DataWriter {
+    private:
+    std::optional<unsigned int> vectorSize;
+
+    public:
+    BinaryDataWriter() {
+        this->vectorSize = std::nullopt;
     }
 
-    std::string elementToString(const std::vector<double> &element) const {
-        std::stringstream stream;
+    void write(const std::vector<double> &element, std::ostream &out) {
+        if (!this->vectorSize.has_value()) {
+            this->vectorSize = element.size();
+            unsigned int size = this->vectorSize.value();
+            out.write(reinterpret_cast<const char *>(&size), sizeof(size));
+        }
         
-        unsigned int size = element.size();
-        stream.write(reinterpret_cast<const char *>(&size), sizeof(size));
-        stream.write(reinterpret_cast<const char *>(element.data()), size * sizeof(double));
-        
-        return stream.str();
+        out.write(reinterpret_cast<const char *>(element.data()), this->vectorSize.value() * sizeof(double));
+    }
+};
+
+class BinaryDataReader : public DataReader {
+    private:
+    std::optional<unsigned int> vectorSize;
+
+    public:
+    BinaryDataReader() {
+        this->vectorSize = std::nullopt;
+    }
+
+    bool read(std::vector<double> &result, std::istream &input) {
+        if (input.peek() == EOF) {
+            return false;
+        }
+
+        result.clear();
+
+        if (!this->vectorSize.has_value()) {
+            unsigned int totalData;
+            input.read(reinterpret_cast<char *>(&totalData), sizeof(totalData));
+            this->vectorSize = totalData;
+        }
+
+        result.resize(this->vectorSize.value());
+        input.read(reinterpret_cast<char *>(result.data()), this->vectorSize.value() * sizeof(double));
+        return true;
     }
 };

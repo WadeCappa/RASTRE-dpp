@@ -27,28 +27,30 @@ int main(int argc, char** argv) {
 
     std::cout << "input file: " << appData.inputFile << ", output file: " << appData.outputFile << ", binary input? " << appData.binaryInput << std::endl;
 
-    AsciiDataFormater asciiDataFormater;
-    BinaryDataFormater binaryDataFormater;
-
-    DataFormater* formaterCursor;
+    AsciiDataReader asciiDataReader;
+    BinaryDataReader binaryDataReader;
+    DataReader* dataReaderCursor;
 
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
 
     if (appData.binaryInput) 
-        formaterCursor = &binaryDataFormater;
+        dataReaderCursor = &binaryDataReader;
     else 
-        formaterCursor = &asciiDataFormater;
+        dataReaderCursor = &asciiDataReader;
 
-    FormatingDataLoader dataLoader(*formaterCursor, inputFile);
+    IncrementalDataLoader dataLoader(*dataReaderCursor, inputFile);
     
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
 
+    AsciiDataWriter asciiDataWriter;
+    BinaryDataWriter binaryDataWriter;
+    DataWriter* dataWriterCursor;
     if (appData.binaryOutput) {
-            formaterCursor = &binaryDataFormater;
+        dataWriterCursor = &binaryDataWriter;
     } else {
-        formaterCursor = &asciiDataFormater;
+        dataWriterCursor = &asciiDataWriter;
     }
 
     DataLoader *dataLoaderCursor;
@@ -59,8 +61,7 @@ int main(int argc, char** argv) {
         dataLoaderCursor = &dataLoader;
     }
 
-    FormatingDataSaver dataSaver(*formaterCursor, *dataLoaderCursor);
-    
+    IncrementalDataSaver dataSaver(*dataWriterCursor, *dataLoaderCursor);
 
     dataSaver.save(outputFile);
     

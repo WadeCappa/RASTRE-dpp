@@ -7,19 +7,19 @@ class DataSaver {
     virtual void save(std::ostream &out) = 0;
 };
 
-class FormatingDataSaver : public DataSaver {
+class IncrementalDataSaver : public DataSaver {
     private:
     DataLoader &data;
-    const DataFormater &formater;
+    DataWriter &writer;
 
     public:
-    FormatingDataSaver(const DataFormater &formater, DataLoader &data) : formater(formater), data(data) {}
+    IncrementalDataSaver(DataWriter &writer, DataLoader &data) : writer(writer), data(data) {}
 
     void save(std::ostream &out) {
         std::vector<double> element;
 
         while (this->data.getNext(element)) {
-            out << this->formater.elementToString(element) << std::endl;
+            this->writer.write(element, out);
         }
     }
 };

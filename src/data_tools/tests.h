@@ -66,10 +66,11 @@ static void DEBUG_printData(const std::vector<std::vector<double>> &data) {
 }
 
 TEST_CASE("Testing loading data") {
-    std::istringstream inputStream(matrixToString(DATA));
-    AsciiDataFormater formater;
+    std::string dataAsString = matrixToString(DATA);
+    std::istringstream inputStream(dataAsString);
+    AsciiDataReader dataReader;
 
-    FormatingDataLoader loader(formater, inputStream);
+    IncrementalDataLoader loader(dataReader, inputStream);
 
     auto data = loadData(loader);
 
@@ -92,9 +93,9 @@ TEST_CASE("Testing vector normalization") {
 
 TEST_CASE("Testing the normalized data loader") {
     std::istringstream inputStream(matrixToString(DATA));
-    AsciiDataFormater formater;
+    AsciiDataReader dataReader;
 
-    FormatingDataLoader dataLoader(formater, inputStream);
+    IncrementalDataLoader dataLoader(dataReader, inputStream);
     Normalizer normalizer(dataLoader);
     std::vector<double> element;
     while (normalizer.getNext(element)) {
@@ -105,11 +106,12 @@ TEST_CASE("Testing the normalized data loader") {
 TEST_CASE("Testing saving data") {
     std::string dataAsString = matrixToString(DATA);
     std::ostringstream stringStream;
-    AsciiDataFormater formater;
+    AsciiDataWriter dataWriter;
+    AsciiDataReader dataReader;
 
     std::istringstream inputStream(dataAsString);
-    FormatingDataLoader dataLoader(formater, inputStream);
-    FormatingDataSaver saver(formater, dataLoader);
+    IncrementalDataLoader dataLoader(dataReader, inputStream);
+    IncrementalDataSaver saver(dataWriter, dataLoader);
     stringStream << saver;
     CHECK(stringStream.str() == dataAsString);
 }
@@ -118,17 +120,18 @@ TEST_CASE("Testing loading and saving binary data") {
     std::string dataAsString = matrixToString(DATA);
     std::istringstream asciiStream(dataAsString);
 
-    AsciiDataFormater asciiDataFormater;
-    FormatingDataLoader asciiDataLoader(asciiDataFormater, asciiStream);
+    AsciiDataReader asciiDataReader;
+    IncrementalDataLoader asciiDataLoader(asciiDataReader, asciiStream);
 
-    BinaryDataFormater binaryDataFormater;
-    FormatingDataSaver saver(binaryDataFormater, asciiDataLoader);
+    BinaryDataWriter binaryDataWriter;
+    IncrementalDataSaver saver(binaryDataWriter, asciiDataLoader);
 
     std::ostringstream outputStream;
     outputStream << saver;
 
     std::istringstream binaryStream(outputStream.str());
-    FormatingDataLoader binaryDataLoader(binaryDataFormater, binaryStream);
+    BinaryDataReader binaryDataReader;
+    IncrementalDataLoader binaryDataLoader(binaryDataReader, binaryStream);
 
     std::vector<std::vector<double>> data = loadData(binaryDataLoader);
 
