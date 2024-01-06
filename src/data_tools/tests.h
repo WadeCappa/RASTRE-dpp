@@ -8,7 +8,7 @@
 static std::vector<std::vector<double>> DATA = {
     {4,17,20},
     {5,7,31},
-    {2.632125,5.12566,763}
+    {2.63212,5.12566,763}
 };
 
 static std::pair<std::vector<double>, double> VECTOR_WITH_LENGTH = std::make_pair(
@@ -17,10 +17,11 @@ static std::pair<std::vector<double>, double> VECTOR_WITH_LENGTH = std::make_pai
 );
 
 static std::string rowToString(const std::vector<double> &row) {
-    std::string output = "";
+    std::ostringstream outputStream;
     for (const auto & v : row) {
-        output += std::to_string(v) + ",";
+        outputStream << v << ",";
     }
+    std::string output = outputStream.str();
     output.pop_back();
     return output;
 }
@@ -45,38 +46,31 @@ static void validateNormalizedVector(const std::vector<double> &data) {
     CHECK(length < 1.1);
 }
 
-class DummyDataLoader : public DataLoader {
-    private: 
-    size_t count;
-
-    public:
-    DummyDataLoader() : count(0) {}
-
-    bool getNext(std::vector<double> &result) {
-        if (count > DATA.size()) {
-            return false;
-        }
-
-        result.clear();
-        for (size_t i = 0; i < DATA[count].size(); i++) {
-            result[i] = DATA[count][i];
-        }
-
-        count++;
-        return true;
-    }
-};
-
-TEST_CASE("Testing loading data") {
-    std::istringstream inputStream(matrixToString(DATA));
-
+static std::vector<std::vector<double>> loadData(DataLoader &loader) {
     std::vector<std::vector<double>> data;
-    AsciiDataLoader loader(inputStream);
-
     std::vector<double> element;
     while (loader.getNext(element)) {
         data.push_back(element);
     }
+
+    return data;
+}
+
+static void DEBUG_printData(const std::vector<std::vector<double>> &data) {
+    for (const auto & d : data) {
+        for (const auto & v : d) {
+            std::cout << v << ", ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+TEST_CASE("Testing loading data") {
+    std::string dataAsString = matrixToString(DATA);
+    std::istringstream inputStream(dataAsString);
+    AsciiDataLoader loader(inputStream);
+
+    auto data = loadData(loader);
 
     CHECK(data == DATA);
 }
@@ -97,7 +91,6 @@ TEST_CASE("Testing vector normalization") {
 
 TEST_CASE("Testing the normalized data loader") {
     std::istringstream inputStream(matrixToString(DATA));
-
     AsciiDataLoader dataLoader(inputStream);
     Normalizer normalizer(dataLoader);
     std::vector<double> element;
@@ -115,4 +108,22 @@ TEST_CASE("Testing saving data") {
     AsciiDataSaver saver(dataLoader);
     stringStream << saver;
     CHECK(stringStream.str() == dataAsString);
+}
+
+TEST_CASE("Testing loading and saving binary data") {
+    std::string dataAsString = matrixToString(DATA);
+    std::istringstream asciiStream(dataAsString);
+
+    AsciiDataLoader asciiDataLoader(asciiStream);
+    BinaryDataSaver saver(asciiDataLoader);
+
+    std::ostringstream outputStream;
+    outputStream << saver;
+
+    std::istringstream binaryStream(outputStream.str());
+    BinaryDataLoader binaryDataLoader(binaryStream);
+
+    std::vector<std::vector<double>> data = loadData(binaryDataLoader);
+
+    CHECK(data == DATA);
 }

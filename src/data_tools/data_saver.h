@@ -1,5 +1,6 @@
 #include <vector>
 #include <string>
+#include <optional>
 #include <iostream>
  
 class DataSaver {
@@ -10,15 +11,6 @@ class DataSaver {
 class AsciiDataSaver : public DataSaver {
     private:
     DataLoader &data;
-    
-    std::string elementToString (const std::vector<double> &element) {
-        std::string output = "";
-        for (const auto & v : element) {
-            output += std::to_string(v) + ",";
-        }
-        output.pop_back();
-        return output;
-    }
 
     public:
     AsciiDataSaver(DataLoader &data) : data(data) {}
@@ -27,7 +19,38 @@ class AsciiDataSaver : public DataSaver {
         std::vector<double> element;
 
         while (this->data.getNext(element)) {
-            out << this->elementToString(element) << std::endl;
+            std::ostringstream outputStream;
+            for (const auto & v : element) {
+                outputStream << fmt::format("{}", v) << ',';
+            }
+            std::string output = outputStream.str();
+            output.pop_back();
+            out << output << std::endl;
+        }
+    }
+};
+
+class BinaryDataSaver : public DataSaver {
+    private:
+    DataLoader &data;
+    std::optional<unsigned int> vectorSize;
+
+    public:
+    BinaryDataSaver(DataLoader &data) : data(data) {
+        this->vectorSize = std::nullopt;
+    }
+
+    void save(std::ostream &out) {
+        std::vector<double> element;
+
+        while (this->data.getNext(element)) {
+            if (!this->vectorSize.has_value()) {
+                this->vectorSize = element.size();
+                unsigned int size = this->vectorSize.value();
+                out.write(reinterpret_cast<const char *>(&size), sizeof(size));
+            }
+            
+            out.write(reinterpret_cast<const char *>(element.data()), this->vectorSize.value() * sizeof(double));
         }
     }
 };

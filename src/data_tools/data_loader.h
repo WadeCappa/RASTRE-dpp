@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <cassert>
 #include <string.h>
+#include <optional>
+#include <fmt/core.h>
 
 static std::string DELIMETER = ",";
 
@@ -17,34 +19,56 @@ class DataLoader {
 
 class AsciiDataLoader : public DataLoader {
     private:
-    bool reachedEndOfFile;
     std::istream &source;
 
-    void buildElement(std::string &input, std::vector<double> &result) {
+    public:
+    AsciiDataLoader(std::istream &input) : source(input) {}
+
+    bool getNext(std::vector<double> &result) {
+        std::string data;
+        if (!std::getline(this->source, data)) {
+            return false;
+        }
+        
         result.clear();
+
         char *token;
-        char *rest = input.data();
+        char *rest = data.data();
 
         while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
             result.push_back(std::stod(std::string(token)));
+
+        return true;
     }
+};
+
+class BinaryDataLoader : public DataLoader {
+    private:
+    std::istream &source;
+    std::optional<unsigned int> vectorSize;
 
     public:
-    AsciiDataLoader(std::istream &input) : reachedEndOfFile(false), source(input) {}
+    BinaryDataLoader(std::istream &input) : source(input) {
+        this->vectorSize = std::nullopt;
+    }
 
     bool getNext(std::vector<double> &result) {
-        if (this->reachedEndOfFile) {
+        if (this->source.peek() == EOF) {
             return false;
         }
 
-        std::string nextline;
+        result.clear();
 
-        if (std::getline(source, nextline)) {
-            buildElement(nextline, result);
-            return true;
-        } else {
-            this->reachedEndOfFile = true;
-            return false;
+        if (!this->vectorSize.has_value()) {
+            unsigned int totalData;
+            this->source.read(reinterpret_cast<char *>(&totalData), sizeof(totalData));
+            this->vectorSize = totalData;
         }
+
+        result.resize(this->vectorSize.value());
+        this->source.read(reinterpret_cast<char *>(result.data()), this->vectorSize.value() * sizeof(double));
+        return true;
+
     }
+
 };
