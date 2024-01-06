@@ -1,4 +1,4 @@
-#include "data_tools/normalizer.h"
+#include "data_tools/data_loader.h"
 #include "data_tools/data_saver.h"
 #include <sstream>
 #include <CLI/CLI.hpp>
@@ -19,14 +19,6 @@ void addCmdOptions(CLI::App &app, AppData &appData) {
     app.add_flag("--normalize", appData.normalizeInput, "Use this flag to normalize each input vector.");
 }
 
-DataLoader* buildDataLoader(bool readBinary, std::istream &data) {
-    return readBinary ? (DataLoader*)(new BinaryDataLoader(data)) : (DataLoader*)(new AsciiDataLoader(data));
-}
-
-DataSaver* buildDataSaver(bool writeBinary, DataLoader &data) {
-    return writeBinary ? (DataSaver*)(new BinaryDataSaver(data)) : (DataSaver*)(new AsciiDataSaver(data));
-}
-
 int main(int argc, char** argv) {
     CLI::App app{"App description"};
     AppData appData;
@@ -34,21 +26,6 @@ int main(int argc, char** argv) {
     CLI11_PARSE(app, argc, argv);
 
     std::cout << "input file: " << appData.inputFile << ", output file: " << appData.outputFile << ", binary input? " << appData.binaryInput << std::endl;
-
-    std::ifstream inputFile;
-    inputFile.open(appData.inputFile);
-    DataLoader* dataLoader = buildDataLoader(appData.binaryInput, inputFile);
-    if (appData.normalizeInput) {
-        dataLoader = new Normalizer(*dataLoader);
-    }
     
-    std::ofstream outputFile;
-    outputFile.open(appData.outputFile);
-    DataSaver* dataSaver = buildDataSaver(appData.binaryOutput, *dataLoader);
-
-    dataSaver->save(outputFile);
-    
-    inputFile.close();
-    outputFile.close();
     return 0;
 }
