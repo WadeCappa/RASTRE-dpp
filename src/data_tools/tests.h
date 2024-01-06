@@ -1,5 +1,6 @@
 #include "normalizer.h"
 #include "data_saver.h"
+#include "matrix_builder.h"
 
 #include <utility>
 #include <functional>
@@ -126,4 +127,16 @@ TEST_CASE("Testing loading and saving binary data") {
     std::vector<std::vector<double>> data = loadData(binaryDataLoader);
 
     CHECK(data == DATA);
+}
+
+TEST_CASE("Testing matrix builder") {
+    std::string dataAsString = matrixToString(DATA);
+    std::istringstream inputStream(dataAsString);
+    AsciiDataLoader loader(inputStream);
+
+    auto matrix = MatrixBuilder::buildMatrix(loader);
+
+    CHECK(matrix.data == DATA);
+    CHECK(matrix.rows == DATA.size());
+    CHECK(matrix.columns == DATA[0].size());
 }
