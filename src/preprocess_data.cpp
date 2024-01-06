@@ -19,6 +19,14 @@ void addCmdOptions(CLI::App &app, AppData &appData) {
     app.add_flag("--normalize", appData.normalizeInput, "Use this flag to normalize each input vector.");
 }
 
+DataLoader* buildDataLoader(bool readBinary, std::istream &data) {
+    return readBinary ? (DataLoader*)(new BinaryDataLoader(data)) : (DataLoader*)(new AsciiDataLoader(data));
+}
+
+DataSaver* buildDataSaver(bool writeBinary, DataLoader &data) {
+    return writeBinary ? (DataSaver*)(new BinaryDataSaver(data)) : (DataSaver*)(new AsciiDataSaver(data));
+}
+
 int main(int argc, char** argv) {
     CLI::App app{"App description"};
     AppData appData;
@@ -27,43 +35,18 @@ int main(int argc, char** argv) {
 
     std::cout << "input file: " << appData.inputFile << ", output file: " << appData.outputFile << ", binary input? " << appData.binaryInput << std::endl;
 
-    AsciiDataReader asciiDataReader;
-    BinaryDataReader binaryDataReader;
-    DataReader* dataReaderCursor;
-
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
-
-    if (appData.binaryInput) 
-        dataReaderCursor = &binaryDataReader;
-    else 
-        dataReaderCursor = &asciiDataReader;
-
-    IncrementalDataLoader dataLoader(*dataReaderCursor, inputFile);
+    DataLoader* dataLoader = buildDataLoader(appData.binaryInput, inputFile);
+    if (appData.normalizeInput) {
+        dataLoader = new Normalizer(*dataLoader);
+    }
     
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
+    DataSaver* dataSaver = buildDataSaver(appData.binaryOutput, *dataLoader);
 
-    AsciiDataWriter asciiDataWriter;
-    BinaryDataWriter binaryDataWriter;
-    DataWriter* dataWriterCursor;
-    if (appData.binaryOutput) {
-        dataWriterCursor = &binaryDataWriter;
-    } else {
-        dataWriterCursor = &asciiDataWriter;
-    }
-
-    DataLoader *dataLoaderCursor;
-    Normalizer normalizer(dataLoader);
-    if (appData.normalizeInput) {
-        dataLoaderCursor = &normalizer;
-    } else {
-        dataLoaderCursor = &dataLoader;
-    }
-
-    IncrementalDataSaver dataSaver(*dataWriterCursor, *dataLoaderCursor);
-
-    dataSaver.save(outputFile);
+    dataSaver->save(outputFile);
     
     inputFile.close();
     outputFile.close();

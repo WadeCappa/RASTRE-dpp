@@ -68,9 +68,7 @@ static void DEBUG_printData(const std::vector<std::vector<double>> &data) {
 TEST_CASE("Testing loading data") {
     std::string dataAsString = matrixToString(DATA);
     std::istringstream inputStream(dataAsString);
-    AsciiDataReader dataReader;
-
-    IncrementalDataLoader loader(dataReader, inputStream);
+    AsciiDataLoader loader(inputStream);
 
     auto data = loadData(loader);
 
@@ -93,9 +91,7 @@ TEST_CASE("Testing vector normalization") {
 
 TEST_CASE("Testing the normalized data loader") {
     std::istringstream inputStream(matrixToString(DATA));
-    AsciiDataReader dataReader;
-
-    IncrementalDataLoader dataLoader(dataReader, inputStream);
+    AsciiDataLoader dataLoader(inputStream);
     Normalizer normalizer(dataLoader);
     std::vector<double> element;
     while (normalizer.getNext(element)) {
@@ -106,12 +102,10 @@ TEST_CASE("Testing the normalized data loader") {
 TEST_CASE("Testing saving data") {
     std::string dataAsString = matrixToString(DATA);
     std::ostringstream stringStream;
-    AsciiDataWriter dataWriter;
-    AsciiDataReader dataReader;
 
     std::istringstream inputStream(dataAsString);
-    IncrementalDataLoader dataLoader(dataReader, inputStream);
-    IncrementalDataSaver saver(dataWriter, dataLoader);
+    AsciiDataLoader dataLoader(inputStream);
+    AsciiDataSaver saver(dataLoader);
     stringStream << saver;
     CHECK(stringStream.str() == dataAsString);
 }
@@ -120,18 +114,14 @@ TEST_CASE("Testing loading and saving binary data") {
     std::string dataAsString = matrixToString(DATA);
     std::istringstream asciiStream(dataAsString);
 
-    AsciiDataReader asciiDataReader;
-    IncrementalDataLoader asciiDataLoader(asciiDataReader, asciiStream);
-
-    BinaryDataWriter binaryDataWriter;
-    IncrementalDataSaver saver(binaryDataWriter, asciiDataLoader);
+    AsciiDataLoader asciiDataLoader(asciiStream);
+    BinaryDataSaver saver(asciiDataLoader);
 
     std::ostringstream outputStream;
     outputStream << saver;
 
     std::istringstream binaryStream(outputStream.str());
-    BinaryDataReader binaryDataReader;
-    IncrementalDataLoader binaryDataLoader(binaryDataReader, binaryStream);
+    BinaryDataLoader binaryDataLoader(binaryStream);
 
     std::vector<std::vector<double>> data = loadData(binaryDataLoader);
 

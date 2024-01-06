@@ -7,52 +7,68 @@
 #include <stdio.h>
 #include <cassert>
 #include <string.h>
+#include <optional>
+#include <fmt/core.h>
 
-#include "data_formater.h"
+static std::string DELIMETER = ",";
 
 class DataLoader {
     public:
     virtual bool getNext(std::vector<double> &result) = 0;
 };
 
-class IncrementalDataLoader : public DataLoader {
+class AsciiDataLoader : public DataLoader {
     private:
-    bool reachedEndOfFile;
     std::istream &source;
-    DataReader &reader;
 
     public:
-    IncrementalDataLoader(DataReader &reader, std::istream &input) : reader(reader), reachedEndOfFile(false), source(input) {}
+    AsciiDataLoader(std::istream &input) : source(input) {}
 
     bool getNext(std::vector<double> &result) {
-        if (this->reachedEndOfFile) {
+        std::string data;
+        if (!std::getline(this->source, data)) {
             return false;
         }
+        
+        result.clear();
 
-        this->reachedEndOfFile = !this->reader.read(result, source);
-        return !this->reachedEndOfFile;
+        char *token;
+        char *rest = data.data();
+
+        while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
+            result.push_back(std::stod(std::string(token)));
+
+        return true;
     }
 };
 
-class InstantDataLoader : public DataLoader { 
+class BinaryDataLoader : public DataLoader {
     private:
-    std::istringstream data;
-    DataReader &reader;
-    bool reachedEndOfData;
+    std::istream &source;
+    std::optional<unsigned int> vectorSize;
 
     public:
-    InstantDataLoader(DataReader &reader, std::istream &input) : reader(reader), reachedEndOfData(false) {
-        std::ostringstream dataStream;
-        dataStream << input.rdbuf();
-        data = std::istringstream(dataStream.str());
+    BinaryDataLoader(std::istream &input) : source(input) {
+        this->vectorSize = std::nullopt;
     }
 
-    bool getNext(std::vector<double> &result) { 
-        if (reachedEndOfData) {
+    bool getNext(std::vector<double> &result) {
+        if (this->source.peek() == EOF) {
             return false;
         }
 
-        this->reachedEndOfData = !this->reader.read(result, data);
-        return !this->reachedEndOfData;
+        result.clear();
+
+        if (!this->vectorSize.has_value()) {
+            unsigned int totalData;
+            this->source.read(reinterpret_cast<char *>(&totalData), sizeof(totalData));
+            this->vectorSize = totalData;
+        }
+
+        result.resize(this->vectorSize.value());
+        this->source.read(reinterpret_cast<char *>(result.data()), this->vectorSize.value() * sizeof(double));
+        return true;
+
     }
+
 };
