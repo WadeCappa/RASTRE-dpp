@@ -8,6 +8,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tools)
 find_package(CLI11 REQUIRED)
 find_package(doctest REQUIRED)
 find_package(fmt REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 add_executable(preprocess_data src/preprocess_data.cpp)
 add_executable(run_tests src/tests.cpp)
@@ -21,3 +22,5 @@ target_link_libraries(run_tests doctest::doctest)
 target_link_libraries(preprocess_data fmt::fmt)
 target_link_libraries(run_tests fmt::fmt)
 target_link_libraries(find_approximation_set fmt::fmt)
+
+target_link_libraries(run_tests Eigen3::Eigen)

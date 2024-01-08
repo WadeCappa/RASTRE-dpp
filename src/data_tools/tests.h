@@ -6,12 +6,6 @@
 #include <functional>
 #include <doctest/doctest.h>
 
-static std::vector<std::vector<double>> DATA = {
-    {4,17,20},
-    {5,7,31},
-    {2.63212,5.12566,763}
-};
-
 static std::pair<std::vector<double>, double> VECTOR_WITH_LENGTH = std::make_pair(
     std::vector<double>{3.0, 3.0, 3.0, 3.0},
     6.0
@@ -134,7 +128,7 @@ TEST_CASE("Testing matrix builder") {
     std::istringstream inputStream(dataAsString);
     AsciiDataLoader loader(inputStream);
 
-    auto matrix = MatrixBuilder::buildMatrix(loader);
+    auto matrix = DataBuilder::buildData(loader);
 
     CHECK(matrix.data == DATA);
     CHECK(matrix.rows == DATA.size());

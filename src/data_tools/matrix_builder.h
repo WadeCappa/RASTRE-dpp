@@ -5,17 +5,17 @@
 
 #define assertm(exp, msg) assert(((void)msg, exp))
 
-struct matrix {
+struct data {
     std::vector<std::vector<double>> data;
     size_t rows;
     size_t columns;
-} typedef Matrix;
+} typedef Data;
 
-class MatrixBuilder {
+class DataBuilder {
     public:
-    static Matrix buildMatrix(DataLoader &loader) {
+    static Data buildData(DataLoader &loader) {
         std::optional<size_t> columns = std::nullopt;
-        Matrix result;
+        Data result;
         result.rows = 0;
 
         std::vector<double> element;
