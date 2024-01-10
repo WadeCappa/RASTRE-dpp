@@ -8,4 +8,4 @@ static const std::vector<std::vector<double>> DATA = {
 };
 
 #include "data_tools/tests.h"
-#include "similarity_matrix/tests.h"
+#include "representative_subset_calculator/tests.h"

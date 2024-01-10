@@ -32,8 +32,14 @@ class SimilarityMatrix {
     }
 
     public:
+    SimilarityMatrix() {}
+
     SimilarityMatrix(const std::vector<double> &initialVector) {
         this->addRow(initialVector);
+    }
+
+    SimilarityMatrix(const SimilarityMatrix& t) : baseRows(t.getBase()) {
+
     }
 
     void addRow(const std::vector<double> &newRow) {
@@ -42,6 +48,10 @@ class SimilarityMatrix {
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> DEBUG_getMatrix() const {
         return getMatrix();
+    }
+
+    std::vector<const std::vector<double>*> getBase() const {
+        return this->baseRows;
     }
 
     double getCoverage() const {
