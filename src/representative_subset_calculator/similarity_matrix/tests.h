@@ -18,6 +18,7 @@ TEST_CASE("Get expected matrix") {
 
     SimilarityMatrix matrix(DATA[0]);
     auto firstMatrix = matrix.DEBUG_getMatrix();
+    CHECK(firstMatrix.rows() == firstMatrix.cols());
     CHECK(firstMatrix.rows() == 1);
     CHECK(firstMatrix.cols() == 1);
 
@@ -26,5 +27,5 @@ TEST_CASE("Get expected matrix") {
     }
 
     auto lastMatrix = matrix.DEBUG_getMatrix();
-    CHECK(lastMatrix == dataMatrix.transpose() * dataMatrix);
+    CHECK(lastMatrix == dataMatrix * dataMatrix.transpose());
 }
