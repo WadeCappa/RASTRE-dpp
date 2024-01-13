@@ -1,0 +1,1 @@
+./tools/find_approximation_set --input ../data/binary_normalized_parkinsons.data --loadBinary --output q.json -k 100

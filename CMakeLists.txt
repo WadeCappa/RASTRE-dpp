@@ -26,4 +26,6 @@ target_link_libraries(find_approximation_set fmt::fmt)
 
 target_link_libraries(run_tests Eigen3::Eigen)
 target_link_libraries(find_approximation_set Eigen3::Eigen)
+
 target_link_libraries(find_approximation_set nlohmann_json::nlohmann_json)
+target_link_libraries(run_tests nlohmann_json::nlohmann_json)
