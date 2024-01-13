@@ -1,5 +1,4 @@
 #include <doctest/doctest.h>
-#include "similarity_matrix.h"
 #include <Eigen/Dense>
 
 TEST_CASE("No errors thrown with initialization") {
