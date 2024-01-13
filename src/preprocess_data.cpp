@@ -28,7 +28,7 @@ DataSaver* buildDataSaver(bool writeBinary, DataLoader &data) {
 }
 
 int main(int argc, char** argv) {
-    CLI::App app{"App description"};
+    CLI::App app{"Preprocesses datasets for use in the find_appriximation_set tool."};
     AppData appData;
     addCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);

@@ -2,6 +2,8 @@
 #include <string>
 #include <optional>
 #include <iostream>
+
+#define assertm(exp, msg) assert(((void)msg, exp))
  
 class DataSaver {
     public:
@@ -50,6 +52,7 @@ class BinaryDataSaver : public DataSaver {
                 out.write(reinterpret_cast<const char *>(&size), sizeof(size));
             }
             
+            assertm(element.size() == this->vectorSize.value(), "Mismatch on write size.");
             out.write(reinterpret_cast<const char *>(element.data()), this->vectorSize.value() * sizeof(double));
         }
     }

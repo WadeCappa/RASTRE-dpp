@@ -1,15 +1,10 @@
 #include "normalizer.h"
 #include "data_saver.h"
+#include "matrix_builder.h"
 
 #include <utility>
 #include <functional>
 #include <doctest/doctest.h>
-
-static std::vector<std::vector<double>> DATA = {
-    {4,17,20},
-    {5,7,31},
-    {2.63212,5.12566,763}
-};
 
 static std::pair<std::vector<double>, double> VECTOR_WITH_LENGTH = std::make_pair(
     std::vector<double>{3.0, 3.0, 3.0, 3.0},
@@ -126,4 +121,16 @@ TEST_CASE("Testing loading and saving binary data") {
     std::vector<std::vector<double>> data = loadData(binaryDataLoader);
 
     CHECK(data == DATA);
+}
+
+TEST_CASE("Testing matrix builder") {
+    std::string dataAsString = matrixToString(DATA);
+    std::istringstream inputStream(dataAsString);
+    AsciiDataLoader loader(inputStream);
+
+    auto matrix = DataBuilder::buildData(loader);
+
+    CHECK(matrix.data == DATA);
+    CHECK(matrix.rows == DATA.size());
+    CHECK(matrix.columns == DATA[0].size());
 }

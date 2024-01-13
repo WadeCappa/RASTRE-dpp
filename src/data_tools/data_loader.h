@@ -10,7 +10,7 @@
 #include <optional>
 #include <fmt/core.h>
 
-static std::string DELIMETER = ",";
+static const std::string DELIMETER = ",";
 
 class DataLoader {
     public:
