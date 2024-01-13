@@ -16,16 +16,22 @@ TEST_CASE("Get expected matrix") {
         }
     }
 
-    SimilarityMatrix matrix(DATA[0]);
-    auto firstMatrix = matrix.DEBUG_getMatrix();
-    CHECK(firstMatrix.rows() == firstMatrix.cols());
-    CHECK(firstMatrix.rows() == 1);
-    CHECK(firstMatrix.cols() == 1);
+    SimilarityMatrix matrix;
+    double previousScore = -1;
 
-    for (size_t j = 1; j < DATA.size(); j++) {
+    for (size_t j = 0; j < DATA.size(); j++) {
         matrix.addRow(DATA[j]);
+        auto kernelMatrix = matrix.DEBUG_getMatrix();
+        CHECK(kernelMatrix.rows() == kernelMatrix.cols());
+        CHECK(kernelMatrix.rows() == j + 1);
+        CHECK(kernelMatrix.cols() == j + 1);
+
+        double currentScore = matrix.getCoverage();
+        CHECK(previousScore <= currentScore);
+        previousScore = currentScore;
     }
 
     auto lastMatrix = matrix.DEBUG_getMatrix();
     CHECK(lastMatrix == dataMatrix * dataMatrix.transpose());
+    CHECK(matrix.getCoverage() > 0);
 }

@@ -10,10 +10,6 @@ class SimilarityMatrix {
     std::vector<const std::vector<double>*> baseRows;
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> getKernelMatrix() const {
-        if (this->baseRows.size() == 0) {
-            return Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>();
-        }
-
         Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> res(this->baseRows.size(), this->baseRows[0]->size());
         for (size_t j = 0; j < this->baseRows.size(); j++) {
             for (size_t i = 0; i < this->baseRows[j]->size(); i++) {
@@ -50,6 +46,6 @@ class SimilarityMatrix {
 
     double getCoverage() const {
         auto matrix = getKernelMatrix();
-        return std::log10(matrix.determinant()) * 0.5;
+        return std::log(matrix.llt().matrixL().determinant()) * 0.5;
     }
 };

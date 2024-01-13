@@ -1,6 +1,7 @@
 #include "data_tools/normalizer.h"
 #include "data_tools/matrix_builder.h"
 #include "representative_subset_calculator/representative_subset_calculator.h"
+
 #include <CLI/CLI.hpp>
 #include "nlohmann/json.hpp"
 
@@ -12,11 +13,15 @@ struct appData {
     bool normalizeInput = false;
 } typedef AppData;
 
-nlohmann::json buildOutput(const AppData &appData, const RepresentativeSubset &subset) {
+nlohmann::json buildOutput(
+    const AppData &appData, 
+    const RepresentativeSubset &subset,
+    const Timers &timers) {
     nlohmann::json output {
         {"k", appData.outputSetSize}, 
         {"RepresentativeRows", subset.representativeRows},
-        {"Coverage", subset.coverage}
+        {"Coverage", subset.coverage},
+        {"timings", timers.outputToJson()}
     };
 
     return output;
@@ -41,19 +46,28 @@ int main(int argc, char** argv) {
     addCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
+    std::cout << "after cli parsing" << std::endl;
+
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
     DataLoader *dataLoader = buildDataLoader(appData, inputFile);
     Data data = DataBuilder::buildData(*dataLoader);
     inputFile.close();
 
-    NaiveRepresentativeSubsetCalculator calculator;
+    std::cout << "after loading data" << std::endl;
+
+    std::cout << "Finding a representative set for " << data.rows << " rows and " << data.columns << " columns" << std::endl;
+
+    Timers timers;
+    NaiveRepresentativeSubsetCalculator calculator(timers);
     RepresentativeSubset subset = calculator.getApproximationSet(data, appData.outputSetSize);
 
-    nlohmann::json output = buildOutput(appData, subset);
+    std::cout << "after approx calc" << std::endl;
+
+    nlohmann::json output = buildOutput(appData, subset, timers);
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
-    outputFile << output;
+    outputFile << output.dump(2);
     outputFile.close();
 
     return 0;
