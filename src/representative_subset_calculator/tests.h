@@ -11,7 +11,8 @@ static const size_t k = 2;
 
 TEST_CASE("Testing Naive representative set finder") {
     NaiveRepresentativeSubsetCalculator calculator;
-    std::vector<size_t> res = calculator.getApproximationSet(data, k);
-
-    CHECK(res.size() == k);
+    RepresentativeSubset res = calculator.getApproximationSet(data, k);
+    
+    CHECK(res.coverage > 0);
+    CHECK(res.representativeRows.size() == k);
 }

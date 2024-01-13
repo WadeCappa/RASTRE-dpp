@@ -9,18 +9,12 @@ class SimilarityMatrix {
     private:
     std::vector<const std::vector<double>*> baseRows;
 
-    double getSimilarityScore(const std::vector<double> v1, const std::vector<double> v2) const {
-        double res = 0;
-        assertm(v1.size() == v2.size(), "Expected input data rows to be the same size.");
-        for (size_t index = 0; index < v1.size() && index < v2.size(); index++) {
-            res += v1[index] * v2[index];
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> getKernelMatrix() const {
+        if (this->baseRows.size() == 0) {
+            return Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>();
         }
 
-        return res;
-    }
-
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> getTransposeMatrix() const {
-        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> res(this->baseRows.size(), this->baseRows.size());
+        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> res(this->baseRows.size(), this->baseRows[0]->size());
         for (size_t j = 0; j < this->baseRows.size(); j++) {
             for (size_t i = 0; i < this->baseRows[j]->size(); i++) {
                 const auto & v = this->baseRows[j]->at(i);
@@ -28,7 +22,7 @@ class SimilarityMatrix {
             }
         }
 
-        return res.transpose() * res;
+        return res * res.transpose();
     }
 
     public:
@@ -47,7 +41,7 @@ class SimilarityMatrix {
     }
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> DEBUG_getMatrix() const {
-        return getTransposeMatrix();
+        return getKernelMatrix();
     }
 
     std::vector<const std::vector<double>*> getBase() const {
@@ -55,7 +49,7 @@ class SimilarityMatrix {
     }
 
     double getCoverage() const {
-        auto matrix = getTransposeMatrix();
+        auto matrix = getKernelMatrix();
         return std::log10(matrix.determinant()) * 0.5;
     }
 };

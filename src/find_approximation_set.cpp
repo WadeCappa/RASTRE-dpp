@@ -2,6 +2,7 @@
 #include "data_tools/matrix_builder.h"
 #include "representative_subset_calculator/representative_subset_calculator.h"
 #include <CLI/CLI.hpp>
+#include "nlohmann/json.hpp"
 
 struct appData {
     std::string inputFile;
@@ -10,6 +11,16 @@ struct appData {
     bool binaryInput = false;
     bool normalizeInput = false;
 } typedef AppData;
+
+nlohmann::json buildOutput(const AppData &appData, const RepresentativeSubset &subset) {
+    nlohmann::json output {
+        {"k", appData.outputSetSize}, 
+        {"RepresentativeRows", subset.representativeRows},
+        {"Coverage", subset.coverage}
+    };
+
+    return output;
+}
 
 void addCmdOptions(CLI::App &app, AppData &appData) {
     app.add_option("-i,--input", appData.inputFile, "Path to input file. Should contain data in row vector format.")->required();
@@ -33,12 +44,17 @@ int main(int argc, char** argv) {
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
     DataLoader *dataLoader = buildDataLoader(appData, inputFile);
-
     Data data = DataBuilder::buildData(*dataLoader);
+    inputFile.close();
 
     NaiveRepresentativeSubsetCalculator calculator;
-    std::vector<size_t> representativeRows = calculator.getApproximationSet(data, appData.outputSetSize);
+    RepresentativeSubset subset = calculator.getApproximationSet(data, appData.outputSetSize);
 
-    inputFile.close();
+    nlohmann::json output = buildOutput(appData, subset);
+    std::ofstream outputFile;
+    outputFile.open(appData.outputFile);
+    outputFile << output;
+    outputFile.close();
+
     return 0;
 }
