@@ -1,5 +1,5 @@
 #include <set>
-#include "representative_subset_calculator.h"
+#include "naive_representative_subset_calculator.h"
 #include "similarity_matrix/tests.h"
 
 static const Data data{

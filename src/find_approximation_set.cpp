@@ -1,6 +1,6 @@
 #include "data_tools/normalizer.h"
 #include "data_tools/matrix_builder.h"
-#include "representative_subset_calculator/representative_subset_calculator.h"
+#include "representative_subset_calculator/naive_representative_subset_calculator.h"
 
 #include <CLI/CLI.hpp>
 #include "nlohmann/json.hpp"
