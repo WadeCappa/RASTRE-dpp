@@ -19,7 +19,7 @@ class SimilarityMatrix {
         return res;
     }
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> getMatrix() const {
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> getTransposeMatrix() const {
         Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> res(this->baseRows.size(), this->baseRows.size());
         for (size_t j = 0; j < this->baseRows.size(); j++) {
             for (size_t i = 0; i < this->baseRows[j]->size(); i++) {
@@ -47,7 +47,7 @@ class SimilarityMatrix {
     }
 
     Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> DEBUG_getMatrix() const {
-        return getMatrix();
+        return getTransposeMatrix();
     }
 
     std::vector<const std::vector<double>*> getBase() const {
@@ -55,7 +55,7 @@ class SimilarityMatrix {
     }
 
     double getCoverage() const {
-        auto matrix = getMatrix();
+        auto matrix = getTransposeMatrix();
         return std::log10(matrix.determinant()) * 0.5;
     }
 };
