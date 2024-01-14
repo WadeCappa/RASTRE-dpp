@@ -30,9 +30,9 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
         std::set<size_t> seen;
 
         for (size_t seed = 0; seed < k; seed++) {
-            double highestScore = -std::numeric_limits<double>::max();
-            size_t bestRow = -1;
-            // TODO: do in parallel
+            std::vector<double> marginals(data.rows);
+
+            #pragma omp parallel for 
             for (size_t index = 0; index < data.rows; index++) {
                 if (seen.find(index) != seen.end()) {
                     continue;
@@ -41,8 +41,13 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
                 const auto & row = data.data[index];
                 SimilarityMatrix tempMatrix(matrix);
                 tempMatrix.addRow(row);
-                double tempScore = tempMatrix.getCoverage();
+                marginals[index] = tempMatrix.getCoverage();
+            }
 
+            double highestScore = -std::numeric_limits<double>::max();
+            size_t bestRow = -1;
+            for (size_t index = 0; index < data.rows; index++) {
+                const auto &tempScore = marginals[index];
                 if (tempScore > highestScore) {
                     bestRow = index;
                     highestScore = tempScore;

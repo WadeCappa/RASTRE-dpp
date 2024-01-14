@@ -41,6 +41,10 @@ DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
     return appData.normalizeInput ? (DataLoader*)(new Normalizer(*base)) : base;
 }
 
+RepresentativeSubsetCalculator* getCalculator(Timers &timers) {
+    return false ? (RepresentativeSubsetCalculator*)(new LazyRepresentativeSubsetCalculator(timers)) : (RepresentativeSubsetCalculator*)(new NaiveRepresentativeSubsetCalculator (timers));
+}
+
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset."};
     AppData appData;
@@ -60,8 +64,8 @@ int main(int argc, char** argv) {
     std::cout << "Finding a representative set for " << data.rows << " rows and " << data.columns << " columns" << std::endl;
 
     Timers timers;
-    NaiveRepresentativeSubsetCalculator calculator(timers);
-    RepresentativeSubset subset = calculator.getApproximationSet(data, appData.outputSetSize);
+    RepresentativeSubsetCalculator *calculator = getCalculator(timers);
+    RepresentativeSubset subset = calculator->getApproximationSet(data, appData.outputSetSize);
 
     std::cout << "after approx calc" << std::endl;
 

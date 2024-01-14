@@ -10,6 +10,7 @@ find_package(doctest REQUIRED)
 find_package(fmt REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(OpenMP REQUIRED)
 
 add_executable(preprocess_data src/preprocess_data.cpp)
 add_executable(run_tests src/tests.cpp)
@@ -29,3 +30,8 @@ target_link_libraries(find_approximation_set Eigen3::Eigen)
 
 target_link_libraries(find_approximation_set nlohmann_json::nlohmann_json)
 target_link_libraries(run_tests nlohmann_json::nlohmann_json)
+
+
+target_link_libraries(run_tests OpenMP::OpenMP_CXX)
+target_link_libraries(find_approximation_set OpenMP::OpenMP_CXX)
+
