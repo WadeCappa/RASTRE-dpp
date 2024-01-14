@@ -1,3 +1,11 @@
+#include <vector>
+#include <stdexcept>
+#include <set>
+#include <limits>
+
+#include "timers/timers.h"
+#include "similarity_matrix/similarity_matrix.h"
+
 #include "representative_subset_calculator.h"
 
 class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
@@ -46,7 +54,7 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
                 return buildResult(res, matrix.getCoverage());
             }
 
-            std::cout << "found " << bestRow << " with score of " << highestScore << std::endl;
+            std::cout << "naive found " << bestRow << " with score of " << highestScore << std::endl;
             res.push_back(bestRow);
             matrix.addRow(data.data[bestRow]);
             seen.insert(bestRow);
