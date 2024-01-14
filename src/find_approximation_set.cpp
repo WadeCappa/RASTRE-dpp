@@ -42,7 +42,7 @@ DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
 }
 
 RepresentativeSubsetCalculator* getCalculator(Timers &timers) {
-    return false ? (RepresentativeSubsetCalculator*)(new LazyRepresentativeSubsetCalculator(timers)) : (RepresentativeSubsetCalculator*)(new NaiveRepresentativeSubsetCalculator (timers));
+    return true ? (RepresentativeSubsetCalculator*)(new LazyRepresentativeSubsetCalculator(timers)) : (RepresentativeSubsetCalculator*)(new NaiveRepresentativeSubsetCalculator (timers));
 }
 
 int main(int argc, char** argv) {
@@ -51,23 +51,17 @@ int main(int argc, char** argv) {
     addCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
-    std::cout << "after cli parsing" << std::endl;
-
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
     DataLoader *dataLoader = buildDataLoader(appData, inputFile);
     Data data = DataBuilder::buildData(*dataLoader);
     inputFile.close();
 
-    std::cout << "after loading data" << std::endl;
-
     std::cout << "Finding a representative set for " << data.rows << " rows and " << data.columns << " columns" << std::endl;
 
     Timers timers;
     RepresentativeSubsetCalculator *calculator = getCalculator(timers);
     RepresentativeSubset subset = calculator->getApproximationSet(data, appData.outputSetSize);
-
-    std::cout << "after approx calc" << std::endl;
 
     nlohmann::json output = buildOutput(appData, subset, timers);
     std::ofstream outputFile;
