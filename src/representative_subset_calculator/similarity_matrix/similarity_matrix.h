@@ -9,16 +9,17 @@ class SimilarityMatrix {
     private:
     std::vector<const std::vector<double>*> baseRows;
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> getKernelMatrix() const {
-        Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> res(this->baseRows.size(), this->baseRows[0]->size());
-        for (size_t j = 0; j < this->baseRows.size(); j++) {
-            for (size_t i = 0; i < this->baseRows[j]->size(); i++) {
-                const auto & v = this->baseRows[j]->at(i);
-                res(j, i) = v;
-            }
+    Eigen::MatrixXd getKernelMatrix() const {
+        Eigen::MatrixXd matrix(this->baseRows.size(), this->baseRows[0]->size());
+        for (int i = 0; i < this->baseRows.size(); i++) {
+            matrix.row(i) = Eigen::VectorXd::Map(this->baseRows[i]->data(), this->baseRows[i]->size());
         }
 
-        return res * res.transpose();
+        auto transpose = Eigen::MatrixXd(matrix * matrix.transpose());
+        for (size_t index = 0; index < transpose.rows(); index++) {
+            transpose(index,index) += 1;
+        }
+        return transpose;
     }
 
     public:
@@ -28,9 +29,7 @@ class SimilarityMatrix {
         this->addRow(initialVector);
     }
 
-    SimilarityMatrix(const SimilarityMatrix& t) : baseRows(t.getBase()) {
-
-    }
+    SimilarityMatrix(const SimilarityMatrix& t) : baseRows(t.getBase()) {}
 
     void addRow(const std::vector<double> &newRow) {
         this->baseRows.push_back(&newRow);
@@ -45,7 +44,15 @@ class SimilarityMatrix {
     }
 
     double getCoverage() const {
-        auto matrix = getKernelMatrix();
-        return std::log(matrix.llt().matrixL().determinant()) * 0.5;
+        auto kernelMatrix = getKernelMatrix();
+        Eigen::MatrixXd diagonal(kernelMatrix.llt().matrixL());
+
+        double res = 0;
+        for (size_t index = 0; index < diagonal.rows(); index++) {
+            res += std::log(diagonal(index,index));
+        }
+
+        // std::cout << "determinant: " << std::log(kernelMatrix.determinant()) << ", cholskey determanant: " << res * 2 << std::endl;
+        return res * 2;
     }
 };

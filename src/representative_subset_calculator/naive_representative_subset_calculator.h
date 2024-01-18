@@ -51,7 +51,7 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
                 }
 
                 const auto &tempMarginal = marginals[index];
-                if (tempMarginal > highestMarginal && tempMarginal - currentScore > 0) {
+                if (tempMarginal > highestMarginal) {
                     bestRow = index;
                     highestMarginal = tempMarginal;
                 }
@@ -63,7 +63,7 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
                 return buildResult(res, matrix.getCoverage());
             }
 
-            std::cout << "naive found " << bestRow << " which increased marginal score by " << highestMarginal - currentScore << std::endl;
+            std::cout << "naive found " << bestRow << " increased marginal by " << highestMarginal - currentScore << std::endl;
             res.push_back(bestRow);
             matrix.addRow(data.data[bestRow]);
             seen.insert(bestRow);

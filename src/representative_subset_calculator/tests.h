@@ -9,7 +9,7 @@ static const Data data{
     DATA[0].size()
 };
 
-static const size_t k = 4;
+static const size_t k = DATA.size();
 
 TEST_CASE("Testing Naive representative set finder") {
     Timers timers;
