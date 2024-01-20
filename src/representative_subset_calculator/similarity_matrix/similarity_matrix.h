@@ -25,6 +25,12 @@ class SimilarityMatrix {
     public:
     SimilarityMatrix() {}
 
+    SimilarityMatrix(const std::vector<std::vector<double>> &data) {
+        for (const auto & v : data) {
+            this->baseRows.push_back(&v);
+        }
+    }
+
     SimilarityMatrix(const std::vector<double> &initialVector) {
         this->addRow(initialVector);
     }
@@ -53,6 +59,6 @@ class SimilarityMatrix {
         }
 
         // std::cout << "determinant: " << std::log(kernelMatrix.determinant()) << ", cholskey determanant: " << res * 2 << std::endl;
-        return res * 2;
+        return res;
     }
 };
