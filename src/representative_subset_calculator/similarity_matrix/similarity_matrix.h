@@ -59,6 +59,6 @@ class SimilarityMatrix {
         }
 
         // std::cout << "determinant: " << std::log(kernelMatrix.determinant()) << ", cholskey determanant: " << res * 2 << std::endl;
-        return res;
+        return res * 2;
     }
 };

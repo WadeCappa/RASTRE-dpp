@@ -8,7 +8,7 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
     Timers &timers;
     double epsilon;
 
-    static Eigen::MatrixXd getLowerTriangleMatrix(const Data &data) {
+    static Eigen::MatrixXd getKernelMatrix(const Data &data) {
         Eigen::MatrixXd matrix(data.rows, data.columns);
         for (int i = 0; i < data.rows; i++) {
             matrix.row(i) = Eigen::VectorXd::Map(data.data[i].data(), data.columns);
@@ -20,14 +20,13 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             kernelMatrix(index, index) += 1;
         }
 
-        Eigen::MatrixXd diagonal(kernelMatrix.llt().matrixL());
-        return diagonal;
+        return kernelMatrix;
     }
 
-    static std::vector<double> getDiagonalVector(const Eigen::MatrixXd &matrix) {
-        std::vector<double> diagonals(matrix.rows());
-        for (size_t i = 0; i < matrix.rows(); i++) {
-            diagonals[i] = matrix(i, i);
+    static std::vector<double> getDiagonalVector(const Eigen::MatrixXd &kernelMatrix) {
+        std::vector<double> diagonals(kernelMatrix.rows());
+        for (size_t i = 0; i < kernelMatrix.rows(); i++) {
+            diagonals[i] = kernelMatrix(i, i);
         }
 
         return diagonals;
@@ -74,9 +73,8 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
         std::vector<size_t> solution;
         std::unordered_set<size_t> seen;
 
-        Eigen::MatrixXd lowerTriangle = this->getLowerTriangleMatrix(data);
-        std::cout << lowerTriangle << std::endl;
-        std::vector<double> diagonals = this->getDiagonalVector(lowerTriangle); 
+        Eigen::MatrixXd kernelMatrix = this->getKernelMatrix(data);
+        std::vector<double> diagonals = this->getDiagonalVector(kernelMatrix); 
 
         std::vector<std::vector<double>> c(data.rows, std::vector<double>());
 
@@ -87,14 +85,13 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
         solution.push_back(j);
         double totalScore = bestScore.second;
 
-        while (solution.size()) {
+        while (solution.size() < k) {
             for (size_t i = 0; i < data.rows; i++) {
                 if (seen.find(i) != seen.end()) {
                     continue;
                 }
                 
-                double e = (lowerTriangle(j, i) - getDotProduct(c[j], c[i])) / std::sqrt(diagonals[j]);
-                std::cout << "e of " << e << std::endl;
+                double e = (kernelMatrix(j, i) - getDotProduct(c[j], c[i])) / std::sqrt(diagonals[j]);
                 c[i].push_back(e);
                 diagonals[i] -= std::pow(e, 2);
             }
@@ -102,6 +99,7 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             // Modifies the solution set
             bestScore = getNextHighestScore(diagonals, seen);
             if (bestScore.second <= this->epsilon) {
+                std::cout << "score of " << bestScore.second << " was less than " << this->epsilon << ". " << std::endl;
                 timers.totalCalculationTime.stopTimer();
                 RepresentativeSubset subset;
                 subset.representativeRows = solution;
