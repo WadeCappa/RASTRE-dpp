@@ -42,7 +42,7 @@ DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
 }
 
 RepresentativeSubsetCalculator* getCalculator(Timers &timers) {
-    return true ? (RepresentativeSubsetCalculator*)(new LazyRepresentativeSubsetCalculator(timers)) : (RepresentativeSubsetCalculator*)(new NaiveRepresentativeSubsetCalculator (timers));
+    return false ? (RepresentativeSubsetCalculator*)(new LazyRepresentativeSubsetCalculator(timers)) : (RepresentativeSubsetCalculator*)(new NaiveRepresentativeSubsetCalculator (timers));
 }
 
 int main(int argc, char** argv) {
