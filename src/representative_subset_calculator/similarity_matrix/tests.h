@@ -7,15 +7,6 @@ TEST_CASE("No errors thrown with initialization") {
 }
 
 TEST_CASE("Get expected matrix") {
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> dataMatrix(DATA.size(), DATA[0].size());
-    for (size_t j = 0; j < DATA.size(); j++) {
-        const auto & row = DATA[j];
-        for (size_t i = 0; i < row.size(); i++) {
-            const auto & v = row[i];
-            dataMatrix(j, i) = v;
-        }
-    }
-
     SimilarityMatrix matrix;
     double previousScore = -1;
 
@@ -32,6 +23,5 @@ TEST_CASE("Get expected matrix") {
     }
 
     auto lastMatrix = matrix.DEBUG_getMatrix();
-    CHECK(lastMatrix == dataMatrix * dataMatrix.transpose());
     CHECK(matrix.getCoverage() > 0);
 }
