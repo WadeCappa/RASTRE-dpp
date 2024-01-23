@@ -65,7 +65,11 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
     }
 
   public:
-    FastRepresentativeSubsetCalculator(Timers &timers, const double epsilon) : timers(timers), epsilon(epsilon) {}
+    FastRepresentativeSubsetCalculator(Timers &timers, const double epsilon) : timers(timers), epsilon(epsilon) {
+        if (this->epsilon < 0) {
+            throw std::invalid_argument("Epsilon is less than 0.");
+        }
+    }
 
     RepresentativeSubset getApproximationSet(const Data &data, size_t k) {
         timers.totalCalculationTime.startTimer();
