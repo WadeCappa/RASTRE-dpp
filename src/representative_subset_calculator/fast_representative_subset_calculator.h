@@ -86,6 +86,7 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
         double totalScore = bestScore.second;
 
         while (solution.size() < k) {
+            #pragma omp parallel for 
             for (size_t i = 0; i < data.rows; i++) {
                 if (seen.find(i) != seen.end()) {
                     continue;
