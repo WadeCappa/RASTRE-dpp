@@ -25,6 +25,12 @@ class SimilarityMatrix {
     public:
     SimilarityMatrix() {}
 
+    SimilarityMatrix(const std::vector<std::vector<double>> &data) {
+        for (const auto & v : data) {
+            this->baseRows.push_back(&v);
+        }
+    }
+
     SimilarityMatrix(const std::vector<double> &initialVector) {
         this->addRow(initialVector);
     }
