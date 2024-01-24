@@ -11,6 +11,9 @@ find_package(fmt REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(OpenMP REQUIRED)
+find_package(OpenMP REQUIRED)
+
+find_package(MPI)
 
 add_executable(preprocess_data src/preprocess_data.cpp)
 add_executable(run_tests src/tests.cpp)
