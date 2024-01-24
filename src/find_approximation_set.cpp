@@ -8,12 +8,13 @@
 #include <CLI/CLI.hpp>
 #include "nlohmann/json.hpp"
 
-
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset."};
-    Orchestrator* orchestrator = SingleMachineOrchestrator::build(argc, argv, app);
+    AppData appData;
+    Orchestrator::addCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
-    orchestrator->runJob();
+    SingleMachineOrchestrator orchestrator;
+    Orchestrator::runJob(orchestrator, appData);
     return 0;
 }
