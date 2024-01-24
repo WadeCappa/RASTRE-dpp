@@ -15,6 +15,10 @@ int main(int argc, char** argv) {
     Orchestrator::addCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
+    MPI_Init(NULL, NULL);
+    MPI_Comm_rank(MPI_COMM_WORLD, &appData.worldRank);
+    MPI_Comm_size(MPI_COMM_WORLD, &appData.worldSize);
+
     MpiOrchestrator orchestrator;
     Orchestrator::runJob(orchestrator, appData);
     return 0;

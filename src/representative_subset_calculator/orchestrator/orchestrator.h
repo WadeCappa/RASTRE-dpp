@@ -10,6 +10,9 @@ struct appData {
     bool normalizeInput = false;
     double epsilon = -1;
     unsigned int algorithm;
+
+    unsigned int worldSize = 1;
+    unsigned int worldRank = 0;
 } typedef AppData;
 
 class Orchestrator {
