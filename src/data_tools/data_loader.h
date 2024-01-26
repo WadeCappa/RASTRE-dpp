@@ -48,9 +48,7 @@ class BinaryDataLoader : public DataLoader {
     std::optional<unsigned int> vectorSize;
 
     public:
-    BinaryDataLoader(std::istream &input) : source(input) {
-        this->vectorSize = std::nullopt;
-    }
+    BinaryDataLoader(std::istream &input) : source(input), vectorSize(std::nullopt) {}
 
     bool getNext(std::vector<double> &result) {
         if (this->source.peek() == EOF) {

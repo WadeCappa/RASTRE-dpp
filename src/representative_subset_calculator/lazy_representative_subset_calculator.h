@@ -48,9 +48,6 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             double marginal = tempMatrix.getCoverage();
 
             auto nextElement = heap.front();
-            // if (marginal - currentScore <= 0) {
-            //     std::cout << "FAILED to add element to matrix that increased marginal" << std::endl;
-            // }
 
             if (marginal >= nextElement.second) {
                 subsetRows.push_back(top.first);
