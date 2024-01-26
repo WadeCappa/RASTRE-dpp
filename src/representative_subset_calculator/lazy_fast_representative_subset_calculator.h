@@ -13,7 +13,7 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
         const std::vector<double> &diagonals;
         HeapComparitor(const std::vector<double> &diagonals) : diagonals(diagonals) {}
         bool operator()(size_t a, size_t b) {
-            return diagonals[a] < diagonals[b];
+            return std::log(diagonals[a] * diagonals[a]) < std::log(diagonals[b] * diagonals[b]);
         }
     };
 
@@ -71,11 +71,11 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
 
             u[i] = solution.size();
 
-            double nextScore = diagonals[priorityQueue.front()];
-            if (diagonals[i] > nextScore || solution.size() == data.rows - 1) {
+            double nextScore = std::log(diagonals[priorityQueue.front()] * diagonals[priorityQueue.front()]);
+            if (std::log(diagonals[i] * diagonals[i]) > nextScore || solution.size() == data.rows - 1) {
                 solution.push_back(i);
-                std::cout << "lazy fast found " << i << " which increasd marginal score by " << diagonals[i] << std::endl;
-                totalScore += diagonals[i];
+                std::cout << "lazy fast found " << i << " which increasd marginal score by " << std::log(diagonals[i] * diagonals[i]) << std::endl;
+                totalScore += std::log(diagonals[i] * diagonals[i]);
             } else {
                 priorityQueue.push_back(i);
                 std::push_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
