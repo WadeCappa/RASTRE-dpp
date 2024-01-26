@@ -3,7 +3,6 @@
 #include <math.h>
 #include <unordered_set>
 #include <optional>
-#include "kernel_matrix/kernel_matrix.h"
 
 class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
     private:
@@ -45,12 +44,12 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
 
         // Initialize kernel matrix 
         LazyKernelMatrix kernelMatrix(data);
+        std::vector<double> diagonals = kernelMatrix.getDiagonals(data.rows);
 
         // Initialize priority queue
         std::vector<size_t> priorityQueue;
-        std::vector<double> diagonals(data.rows);
         for (size_t index = 0; index < data.rows; index++) {
-            diagonals[index] = std::sqrt(kernelMatrix.get(index, index));
+            diagonals[index] = std::sqrt(diagonals[index]);
             priorityQueue.push_back(index);
         }
 
