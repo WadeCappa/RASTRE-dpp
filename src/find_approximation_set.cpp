@@ -88,7 +88,7 @@ int main(int argc, char** argv) {
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
     DataLoader *dataLoader = buildDataLoader(appData, inputFile);
-    Data data = DataBuilder::buildData(*dataLoader);
+    Data data(*dataLoader);
     inputFile.close();
 
     std::cout << "Finding a representative set for " << data.rows << " rows and " << data.columns << " columns" << std::endl;
