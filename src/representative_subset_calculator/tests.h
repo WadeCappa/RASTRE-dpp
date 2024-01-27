@@ -20,13 +20,13 @@ static const double epsilon = 0.01;
 TEST_CASE("Testing Naive representative set finder") {
     Timers timers;
     NaiveRepresentativeSubsetCalculator calculator(timers);
-    RepresentativeSubset res = calculator.getApproximationSet(data, k);
+    std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
     
-    CHECK(res.coverage > 0);
-    CHECK(res.representativeRows.size() == k);
+    CHECK(res.size() == k);
 
     std::set<size_t> seen;
-    for (const auto & row : res.representativeRows) {
+    for (const auto & seed : res) {
+        const auto & row = seed.first;
         CHECK(seen.find(row) == seen.end());
         seen.insert(row);
     }
@@ -35,13 +35,13 @@ TEST_CASE("Testing Naive representative set finder") {
 TEST_CASE("Testing lazy-naive set finder") {
     Timers timers;
     LazyRepresentativeSubsetCalculator calculator(timers);
-    RepresentativeSubset res = calculator.getApproximationSet(data, k);
+    std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
 
-    CHECK(res.coverage > 0);
-    CHECK(res.representativeRows.size() == k);
+    CHECK(res.size() == k);
 
     std::set<size_t> seen;
-    for (const auto & row : res.representativeRows) {
+    for (const auto & seed : res) {
+        const auto & row = seed.first;
         CHECK(seen.find(row) == seen.end());
         seen.insert(row);
     }
@@ -50,13 +50,13 @@ TEST_CASE("Testing lazy-naive set finder") {
 TEST_CASE("Testing FAST set finder") {
     Timers timers;
     FastRepresentativeSubsetCalculator calculator(timers, epsilon);
-    RepresentativeSubset res = calculator.getApproximationSet(data, k);
+    std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
 
-    CHECK(res.coverage > 0);
-    CHECK(res.representativeRows.size() == k);
+    CHECK(res.size() == k);
 
     std::set<size_t> seen;
-    for (const auto & row : res.representativeRows) {
+    for (const auto & seed : res) {
+        const auto & row = seed.first;
         CHECK(seen.find(row) == seen.end());
         seen.insert(row);
     }
@@ -65,13 +65,13 @@ TEST_CASE("Testing FAST set finder") {
 TEST_CASE("Testing LAZYFAST set finder") {
     Timers timers;
     LazyFastRepresentativeSubsetCalculator calculator(timers, epsilon);
-    RepresentativeSubset res = calculator.getApproximationSet(data, k);
+    std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
 
-    CHECK(res.coverage > 0);
-    CHECK(res.representativeRows.size() == k);
+    CHECK(res.size() == k);
 
     std::set<size_t> seen;
-    for (const auto & row : res.representativeRows) {
+    for (const auto & seed : res) {
+        const auto & row = seed.first;
         CHECK(seen.find(row) == seen.end());
         seen.insert(row);
     }

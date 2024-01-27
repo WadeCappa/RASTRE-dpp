@@ -20,10 +20,10 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
     public:
     LazyRepresentativeSubsetCalculator(Timers &timers) : timers(timers) {}
 
-    RepresentativeSubset getApproximationSet(const Data &data, size_t k) {
+    std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
         timers.totalCalculationTime.startTimer();
 
-        std::vector<size_t> subsetRows;
+        std::vector<std::pair<size_t, double>> subsetRows;
         std::vector<std::pair<size_t, double>> heap;
         for (size_t index = 0; index < data.rows; index++) {
             const auto & d = data.data[index];
@@ -50,10 +50,11 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             auto nextElement = heap.front();
 
             if (marginal >= nextElement.second) {
-                subsetRows.push_back(top.first);
+                double marginalGain = marginal - currentScore;
+                subsetRows.push_back(std::make_pair(top.first, marginalGain));
                 matrix.addRow(data.data[top.first]);
 
-                std::cout << "lazy found " << top.first << " which increasd marginal score by " << marginal - currentScore << std::endl;
+                std::cout << "lazy found " << top.first << " which increasd marginal score by " << marginalGain << std::endl;
                 currentScore = marginal;
             } else {
                 top.second = marginal;
@@ -62,10 +63,6 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             }
         }
 
-        RepresentativeSubset subset;
-        subset.representativeRows = subsetRows;
-        subset.coverage = matrix.getCoverage();
-        timers.totalCalculationTime.stopTimer();
-        return subset;
+        return subsetRows;
     }
 };
