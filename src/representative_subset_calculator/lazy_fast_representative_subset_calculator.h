@@ -13,7 +13,7 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
         const std::vector<double> &diagonals;
         HeapComparitor(const std::vector<double> &diagonals) : diagonals(diagonals) {}
         bool operator()(size_t a, size_t b) {
-            return std::log(diagonals[a] * diagonals[a]) < std::log(diagonals[b] * diagonals[b]);
+            return std::log(std::pow(diagonals[a], 2)) < std::log(std::pow(diagonals[b], 2));
         }
     };
 
@@ -70,12 +70,14 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
             }
 
             u[i] = solution.size();
+            
+            double marginalGain = std::log(std::pow(diagonals[i], 2));
+            double nextScore = std::log(std::pow(diagonals[priorityQueue.front()], 2));
 
-            double nextScore = std::log(diagonals[priorityQueue.front()] * diagonals[priorityQueue.front()]);
-            if (std::log(diagonals[i] * diagonals[i]) > nextScore || solution.size() == data.rows - 1) {
+            if (marginalGain > nextScore || solution.size() == data.rows - 1) {
                 solution.push_back(i);
-                std::cout << "lazy fast found " << i << " which increasd marginal score by " << std::log(diagonals[i] * diagonals[i]) << std::endl;
-                totalScore += std::log(diagonals[i] * diagonals[i]);
+                std::cout << "lazy fast found " << i << " which increasd marginal score by " << marginalGain << std::endl;
+                totalScore += marginalGain;
             } else {
                 priorityQueue.push_back(i);
                 std::push_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
