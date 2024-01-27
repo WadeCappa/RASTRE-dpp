@@ -32,6 +32,10 @@ class LazyKernelMatrix : public KernelMatrix {
     const Data &data;
     std::vector<std::vector<std::optional<double>>> kernelMatrix;
 
+    // Disable pass by value. This object is too large for pass by value to make sense implicitly.
+    //  Use an explicit constructor to pass by value.
+    LazyKernelMatrix(const LazyKernelMatrix &);
+
     public:
     LazyKernelMatrix(const Data &data) : data(data), kernelMatrix(data.rows, std::vector<std::optional<double>>(data.rows, std::nullopt)) {}
 
@@ -50,6 +54,10 @@ class LazyKernelMatrix : public KernelMatrix {
 class NaiveKernelMatrix : public KernelMatrix {
     private:
     Eigen::MatrixXd kernelMatrix;
+
+    // Disable pass by value. This object is too large for pass by value to make sense implicitly.
+    //  Use an explicit constructor to pass by value.
+    NaiveKernelMatrix(const NaiveKernelMatrix &);
 
     Eigen::MatrixXd buildKernelMatrix(const Data &data) {
         Eigen::MatrixXd rawDataMatrix(data.rows, data.columns);
