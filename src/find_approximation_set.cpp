@@ -3,6 +3,7 @@
 #include "representative_subset_calculator/naive_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
+#include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
 
 #include <CLI/CLI.hpp>
 #include "nlohmann/json.hpp"
@@ -71,6 +72,8 @@ RepresentativeSubsetCalculator* getCalculator(const AppData &appData, Timers &ti
             return (RepresentativeSubsetCalculator*)(new LazyRepresentativeSubsetCalculator(timers));
         case 2:
             return (RepresentativeSubsetCalculator*)(new FastRepresentativeSubsetCalculator(timers, appData.epsilon));
+        case 3: 
+            return (RepresentativeSubsetCalculator*)(new LazyFastRepresentativeSubsetCalculator(timers, appData.epsilon));
         default:
             throw new std::invalid_argument("Could not find algorithm");
     }

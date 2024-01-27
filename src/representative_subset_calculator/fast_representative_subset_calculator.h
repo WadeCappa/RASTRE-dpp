@@ -2,35 +2,12 @@
 #include <vector>
 #include <math.h>
 #include <unordered_set>
+#include "kernel_matrix/kernel_matrix.h"
 
 class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
     private:
     Timers &timers;
     double epsilon;
-
-    static Eigen::MatrixXd getKernelMatrix(const Data &data) {
-        Eigen::MatrixXd matrix(data.rows, data.columns);
-        for (int i = 0; i < data.rows; i++) {
-            matrix.row(i) = Eigen::VectorXd::Map(data.data[i].data(), data.columns);
-        }
-
-        auto kernelMatrix = Eigen::MatrixXd(matrix * matrix.transpose());
-        for (size_t index = 0; index < kernelMatrix.rows(); index++) {
-            // add identity matrix
-            kernelMatrix(index, index) += 1;
-        }
-
-        return kernelMatrix;
-    }
-
-    static std::vector<double> getDiagonalVector(const Eigen::MatrixXd &kernelMatrix) {
-        std::vector<double> diagonals(kernelMatrix.rows());
-        for (size_t i = 0; i < kernelMatrix.rows(); i++) {
-            diagonals[i] = kernelMatrix(i, i);
-        }
-
-        return diagonals;
-    }
 
     static std::pair<size_t, double> getNextHighestScore(
         const std::vector<double> &diagonals, 
@@ -55,15 +32,6 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
         return std::make_pair(bestRow, highestScore);
     }
 
-    static double getDotProduct(const std::vector<double> &a, const std::vector<double> &b) {
-        double res = 0;
-        for (size_t i = 0; i < a.size() && i < b.size(); i++) {
-            res += a[i] * b[i];
-        }
-    
-        return res;
-    }
-
   public:
     FastRepresentativeSubsetCalculator(Timers &timers, const double epsilon) : timers(timers), epsilon(epsilon) {
         if (this->epsilon < 0) {
@@ -77,8 +45,8 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
         std::vector<size_t> solution;
         std::unordered_set<size_t> seen;
 
-        Eigen::MatrixXd kernelMatrix = this->getKernelMatrix(data);
-        std::vector<double> diagonals = this->getDiagonalVector(kernelMatrix); 
+        NaiveKernelMatrix kernelMatrix(data);
+        std::vector<double> diagonals = kernelMatrix.getDiagonals(data.rows); 
 
         std::vector<std::vector<double>> c(data.rows, std::vector<double>());
 
@@ -96,7 +64,7 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
                     continue;
                 }
                 
-                double e = (kernelMatrix(j, i) - getDotProduct(c[j], c[i])) / std::sqrt(diagonals[j]);
+                double e = (kernelMatrix.get(j, i) - KernelMatrix::getDotProduct(c[j], c[i])) / std::sqrt(diagonals[j]);
                 c[i].push_back(e);
                 diagonals[i] -= std::pow(e, 2);
             }
