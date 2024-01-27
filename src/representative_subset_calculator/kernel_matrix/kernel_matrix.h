@@ -1,3 +1,5 @@
+#include <Eigen/Dense>
+
 #include <vector>
 #include <optional>
 #include <optional>
@@ -47,21 +49,26 @@ class LazyKernelMatrix : public KernelMatrix {
 
 class NaiveKernelMatrix : public KernelMatrix {
     private:
-    std::vector<std::vector<double>> kernelMatrix;
+    Eigen::MatrixXd kernelMatrix;
+
+    Eigen::MatrixXd buildKernelMatrix(const Data &data) {
+        Eigen::MatrixXd rawDataMatrix(data.rows, data.columns);
+        for (int i = 0; i < data.rows; i++) {
+            rawDataMatrix.row(i) = Eigen::VectorXd::Map(data.data[i].data(), data.columns);
+        }
+
+        return Eigen::MatrixXd(rawDataMatrix * rawDataMatrix.transpose());
+    }
 
     public:
-    NaiveKernelMatrix(const Data &data) : kernelMatrix(data.rows, std::vector<double>(data.rows)) {
-        for (size_t j = 0; j < data.rows; j++) {
-            for (size_t i = j; i < data.rows; i++) {
-                double dotProduct = KernelMatrix::getDotProduct(data.data[j], data.data[i]);
-                dotProduct += static_cast<int>(j == i);
-                kernelMatrix[j][i] = dotProduct;
-                kernelMatrix[i][j] = dotProduct;
-            }
+    NaiveKernelMatrix(const Data &data) : kernelMatrix(buildKernelMatrix(data)) {
+        for (size_t index = 0; index < kernelMatrix.rows(); index++) {
+            // add identity matrix
+            kernelMatrix(index, index) += 1;
         }
     }
 
     double get(size_t j, size_t i) {
-        return this->kernelMatrix[j][i];
+        return this->kernelMatrix(j, i);
     }
 };
