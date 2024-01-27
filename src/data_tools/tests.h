@@ -128,7 +128,7 @@ TEST_CASE("Testing matrix builder") {
     std::istringstream inputStream(dataAsString);
     AsciiDataLoader loader(inputStream);
 
-    auto matrix = DataBuilder::buildData(loader);
+    Data matrix(loader);
 
     CHECK(matrix.data == DATA);
     CHECK(matrix.rows == DATA.size());

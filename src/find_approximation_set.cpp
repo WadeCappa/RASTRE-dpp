@@ -6,7 +6,7 @@
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
 
 #include <CLI/CLI.hpp>
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 struct appData {
     std::string inputFile;
@@ -33,17 +33,48 @@ std::string algorithmToString(const AppData &appData) {
     }
 }
 
+nlohmann::json buildRepresentativeSubsetOutput(
+    const std::vector<std::pair<size_t, double>> &solution
+) {
+    std::vector<size_t> rows;
+    std::vector<double> marginals;
+
+    for (const auto & s : solution) {
+        rows.push_back(s.first);
+        marginals.push_back(s.second);
+    }
+
+    nlohmann::json output {
+        {"rows", rows}, 
+        {"marginalGains", marginals}, 
+    };
+
+    return output;
+}
+
+nlohmann::json buildDatasetJson(const Data &data, const AppData &appData) {
+    nlohmann::json output {
+        {"rows", data.rows},
+        {"columns", data.columns},
+        {"inputFile", appData.inputFile}
+    };
+
+    return output;
+}
+
 nlohmann::json buildOutput(
     const AppData &appData, 
-    const RepresentativeSubset &subset,
-    const Timers &timers) {
+    const std::vector<std::pair<size_t, double>> &solution,
+    const Data &data,
+    const Timers &timers
+) {
     nlohmann::json output {
         {"k", appData.outputSetSize}, 
         {"algorithm", algorithmToString(appData)},
         {"epsilon", appData.epsilon},
-        {"RepresentativeRows", subset.representativeRows},
-        {"Coverage", subset.coverage},
-        {"timings", timers.outputToJson()}
+        {"RepresentativeRows", buildRepresentativeSubsetOutput(solution)},
+        {"timings", timers.outputToJson()},
+        {"dataset", buildDatasetJson(data, appData)}
     };
 
     return output;
@@ -88,16 +119,16 @@ int main(int argc, char** argv) {
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
     DataLoader *dataLoader = buildDataLoader(appData, inputFile);
-    Data data = DataBuilder::buildData(*dataLoader);
+    Data data(*dataLoader);
     inputFile.close();
 
     std::cout << "Finding a representative set for " << data.rows << " rows and " << data.columns << " columns" << std::endl;
 
     Timers timers;
     RepresentativeSubsetCalculator *calculator = getCalculator(appData, timers);
-    RepresentativeSubset subset = calculator->getApproximationSet(data, appData.outputSetSize);
+    auto solution = calculator->getApproximationSet(data, appData.outputSetSize);
 
-    nlohmann::json output = buildOutput(appData, subset, timers);
+    nlohmann::json output = buildOutput(appData, solution, data, timers);
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
     outputFile << output.dump(2);

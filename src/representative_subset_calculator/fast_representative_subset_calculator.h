@@ -39,10 +39,10 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
         }
     }
 
-    RepresentativeSubset getApproximationSet(const Data &data, size_t k) {
+    std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
         timers.totalCalculationTime.startTimer();
 
-        std::vector<size_t> solution;
+        std::vector<std::pair<size_t, double>> solution;
         std::unordered_set<size_t> seen;
 
         NaiveKernelMatrix kernelMatrix(data);
@@ -54,8 +54,7 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
         auto bestScore = getNextHighestScore(diagonals, seen);
         size_t j = bestScore.first;
         seen.insert(j);
-        solution.push_back(j);
-        double totalScore = bestScore.second;
+        solution.push_back(std::make_pair(j, bestScore.second));
 
         while (solution.size() < k) {
             #pragma omp parallel for 
@@ -74,22 +73,15 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             if (bestScore.second <= this->epsilon) {
                 std::cout << "score of " << bestScore.second << " was less than " << this->epsilon << ". " << std::endl;
                 timers.totalCalculationTime.stopTimer();
-                RepresentativeSubset subset;
-                subset.representativeRows = solution;
-                subset.coverage = totalScore;
-                return subset;
+                return solution;
             }
 
             j = bestScore.first;
             seen.insert(j);
-            solution.push_back(j);
-            totalScore += bestScore.second;
+            solution.push_back(std::make_pair(j, bestScore.second));
         }
     
         timers.totalCalculationTime.stopTimer();
-        RepresentativeSubset subset;
-        subset.representativeRows = solution;
-        subset.coverage = totalScore;
-        return subset;
+        return solution;
     }
 };

@@ -12,20 +12,13 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
     private: 
     Timers &timers;
 
-    RepresentativeSubset buildResult(const std::vector<size_t> &rows, double coverage) {
-        RepresentativeSubset subset;
-        subset.representativeRows = rows;
-        subset.coverage = coverage;
-        return subset;
-    }
-
     public:
     NaiveRepresentativeSubsetCalculator(Timers &timers) : timers(timers) {}
 
-    RepresentativeSubset getApproximationSet(const Data &data, size_t k) {
+    std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
         timers.totalCalculationTime.startTimer();
 
-        std::vector<size_t> res;
+        std::vector<std::pair<size_t, double>> res;
         SimilarityMatrix matrix; 
         std::set<size_t> seen;
 
@@ -60,17 +53,18 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
             if (bestRow == -1) {
                 std::cout << "FAILED to add element to matrix that increased marginal" << std::endl;
                 timers.totalCalculationTime.stopTimer();
-                return buildResult(res, matrix.getCoverage());
+                return res;
             }
 
-            std::cout << "naive found " << bestRow << " increased marginal by " << highestMarginal - currentScore << std::endl;
-            res.push_back(bestRow);
+            double marginalGain = highestMarginal - currentScore;
+            std::cout << "naive found " << bestRow << " increased marginal by " << marginalGain << std::endl;
+            res.push_back(std::make_pair(bestRow, marginalGain));
             matrix.addRow(data.data[bestRow]);
             seen.insert(bestRow);
             currentScore = highestMarginal;
         }
 
         timers.totalCalculationTime.stopTimer();
-        return buildResult(res, matrix.getCoverage());
+        return res;
     }
 };

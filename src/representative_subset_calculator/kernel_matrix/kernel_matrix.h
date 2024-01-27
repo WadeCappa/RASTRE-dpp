@@ -29,7 +29,7 @@ class KernelMatrix {
 
 class LazyKernelMatrix : public KernelMatrix {
     private:
-    const Data &data;
+    std::vector<Eigen::VectorXd> data;
     std::vector<std::vector<std::optional<double>>> kernelMatrix;
 
     // Disable pass by value. This object is too large for pass by value to make sense implicitly.
@@ -37,11 +37,15 @@ class LazyKernelMatrix : public KernelMatrix {
     LazyKernelMatrix(const LazyKernelMatrix &);
 
     public:
-    LazyKernelMatrix(const Data &data) : data(data), kernelMatrix(data.rows, std::vector<std::optional<double>>(data.rows, std::nullopt)) {}
+    LazyKernelMatrix(const Data &data) : kernelMatrix(data.rows, std::vector<std::optional<double>>(data.rows, std::nullopt)) {
+        for (const auto & row : data.data) {
+            this->data.push_back(Eigen::VectorXd::Map(row.data(), data.columns));
+        }
+    }
 
     double get(size_t j, size_t i) {
         if (!this->kernelMatrix[j][i].has_value()) {
-            double dotProduct = KernelMatrix::getDotProduct(this->data.data[j], this->data.data[i]);
+            double dotProduct = this->data[j].dot(this->data[i]);
             dotProduct += static_cast<int>(j == i);
             this->kernelMatrix[j][i] = dotProduct;
             this->kernelMatrix[i][j] = dotProduct;
