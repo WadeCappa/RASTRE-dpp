@@ -13,7 +13,7 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
         const std::vector<double> &diagonals;
         HeapComparitor(const std::vector<double> &diagonals) : diagonals(diagonals) {}
         bool operator()(size_t a, size_t b) {
-            return std::log(std::pow(diagonals[a], 2)) < std::log(std::pow(diagonals[b], 2));
+            return std::log(diagonals[a]) < std::log(diagonals[b]);
         }
     };
 
@@ -49,7 +49,6 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
         // Initialize priority queue
         std::vector<size_t> priorityQueue;
         for (size_t index = 0; index < data.rows; index++) {
-            diagonals[index] = std::sqrt(diagonals[index]);
             priorityQueue.push_back(index);
         }
 
@@ -65,14 +64,14 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
             for (size_t t = u[i]; t < solution.size(); t++) {
                 size_t j_t = solution[t]; 
                 double dotProduct = KernelMatrix::getDotProduct(this->getSlice(v[i], solution, t), this->getSlice(v[j_t], solution, t));
-                v[i][j_t] = (kernelMatrix.get(i, j_t) - dotProduct) / diagonals[j_t];
-                diagonals[i] = std::sqrt(std::pow(diagonals[i], 2) - std::pow(v[i][j_t], 2));
+                v[i][j_t] = (kernelMatrix.get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t]);
+                diagonals[i] = diagonals[i] - std::pow(v[i][j_t], 2);
             }
 
             u[i] = solution.size();
             
-            double marginalGain = std::log(std::pow(diagonals[i], 2));
-            double nextScore = std::log(std::pow(diagonals[priorityQueue.front()], 2));
+            double marginalGain = std::log(diagonals[i]);
+            double nextScore = std::log(diagonals[priorityQueue.front()]);
 
             if (marginalGain > nextScore || solution.size() == data.rows - 1) {
                 solution.push_back(i);
