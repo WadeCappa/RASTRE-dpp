@@ -50,12 +50,22 @@ nlohmann::json buildRepresentativeSubsetOutput(
     };
 
     return output;
+}
 
+nlohmann::json buildDatasetJson(const Data &data, const AppData &appData) {
+    nlohmann::json output {
+        {"rows", data.rows},
+        {"columns", data.columns},
+        {"inputFile", appData.inputFile}
+    };
+
+    return output;
 }
 
 nlohmann::json buildOutput(
     const AppData &appData, 
     const std::vector<std::pair<size_t, double>> &solution,
+    const Data &data,
     const Timers &timers
 ) {
     nlohmann::json output {
@@ -63,7 +73,8 @@ nlohmann::json buildOutput(
         {"algorithm", algorithmToString(appData)},
         {"epsilon", appData.epsilon},
         {"RepresentativeRows", buildRepresentativeSubsetOutput(solution)},
-        {"timings", timers.outputToJson()}
+        {"timings", timers.outputToJson()},
+        {"dataset", buildDatasetJson(data, appData)}
     };
 
     return output;
@@ -117,7 +128,7 @@ int main(int argc, char** argv) {
     RepresentativeSubsetCalculator *calculator = getCalculator(appData, timers);
     auto solution = calculator->getApproximationSet(data, appData.outputSetSize);
 
-    nlohmann::json output = buildOutput(appData, solution, timers);
+    nlohmann::json output = buildOutput(appData, solution, data, timers);
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
     outputFile << output.dump(2);
