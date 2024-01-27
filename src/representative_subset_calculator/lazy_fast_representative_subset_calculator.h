@@ -65,7 +65,7 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
                 size_t j_t = solution[t]; 
                 double dotProduct = KernelMatrix::getDotProduct(this->getSlice(v[i], solution, t), this->getSlice(v[j_t], solution, t));
                 v[i][j_t] = (kernelMatrix.get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t]);
-                diagonals[i] = diagonals[i] - std::pow(v[i][j_t], 2);
+                diagonals[i] -= std::pow(v[i][j_t], 2);
             }
 
             u[i] = solution.size();
