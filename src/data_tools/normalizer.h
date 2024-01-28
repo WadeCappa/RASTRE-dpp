@@ -1,6 +1,6 @@
 #include <math.h>
 #include <vector>
-#include "data_loader.h"
+#include "blocked_data_loader.h"
 
 class Normalizer : public DataLoader {
     private:

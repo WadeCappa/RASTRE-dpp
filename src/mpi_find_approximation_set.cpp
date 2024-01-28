@@ -11,6 +11,22 @@
 
 #include <mpi.h>
 
+
+static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
+    app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
+}
+
+static std::pair<size_t, size_t> getBlockStartAndEnd(const AppData &appData) {
+    size_t rowsPerBlock = std::ceil(appData.numberOfDataRows / appData.worldSize);
+    return std::make_pair(appData.worldRank * rowsPerBlock, rowsPerBlock);
+}
+
+static DataLoader* buildMpiDataLoader(const AppData &appData, std::istream &data) {
+    DataLoader *dataLoader = Orchestrator::buildDataLoader(appData, data);
+    auto startAndEnd = getBlockStartAndEnd(appData);
+    return dynamic_cast<DataLoader*>(new BlockedDataLoader(*dataLoader, startAndEnd.first, startAndEnd.second));
+}
+
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};
     AppData appData;
