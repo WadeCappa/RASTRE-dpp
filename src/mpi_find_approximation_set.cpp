@@ -19,7 +19,23 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &appData.worldRank);
     MPI_Comm_size(MPI_COMM_WORLD, &appData.worldSize);
 
-    MpiOrchestrator orchestrator;
-    Orchestrator::runJob(orchestrator, appData);
+    std::ifstream inputFile;
+    inputFile.open(appData.inputFile);
+    DataLoader *dataLoader = Orchestrator::buildDataLoader(appData, inputFile);
+    NaiveData data(*dataLoader);
+    inputFile.close();
+
+    delete dataLoader;
+
+    Timers timers;
+    RepresentativeSubsetCalculator *calculator = Orchestrator::getCalculator(appData, timers);
+    std::vector<std::pair<size_t, double>> solution = calculator->getApproximationSet(data, appData.outputSetSize);
+    nlohmann::json result = Orchestrator::buildOutput(appData, solution, data, timers);
+
+    std::ofstream outputFile;
+    outputFile.open(appData.outputFile);
+    outputFile << result.dump(2);
+    outputFile.close();
+
     return 0;
 }

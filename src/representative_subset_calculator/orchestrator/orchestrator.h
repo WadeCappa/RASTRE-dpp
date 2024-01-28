@@ -1,6 +1,5 @@
-#include <string>
-#include "nlohmann/json.hpp"
 #include <CLI/CLI.hpp>
+#include <nlohmann/json.hpp>
 
 struct appData {
     std::string inputFile;
@@ -17,27 +16,66 @@ struct appData {
 
 class Orchestrator {
     public:
-    virtual RepresentativeSubset getApproximationSet(const Data &data, const AppData &appData) = 0;
-    virtual nlohmann::json buildOutput(const RepresentativeSubset &subset, const AppData &appData) = 0;
+    static std::string algorithmToString(const AppData &appData) {
+        switch (appData.algorithm) {
+            case 0:
+                return "naive greedy";
+            case 1:
+                return "lazy greedy";
+            case 2:
+                return "fast greedy";
+            case 3:
+                return "lazy fast greedy";
+            default:
+                throw new std::invalid_argument("Could not find algorithm");
+        }
+    }
 
-    static void runJob(Orchestrator &job, const AppData &appData) {
-        std::ifstream inputFile;
-        inputFile.open(appData.inputFile);
-        DataLoader *dataLoader = Orchestrator::buildDataLoader(appData, inputFile);
-        Data data = DataBuilder::buildData(*dataLoader);
-        inputFile.close();
+    static nlohmann::json buildRepresentativeSubsetOutput(
+        const std::vector<std::pair<size_t, double>> &solution
+    ) {
+        std::vector<size_t> rows;
+        std::vector<double> marginals;
 
-        delete dataLoader;
+        for (const auto & s : solution) {
+            rows.push_back(s.first);
+            marginals.push_back(s.second);
+        }
 
-        std::cout << "Finding a representative set for " << data.rows << " rows and " << data.columns << " columns" << std::endl;
+        nlohmann::json output {
+            {"rows", rows}, 
+            {"marginalGains", marginals}, 
+        };
 
-        RepresentativeSubset solution = job.getApproximationSet(data, appData);
-        nlohmann::json result = job.buildOutput(solution, appData);
+        return output;
+    }
 
-        std::ofstream outputFile;
-        outputFile.open(appData.outputFile);
-        outputFile << result.dump(2);
-        outputFile.close();
+    static nlohmann::json buildDatasetJson(const Data &data, const AppData &appData) {
+        nlohmann::json output {
+            {"rows", data.totalRows()},
+            {"columns", data.totalColumns()},
+            {"inputFile", appData.inputFile}
+        };
+
+        return output;
+    }
+
+    static nlohmann::json buildOutput(
+        const AppData &appData, 
+        const std::vector<std::pair<size_t, double>> &solution,
+        const Data &data,
+        const Timers &timers
+    ) {
+        nlohmann::json output {
+            {"k", appData.outputSetSize}, 
+            {"algorithm", algorithmToString(appData)},
+            {"epsilon", appData.epsilon},
+            {"RepresentativeRows", buildRepresentativeSubsetOutput(solution)},
+            {"timings", timers.outputToJson()},
+            {"dataset", buildDatasetJson(data, appData)}
+        };
+
+        return output;
     }
 
     static void addCmdOptions(CLI::App &app, AppData &appData) {
@@ -50,7 +88,6 @@ class Orchestrator {
         app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
     }
 
-    
     static DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
         DataLoader *base = appData.binaryInput ? (DataLoader*)(new BinaryDataLoader(data)) : (DataLoader*)(new AsciiDataLoader(data));
         return appData.normalizeInput ? (DataLoader*)(new Normalizer(*base)) : base;
@@ -59,11 +96,13 @@ class Orchestrator {
     static RepresentativeSubsetCalculator* getCalculator(const AppData &appData, Timers &timers) {
         switch (appData.algorithm) {
             case 0:
-                return (RepresentativeSubsetCalculator*)(new NaiveRepresentativeSubsetCalculator(timers));
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new NaiveRepresentativeSubsetCalculator(timers));
             case 1:
-                return (RepresentativeSubsetCalculator*)(new LazyRepresentativeSubsetCalculator(timers));
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyRepresentativeSubsetCalculator(timers));
             case 2:
-                return (RepresentativeSubsetCalculator*)(new FastRepresentativeSubsetCalculator(timers, appData.epsilon));
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new FastRepresentativeSubsetCalculator(timers, appData.epsilon));
+            case 3: 
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyFastRepresentativeSubsetCalculator(timers, appData.epsilon));
             default:
                 throw new std::invalid_argument("Could not find algorithm");
         }

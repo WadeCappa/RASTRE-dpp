@@ -20,13 +20,13 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
     public:
     LazyRepresentativeSubsetCalculator(Timers &timers) : timers(timers) {}
 
-    RepresentativeSubset getApproximationSet(const Data &data, size_t k) {
+    std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
         timers.totalCalculationTime.startTimer();
 
-        std::vector<size_t> subsetRows;
+        std::vector<std::pair<size_t, double>> subsetRows;
         std::vector<std::pair<size_t, double>> heap;
-        for (size_t index = 0; index < data.rows; index++) {
-            const auto & d = data.data[index];
+        for (size_t index = 0; index < data.totalRows(); index++) {
+            const auto & d = data.getRow(index);
             SimilarityMatrix matrix(d);
             heap.push_back(std::make_pair(index, matrix.getCoverage()));
         }
@@ -44,19 +44,17 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             heap.pop_back();
 
             SimilarityMatrix tempMatrix(matrix);
-            tempMatrix.addRow(data.data[top.first]);
+            tempMatrix.addRow(data.getRow(top.first));
             double marginal = tempMatrix.getCoverage();
 
             auto nextElement = heap.front();
-            // if (marginal - currentScore <= 0) {
-            //     std::cout << "FAILED to add element to matrix that increased marginal" << std::endl;
-            // }
 
             if (marginal >= nextElement.second) {
-                subsetRows.push_back(top.first);
-                matrix.addRow(data.data[top.first]);
+                double marginalGain = marginal - currentScore;
+                subsetRows.push_back(std::make_pair(top.first, marginalGain));
+                matrix.addRow(data.getRow(top.first));
 
-                std::cout << "lazy found " << top.first << " which increasd marginal score by " << marginal - currentScore << std::endl;
+                std::cout << "lazy found " << top.first << " which increasd marginal score by " << marginalGain << std::endl;
                 currentScore = marginal;
             } else {
                 top.second = marginal;
@@ -65,10 +63,6 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             }
         }
 
-        RepresentativeSubset subset;
-        subset.representativeRows = subsetRows;
-        subset.coverage = matrix.getCoverage();
-        timers.totalCalculationTime.stopTimer();
-        return subset;
+        return subsetRows;
     }
 };
