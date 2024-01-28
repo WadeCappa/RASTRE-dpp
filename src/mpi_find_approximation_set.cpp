@@ -141,7 +141,6 @@ int main(int argc, char** argv) {
 
         std::vector<std::pair<size_t, double>> solution = calculator->getApproximationSet(bestRows, appData.outputSetSize);
 
-        // TODO: Make sure you output the global solution here!
         nlohmann::json result = Orchestrator::buildOutput(appData, solution, data, timers);
 
         std::ofstream outputFile;

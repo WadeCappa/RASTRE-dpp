@@ -134,3 +134,17 @@ TEST_CASE("Testing matrix builder") {
     CHECK(matrix.totalRows() == DATA.size());
     CHECK(matrix.totalColumns() == DATA[0].size());
 }
+
+TEST_CASE("Testing blocked data loader") {
+    std::istringstream inputStream(matrixToString(DATA));
+    AsciiDataLoader dataLoader(inputStream);
+    
+    std::vector<unsigned int> ownership(DATA.size(), 0);
+    ownership[0] = 1;
+    ownership[3] = 1;
+
+    BlockedDataLoader blockedDataLoader(dataLoader, ownership, 1);
+    std::vector<double> element;
+    while (blockedDataLoader.getNext(element)) {
+    }
+}

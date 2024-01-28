@@ -33,6 +33,7 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
         }
     }
 
+    // TODO: Break when marginal gain is below epsilon
     std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
         timers.totalCalculationTime.startTimer();
 
