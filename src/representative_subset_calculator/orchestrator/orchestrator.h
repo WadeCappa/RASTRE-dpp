@@ -1,8 +1,10 @@
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
+#include <limits.h>
 
 struct appData {
     std::string inputFile;
+    size_t numberOfDataRows;
     std::string outputFile;
     size_t outputSetSize;
     bool binaryInput = false;
@@ -10,8 +12,8 @@ struct appData {
     double epsilon = -1;
     unsigned int algorithm;
 
-    unsigned int worldSize = 1;
-    unsigned int worldRank = 0;
+    int worldSize = 1;
+    int worldRank = 0;
 } typedef AppData;
 
 class Orchestrator {
@@ -80,6 +82,7 @@ class Orchestrator {
 
     static void addCmdOptions(CLI::App &app, AppData &appData) {
         app.add_option("-i,--input", appData.inputFile, "Path to input file. Should contain data in row vector format.")->required();
+        app.add_option("-n,--numberOfRows", appData.inputFile, "The number of total rows of data in your input file.")->required();
         app.add_option("-o,--output", appData.outputFile, "Path to output file.")->required();
         app.add_option("-k,--outputSetSize", appData.outputSetSize, "Sets the desired size of the representative set.")->required();
         app.add_option("-e,--epsilon", appData.epsilon, "Only used for the fast greedy variants. Determines the threshold for when seed selection is terminated.");
@@ -88,8 +91,15 @@ class Orchestrator {
         app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
     }
 
+    static std::pair<size_t, size_t> getBlockStartAndEnd(const AppData &appData) {
+        size_t rowsPerBlock = std::ceil(appData.numberOfDataRows / appData.worldSize);
+        return std::make_pair(appData.worldRank * rowsPerBlock, rowsPerBlock);
+    }
+
     static DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
-        DataLoader *base = appData.binaryInput ? (DataLoader*)(new BinaryDataLoader(data)) : (DataLoader*)(new AsciiDataLoader(data));
+        auto startAndEnd = getBlockStartAndEnd(appData);
+        DataLoader *base = appData.binaryInput ? (DataLoader*)(new BinaryDataLoader(data, startAndEnd.first, startAndEnd.second)) : 
+            (DataLoader*)(new AsciiDataLoader(data, startAndEnd.first, startAndEnd.second));
         return appData.normalizeInput ? (DataLoader*)(new Normalizer(*base)) : base;
     }
 

@@ -3,11 +3,13 @@
 #include "representative_subset_calculator/naive_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
+#include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
+#include "representative_subset_calculator/orchestrator/orchestrator.h"
 
 #include <CLI/CLI.hpp>
 #include "nlohmann/json.hpp"
 
+#include <mpi.h>
 
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};

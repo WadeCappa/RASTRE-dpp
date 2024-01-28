@@ -35,7 +35,7 @@ target_link_libraries(run_tests nlohmann_json::nlohmann_json)
 target_link_libraries(run_tests OpenMP::OpenMP_CXX)
 target_link_libraries(find_approximation_set OpenMP::OpenMP_CXX)
 
-if (MPI)
+if (MPI_FOUND)
     add_executable(mpi_find_approximation_set src/mpi_find_approximation_set.cpp)
     target_link_libraries(mpi_find_approximation_set CLI11::CLI11)
     target_link_libraries(mpi_find_approximation_set fmt::fmt)
