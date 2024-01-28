@@ -66,7 +66,5 @@ class BinaryDataLoader : public DataLoader {
         result.resize(this->vectorSize.value());
         this->source.read(reinterpret_cast<char *>(result.data()), this->vectorSize.value() * sizeof(double));
         return true;
-
     }
-
 };

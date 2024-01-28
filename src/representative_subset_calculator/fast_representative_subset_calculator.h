@@ -7,7 +7,7 @@
 class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
     private:
     Timers &timers;
-    double epsilon;
+    const double epsilon;
 
     static std::pair<size_t, double> getNextHighestScore(
         const std::vector<double> &diagonals, 

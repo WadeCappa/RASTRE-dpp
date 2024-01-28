@@ -7,7 +7,7 @@
 class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
     private:
     Timers &timers;
-    double epsilon;
+    const double epsilon;
 
     struct HeapComparitor {
         const std::vector<double> &diagonals;
