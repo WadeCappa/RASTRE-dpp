@@ -37,9 +37,10 @@ class LazyKernelMatrix : public KernelMatrix {
     LazyKernelMatrix(const LazyKernelMatrix &);
 
     public:
-    LazyKernelMatrix(const Data &data) : kernelMatrix(data.rows, std::vector<std::optional<double>>(data.rows, std::nullopt)) {
-        for (const auto & row : data.data) {
-            this->data.push_back(Eigen::VectorXd::Map(row.data(), data.columns));
+    LazyKernelMatrix(const Data &data) : kernelMatrix(data.totalRows(), std::vector<std::optional<double>>(data.totalRows(), std::nullopt)) {
+        for (size_t i = 0; i < data.totalRows(); i++) {
+            const auto & row = data.getRow(i);
+            this->data.push_back(Eigen::VectorXd::Map(row.data(), data.totalColumns()));
         }
     }
 
@@ -64,9 +65,9 @@ class NaiveKernelMatrix : public KernelMatrix {
     NaiveKernelMatrix(const NaiveKernelMatrix &);
 
     Eigen::MatrixXd buildKernelMatrix(const Data &data) {
-        Eigen::MatrixXd rawDataMatrix(data.rows, data.columns);
-        for (int i = 0; i < data.rows; i++) {
-            rawDataMatrix.row(i) = Eigen::VectorXd::Map(data.data[i].data(), data.columns);
+        Eigen::MatrixXd rawDataMatrix(data.totalRows(), data.totalColumns());
+        for (int i = 0; i < data.totalRows(); i++) {
+            rawDataMatrix.row(i) = Eigen::VectorXd::Map(data.getRow(i).data(), data.totalColumns());
         }
 
         return Eigen::MatrixXd(rawDataMatrix * rawDataMatrix.transpose());

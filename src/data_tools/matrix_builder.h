@@ -5,12 +5,26 @@
 
 #define assertm(exp, msg) assert(((void)msg, exp))
 
-struct Data {
+class Data {
+    public:
+    virtual double getTransposeDotProduct(size_t i) const = 0;
+    virtual const std::vector<double>& getRow(size_t i) const = 0;
+    virtual size_t totalRows() const = 0;
+    virtual size_t totalColumns() const = 0;
+};
+
+class NaiveData : public Data {
+    private:
     std::vector<std::vector<double>> data;
     size_t rows;
     size_t columns;
 
-    Data(DataLoader &loader) {
+    // Disable pass by value. This object is too large for pass by value to make sense implicitly.
+    //  Use an explicit constructor to pass by value.
+    NaiveData(const Data&);
+
+    public:
+    NaiveData(DataLoader &loader) {
         std::optional<size_t> columns = std::nullopt;
         this->rows = 0;
 
@@ -30,10 +44,25 @@ struct Data {
         data.pop_back();
     }
 
-    Data(const std::vector<std::vector<double>> &raw, size_t rows, size_t cols) : data(raw), rows(rows), columns(cols) {}
+    NaiveData(const std::vector<std::vector<double>> &raw, size_t rows, size_t cols) : data(raw), rows(rows), columns(cols) {}
 
-    private:
-    // Disable pass by value. This object is too large for pass by value to make sense implicitly.
-    //  Use an explicit constructor to pass by value.
-    Data(const Data&);
+    double getTransposeDotProduct(size_t i) const {
+        
+    }
+
+    const std::vector<double>& getRow(size_t i) const {
+        return this->data[i];
+    }
+
+    size_t totalRows() const {
+        return this->rows;
+    }
+
+    size_t totalColumns() const {
+        return this->columns;
+    }
+
+    bool DEBUG_compareData(const std::vector<std::vector<double>> &data) const {
+        return this->data == data;
+    }
 };
