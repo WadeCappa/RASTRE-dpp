@@ -4,90 +4,18 @@
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/orchestrator/orchestrator.h"
+#include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 
 #include <CLI/CLI.hpp>
 #include "nlohmann/json.hpp"
 
 #include <mpi.h>
 
-static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
-    app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
-}
-
-static unsigned int getTotalSendData(
-    const Data &data, 
-    const std::vector<std::pair<size_t, double>> &localSolution
-) {
-    return data.totalColumns() * localSolution.size();
-}
-
-static void buildSendBuffer(
-    const Data &data, 
-    const std::vector<std::pair<size_t, double>> &localSolution, 
-    std::vector<double> &buffer,
-    const unsigned int totalData 
-) {
-    size_t rowSize = data.totalColumns();
-    size_t numberOfRows = localSolution.size();
-    buffer.resize(totalData);
-
-    #pragma parallel for
-    for (size_t rowIndex = 0; rowIndex < numberOfRows; rowIndex++) {
-        const auto & row = data.getRow(localSolution[rowIndex].first);
-        for (size_t columnIndex = 0; columnIndex < rowSize; columnIndex++) {
-            double v = row[columnIndex];
-            buffer[rowSize * rowIndex + columnIndex] = v;
-        }
-    }
-}
-
-static void buildReceiveBuffer(
-    const std::vector<int> &sendSizes, 
-    std::vector<double> &receiveBuffer
-) {
-    size_t totalData = 0;
-    for (const auto & d : sendSizes) {
-        totalData += d;
-    }
-
-    receiveBuffer.resize(totalData);
-}
-
-static std::vector<int> buildDisplacementBuffer(const std::vector<int> &sendSizes) {
-    std::vector<int> res;
-    unsigned int seenData = 0;
-    for (const auto & s : sendSizes) {
-        res.push_back(seenData);
-        seenData += s;
-    }
-
-    return res;
-}
-
-static void rebuildData(
-    const std::vector<double> &binaryInput, 
-    const size_t rowSize,
-    std::vector<std::vector<double>> &newData
-) {
-    const size_t expectedRows = std::floor(binaryInput.size() / rowSize);
-    if (binaryInput.size() % rowSize != 0) {
-        std::cout << "ERROR: did not get an expected number of values from all gather" << std::endl;
-    }
-
-    newData.clear();
-    newData.resize(expectedRows);
-    
-    #pragma omp parallel for
-    for (size_t currentRow = 0; currentRow < expectedRows; currentRow++) {
-        newData[currentRow] = std::vector<double>(binaryInput.begin() + (rowSize * currentRow), binaryInput.begin() + (rowSize * (currentRow + 1)));
-    }
-}
 
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};
     AppData appData;
-    Orchestrator::addCmdOptions(app, appData);
+    MpiOrchestrator::addCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
     MPI_Init(NULL, NULL);
@@ -112,16 +40,16 @@ int main(int argc, char** argv) {
     std::vector<std::pair<size_t, double>> localSolution = calculator->getApproximationSet(data, appData.outputSetSize);
 
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
-    unsigned int sendDataSize = getTotalSendData(data, localSolution);
+    unsigned int sendDataSize = MpiOrchestrator::getTotalSendData(data, localSolution);
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
     MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), appData.worldSize, MPI_INT, 0, MPI_COMM_WORLD);
 
     std::vector<double> sendBuffer;
-    buildSendBuffer(data, localSolution, sendBuffer, sendDataSize);
+    MpiOrchestrator::buildSendBuffer(data, localSolution, sendBuffer, sendDataSize);
 
     std::vector<double> receiveBuffer;
-    buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
-    std::vector<int> displacements = buildDisplacementBuffer(receivingDataSizesBuffer);
+    MpiOrchestrator::buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
+    std::vector<int> displacements = MpiOrchestrator::buildDisplacementBuffer(receivingDataSizesBuffer);
     MPI_Gatherv(
         sendBuffer.data(), 
         sendDataSize, 
@@ -135,11 +63,12 @@ int main(int argc, char** argv) {
     );
 
     if (appData.worldRank == 0) {
-        std::vector<std::vector<double>> newData;
-        rebuildData(receiveBuffer, data.totalColumns(), newData);
-        NaiveData bestRows(newData, newData.size(), data.totalColumns());
+        std::vector<std::pair<size_t, std::vector<double>>> newData;
+        MpiOrchestrator::rebuildData(receiveBuffer, data.totalColumns(), newData);
+        SelectiveData bestRows(newData);
 
-        std::vector<std::pair<size_t, double>> solution = calculator->getApproximationSet(bestRows, appData.outputSetSize);
+        std::vector<std::pair<size_t, double>> globalSolutionWithLocalIndicies = calculator->getApproximationSet(bestRows, appData.outputSetSize);
+        std::vector<std::pair<size_t, double>> solution = bestRows.translateSolution(globalSolutionWithLocalIndicies);
 
         nlohmann::json result = Orchestrator::buildOutput(appData, solution, data, timers);
 

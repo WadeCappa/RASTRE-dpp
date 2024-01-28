@@ -61,3 +61,44 @@ class NaiveData : public Data {
         return this->data == data;
     }
 };
+
+class SelectiveData : public Data {
+    private:
+    const std::vector<std::pair<size_t, std::vector<double>>> &base;
+    const size_t rows;
+    const size_t columns;
+
+    // Disable pass by value. This object is too large for pass by value to make sense implicitly.
+    //  Use an explicit constructor to pass by value.
+    SelectiveData(const Data&);
+
+    public:
+    SelectiveData(const std::vector<std::pair<size_t, std::vector<double>>> &base) 
+    : base(base), rows(base.size()), columns(base[0].second.size()) {}
+
+    const std::vector<double>& getRow(size_t i) const {
+        return this->base[i].second;
+    }
+
+    size_t totalRows() const {
+        return this->rows;
+    }
+
+    size_t totalColumns() const {
+        return this->columns;
+    }
+
+    std::vector<std::pair<size_t, double>> translateSolution(
+        const std::vector<std::pair<size_t, double>> &localSolution
+    ) {
+        std::vector<std::pair<size_t, double>> globalSolution;
+        for (const auto & i : localSolution) {
+            globalSolution.push_back(std::make_pair(
+                this->base[i.first].first,
+                i.second
+            ));
+        }
+
+        return globalSolution;
+    }
+};
