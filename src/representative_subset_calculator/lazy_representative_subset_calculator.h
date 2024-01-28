@@ -25,8 +25,8 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
 
         std::vector<std::pair<size_t, double>> subsetRows;
         std::vector<std::pair<size_t, double>> heap;
-        for (size_t index = 0; index < data.rows; index++) {
-            const auto & d = data.data[index];
+        for (size_t index = 0; index < data.totalRows(); index++) {
+            const auto & d = data.getRow(index);
             SimilarityMatrix matrix(d);
             heap.push_back(std::make_pair(index, matrix.getCoverage()));
         }
@@ -44,7 +44,7 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             heap.pop_back();
 
             SimilarityMatrix tempMatrix(matrix);
-            tempMatrix.addRow(data.data[top.first]);
+            tempMatrix.addRow(data.getRow(top.first));
             double marginal = tempMatrix.getCoverage();
 
             auto nextElement = heap.front();
@@ -52,7 +52,7 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             if (marginal >= nextElement.second) {
                 double marginalGain = marginal - currentScore;
                 subsetRows.push_back(std::make_pair(top.first, marginalGain));
-                matrix.addRow(data.data[top.first]);
+                matrix.addRow(data.getRow(top.first));
 
                 std::cout << "lazy found " << top.first << " which increasd marginal score by " << marginalGain << std::endl;
                 currentScore = marginal;

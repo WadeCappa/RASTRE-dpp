@@ -38,16 +38,16 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
 
         std::vector<std::pair<size_t, double>> solution;
         std::unordered_set<size_t> seen;
-        std::vector<std::vector<double>> v(data.rows, std::vector<double>(data.rows));
-        std::vector<size_t> u(data.rows, 0);
+        std::vector<std::vector<double>> v(data.totalRows(), std::vector<double>(data.totalRows()));
+        std::vector<size_t> u(data.totalRows(), 0);
 
         // Initialize kernel matrix 
         LazyKernelMatrix kernelMatrix(data);
-        std::vector<double> diagonals = kernelMatrix.getDiagonals(data.rows);
+        std::vector<double> diagonals = kernelMatrix.getDiagonals(data.totalRows());
 
         // Initialize priority queue
         std::vector<size_t> priorityQueue;
-        for (size_t index = 0; index < data.rows; index++) {
+        for (size_t index = 0; index < data.totalRows(); index++) {
             priorityQueue.push_back(index);
         }
 
@@ -72,7 +72,7 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
             double marginalGain = std::log(diagonals[i]);
             double nextScore = std::log(diagonals[priorityQueue.front()]);
 
-            if (marginalGain > nextScore || solution.size() == data.rows - 1) {
+            if (marginalGain > nextScore || solution.size() == data.totalRows() - 1) {
                 solution.push_back(std::make_pair(i, marginalGain));
                 std::cout << "lazy fast found " << i << " which increasd marginal score by " << marginalGain << std::endl;
             } else {

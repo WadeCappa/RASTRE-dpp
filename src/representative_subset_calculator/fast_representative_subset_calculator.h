@@ -46,9 +46,9 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
         std::unordered_set<size_t> seen;
 
         NaiveKernelMatrix kernelMatrix(data);
-        std::vector<double> diagonals = kernelMatrix.getDiagonals(data.rows); 
+        std::vector<double> diagonals = kernelMatrix.getDiagonals(data.totalRows()); 
 
-        std::vector<std::vector<double>> c(data.rows, std::vector<double>());
+        std::vector<std::vector<double>> c(data.totalRows(), std::vector<double>());
 
         // Modifies the solution set
         auto bestScore = getNextHighestScore(diagonals, seen);
@@ -58,7 +58,7 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
 
         while (solution.size() < k) {
             #pragma omp parallel for 
-            for (size_t i = 0; i < data.rows; i++) {
+            for (size_t i = 0; i < data.totalRows(); i++) {
                 if (seen.find(i) != seen.end()) {
                     continue;
                 }

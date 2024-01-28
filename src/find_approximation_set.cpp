@@ -54,8 +54,8 @@ nlohmann::json buildRepresentativeSubsetOutput(
 
 nlohmann::json buildDatasetJson(const Data &data, const AppData &appData) {
     nlohmann::json output {
-        {"rows", data.rows},
-        {"columns", data.columns},
+        {"rows", data.totalRows()},
+        {"columns", data.totalColumns()},
         {"inputFile", appData.inputFile}
     };
 
@@ -119,10 +119,10 @@ int main(int argc, char** argv) {
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
     DataLoader *dataLoader = buildDataLoader(appData, inputFile);
-    Data data(*dataLoader);
+    NaiveData data(*dataLoader);
     inputFile.close();
 
-    std::cout << "Finding a representative set for " << data.rows << " rows and " << data.columns << " columns" << std::endl;
+    std::cout << "Finding a representative set for " << data.totalRows() << " rows and " << data.totalColumns() << " columns" << std::endl;
 
     Timers timers;
     RepresentativeSubsetCalculator *calculator = getCalculator(appData, timers);
