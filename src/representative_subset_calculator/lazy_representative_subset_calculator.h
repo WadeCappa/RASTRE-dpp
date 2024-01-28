@@ -53,8 +53,6 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
                 double marginalGain = marginal - currentScore;
                 subsetRows.push_back(std::make_pair(top.first, marginalGain));
                 matrix.addRow(data.getRow(top.first));
-
-                std::cout << "lazy found " << top.first << " which increasd marginal score by " << marginalGain << std::endl;
                 currentScore = marginal;
             } else {
                 top.second = marginal;

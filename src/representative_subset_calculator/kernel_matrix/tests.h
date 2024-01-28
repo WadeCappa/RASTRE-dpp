@@ -1,8 +1,5 @@
 #include <doctest/doctest.h>
 
-// Do to rounding errors, these results may not always be exactly equivalent
-static const double LARGEST_ACCEPTABLE_ERROR = 0.00000001;
-
 TEST_CASE("Kernel matracies are equivalent") {
     NaiveKernelMatrix naiveMatrix(data);
     LazyKernelMatrix lazyMatrix(data);

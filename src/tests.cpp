@@ -10,5 +10,8 @@ static const std::vector<std::vector<double>> DATA = {
     {6,31,54,3.5,23,547}
 };
 
+// Do to rounding errors, these results may not always be exactly equivalent
+static const double LARGEST_ACCEPTABLE_ERROR = 0.00000001;
+
 #include "data_tools/tests.h"
 #include "representative_subset_calculator/tests.h"

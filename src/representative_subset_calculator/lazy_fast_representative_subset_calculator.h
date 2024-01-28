@@ -75,7 +75,6 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
 
             if (marginalGain > nextScore || solution.size() == data.totalRows() - 1) {
                 solution.push_back(std::make_pair(i, marginalGain));
-                std::cout << "lazy fast found " << i << " which increasd marginal score by " << marginalGain << std::endl;
             } else {
                 priorityQueue.push_back(i);
                 std::push_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);

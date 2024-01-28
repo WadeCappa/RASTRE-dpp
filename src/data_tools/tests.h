@@ -157,4 +157,5 @@ TEST_CASE("Testing blocked data loader") {
     }
 
     CHECK(rows.size() == 2);
+    CHECK(rows == ownedRows);
 }
