@@ -7,7 +7,6 @@
 
 class Data {
     public:
-    virtual double getTransposeDotProduct(size_t i) const = 0;
     virtual const std::vector<double>& getRow(size_t i) const = 0;
     virtual size_t totalRows() const = 0;
     virtual size_t totalColumns() const = 0;
@@ -45,10 +44,6 @@ class NaiveData : public Data {
     }
 
     NaiveData(const std::vector<std::vector<double>> &raw, size_t rows, size_t cols) : data(raw), rows(rows), columns(cols) {}
-
-    double getTransposeDotProduct(size_t i) const {
-        
-    }
 
     const std::vector<double>& getRow(size_t i) const {
         return this->data[i];
