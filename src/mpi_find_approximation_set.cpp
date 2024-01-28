@@ -16,17 +16,6 @@ static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
     app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
 }
 
-static std::pair<size_t, size_t> getBlockStartAndEnd(const AppData &appData) {
-    size_t rowsPerBlock = std::ceil(appData.numberOfDataRows / appData.worldSize);
-    return std::make_pair(appData.worldRank * rowsPerBlock, rowsPerBlock);
-}
-
-static DataLoader* buildMpiDataLoader(const AppData &appData, std::istream &data) {
-    DataLoader *dataLoader = Orchestrator::buildDataLoader(appData, data);
-    auto startAndEnd = getBlockStartAndEnd(appData);
-    return dynamic_cast<DataLoader*>(new BlockedDataLoader(*dataLoader, startAndEnd.first, startAndEnd.second));
-}
-
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};
     AppData appData;
@@ -37,9 +26,14 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &appData.worldRank);
     MPI_Comm_size(MPI_COMM_WORLD, &appData.worldSize);
 
+    unsigned int seed = (unsigned int)time(0);
+    MPI_Bcast(&seed, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+
+    std::vector<unsigned int> rowToRank = Orchestrator::getRowToRank(appData, seed);
+
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
-    DataLoader *dataLoader = Orchestrator::buildDataLoader(appData, inputFile);
+    DataLoader *dataLoader = Orchestrator::buildMpiDataLoader(appData, inputFile, rowToRank);
     NaiveData data(*dataLoader);
     inputFile.close();
 

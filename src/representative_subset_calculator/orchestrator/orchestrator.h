@@ -2,7 +2,11 @@
 #include <nlohmann/json.hpp>
 #include <limits.h>
 
-struct appData {
+#include<cstdlib>
+
+#include <random>
+
+struct appData{
     std::string inputFile;
     std::string outputFile;
     size_t outputSetSize;
@@ -99,6 +103,16 @@ class Orchestrator {
 
         return dataLoader;
     }
+            
+    static DataLoader* buildMpiDataLoader(
+        const AppData &appData, 
+        std::istream &data, 
+        const std::vector<unsigned int> &rankMapping
+    ) {
+        DataLoader *dataLoader = Orchestrator::buildDataLoader(appData, data);
+        return dynamic_cast<DataLoader*>(new BlockedDataLoader(*dataLoader, rankMapping, appData.worldRank));
+    }
+
 
     static RepresentativeSubsetCalculator* getCalculator(const AppData &appData, Timers &timers) {
         switch (appData.algorithm) {
@@ -113,5 +127,19 @@ class Orchestrator {
             default:
                 throw new std::invalid_argument("Could not find algorithm");
         }
+    }
+
+    // TODO: This can be improved. Instead of returning a vector that is the same size of all rows that includes all rank data, return only
+    //  the rows that this given rank cares about. This will improve performance while loading the dataset.
+    static std::vector<unsigned int> getRowToRank(const AppData &appData, const int seed) {
+        std::vector<unsigned int> rowToRank(appData.numberOfDataRows, -1);
+        std::uniform_int_distribution<int> uniform_distribution(0, appData.worldSize - 1);
+        std::default_random_engine number_selecter(seed);
+
+        for (int i = 0; i < appData.numberOfDataRows; i++) {
+            rowToRank[i] = uniform_distribution(number_selecter);
+        }
+
+        return rowToRank;
     }
 };

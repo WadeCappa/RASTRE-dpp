@@ -12,6 +12,7 @@ static const NaiveData data(
 );
 
 #include "kernel_matrix/tests.h"
+#include "orchestrator/tests.h"
 
 static const size_t k = DATA.size();
 

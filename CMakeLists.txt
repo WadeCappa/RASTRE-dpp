@@ -19,6 +19,7 @@ add_executable(find_approximation_set src/find_approximation_set.cpp)
 
 target_link_libraries(preprocess_data CLI11::CLI11)
 target_link_libraries(find_approximation_set CLI11::CLI11)
+target_link_libraries(run_tests CLI11::CLI11)
 
 target_link_libraries(run_tests doctest::doctest)
 

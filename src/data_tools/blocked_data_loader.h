@@ -5,27 +5,21 @@
 class BlockedDataLoader : public DataLoader {
     private:
     DataLoader &base;
-    const size_t end;
     size_t count;
+    const unsigned int rank;
+    const std::vector<unsigned int> &rowToRank;
 
     public:
-    BlockedDataLoader(DataLoader &base, size_t start, size_t end) : base(base), end(end), count(0) {
-        std::vector<double> unusedData;
-        for (; this->count < start; this->count++) {
-            bool hasData = this->base.getNext(unusedData);
-            if (!hasData) {
-                break;
-            }
-        }
-    }
+    BlockedDataLoader(DataLoader &base, const std::vector<unsigned int> &rowToRank, unsigned int rank) : base(base), rowToRank(rowToRank), count(0), rank(rank) {}
 
     bool getNext(std::vector<double> &result) {
-        if (this->count >= this->end) {
-            return false;
+        std::vector<double> badResult;
+        while (this->rowToRank[this->count] != this->rank) {
+            this->base.getNext(badResult);
+            this->count++;
         }
 
         if (this->base.getNext(result)) {
-            this->count++;
             return true;
         }
 
