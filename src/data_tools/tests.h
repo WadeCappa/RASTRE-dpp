@@ -139,12 +139,22 @@ TEST_CASE("Testing blocked data loader") {
     std::istringstream inputStream(matrixToString(DATA));
     AsciiDataLoader dataLoader(inputStream);
     
-    std::vector<unsigned int> ownership(DATA.size(), 0);
-    ownership[0] = 1;
-    ownership[3] = 1;
+    std::vector<std::vector<double>> ownedRows;
+    ownedRows.push_back(DATA[0]);
+    ownedRows.push_back(DATA[3]);
 
-    BlockedDataLoader blockedDataLoader(dataLoader, ownership, 1);
+    const int RANK = 1;
+    
+    std::vector<unsigned int> ownership(DATA.size(), 0);
+    ownership[0] = RANK;
+    ownership[3] = RANK;
+
+    BlockedDataLoader blockedDataLoader(dataLoader, ownership, RANK);
     std::vector<double> element;
+    std::vector<std::vector<double>> rows;
     while (blockedDataLoader.getNext(element)) {
+        rows.push_back(element);
     }
+
+    CHECK(rows.size() == 2);
 }

@@ -17,11 +17,14 @@ class BlockedDataLoader : public DataLoader {
     bool getNext(std::vector<double> &result) {
         std::vector<double> badResult;
         while (this->rowToRank[this->count] != this->rank) {
-            this->base.getNext(badResult);
+            if (!this->base.getNext(badResult)) {
+                return false;
+            }
             this->count++;
         }
 
         if (this->base.getNext(result)) {
+            this->count++;
             return true;
         }
 
