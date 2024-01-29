@@ -51,12 +51,9 @@ int main(int argc, char** argv) {
     MpiOrchestrator::buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
     std::vector<int> displacements = MpiOrchestrator::buildDisplacementBuffer(receivingDataSizesBuffer);
 
-    for (size_t i = 0; i < displacements.size(); i++)
-        displacements[i] *= i;
-        
     MPI_Gatherv(
         sendBuffer.data(), 
-        sendDataSize, 
+        sendBuffer.size(), 
         MPI_DOUBLE, 
         receiveBuffer.data(), 
         receivingDataSizesBuffer.data(), 
