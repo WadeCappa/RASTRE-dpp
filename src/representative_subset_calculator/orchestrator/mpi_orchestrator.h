@@ -1,6 +1,6 @@
 #include "orchestrator.h"
 
-class MpiOrchestrator : public Orchestrator { 
+class MpiOrchestrator { 
     public:
     static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
         Orchestrator::addCmdOptions(app, appData);
@@ -82,5 +82,15 @@ class MpiOrchestrator : public Orchestrator {
                 std::vector<double>(binaryInput.begin() + (expectedColumns * currentRow) + 1, binaryInput.begin() + (expectedColumns * (currentRow + 1)))
             );
         }
+    }
+
+    static nlohmann::json buildOutput(
+        const AppData &appData, 
+        const std::vector<std::pair<size_t, double>> &solution,
+        const Data &data,
+        const Timers &timers
+    ) {
+        nlohmann::json output = Orchestrator::buildOutput(appData, solution, data, timers);
+        return output;
     }
 };

@@ -15,7 +15,7 @@
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};
     AppData appData;
-    MpiOrchestrator::addCmdOptions(app, appData);
+    MpiOrchestrator::addMpiCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
     MPI_Init(NULL, NULL);
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
         std::vector<std::pair<size_t, double>> globalSolutionWithLocalIndicies = calculator->getApproximationSet(bestRows, appData.outputSetSize);
         std::vector<std::pair<size_t, double>> solution = bestRows.translateSolution(globalSolutionWithLocalIndicies);
 
-        nlohmann::json result = Orchestrator::buildOutput(appData, solution, data, timers);
+        nlohmann::json result = MpiOrchestrator::buildOutput(appData, solution, data, timers);
 
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
@@ -78,5 +78,6 @@ int main(int argc, char** argv) {
         outputFile.close();
     }
 
+    MPI_Finalize();
     return 0;
 }

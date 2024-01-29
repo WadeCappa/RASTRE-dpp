@@ -78,7 +78,8 @@ class Orchestrator {
             {"epsilon", appData.epsilon},
             {"RepresentativeRows", buildRepresentativeSubsetOutput(solution)},
             {"timings", timers.outputToJson()},
-            {"dataset", buildDatasetJson(data, appData)}
+            {"dataset", buildDatasetJson(data, appData)},
+            {"worldSize", appData.worldSize}
         };
 
         return output;
