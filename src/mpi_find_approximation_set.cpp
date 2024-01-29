@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
     unsigned int sendDataSize = MpiOrchestrator::getTotalSendData(data, localSolution);
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
-    MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), appData.worldSize, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     std::vector<double> sendBuffer;
     MpiOrchestrator::buildSendBuffer(data, localSolution, sendBuffer, sendDataSize);
@@ -50,6 +50,10 @@ int main(int argc, char** argv) {
     std::vector<double> receiveBuffer;
     MpiOrchestrator::buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
     std::vector<int> displacements = MpiOrchestrator::buildDisplacementBuffer(receivingDataSizesBuffer);
+
+    for (size_t i = 0; i < displacements.size(); i++)
+        displacements[i] *= i;
+        
     MPI_Gatherv(
         sendBuffer.data(), 
         sendDataSize, 
