@@ -1,5 +1,6 @@
 #include "data_tools/normalizer.h"
 #include "data_tools/matrix_builder.h"
+#include "logger/logger.h"
 #include "representative_subset_calculator/naive_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
@@ -22,6 +23,8 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &appData.worldRank);
     MPI_Comm_size(MPI_COMM_WORLD, &appData.worldSize);
 
+    MpiLogger logger(appData.worldRank);
+
     unsigned int seed = (unsigned int)time(0);
     MPI_Bcast(&seed, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 
@@ -38,23 +41,11 @@ int main(int argc, char** argv) {
     Timers timers;
     RepresentativeSubsetCalculator *calculator = Orchestrator::getCalculator(appData, timers);
     std::vector<std::pair<size_t, double>> localSolution = calculator->getApproximationSet(data, appData.outputSetSize);
-    // std::cout << "rank " << appData.worldRank << " has local solution of size " << localSolution.size() << std::endl;
 
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
     unsigned int sendDataSize = MpiOrchestrator::getTotalSendData(data, localSolution);
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
     MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
-    // std::cout << "rank " << appData.worldRank << " has sent gather size of " << sendDataSize << std::endl;
-
-    // if (appData.worldRank == 0) {
-    //     int totalData = 0;
-    //     for (size_t r = 0; r < appData.worldSize; r++) {
-    //         std::cout << "received " << receivingDataSizesBuffer[r] << " from rank " << r << std::endl;
-    //         totalData += receivingDataSizesBuffer[r];
-    //     }
-
-    //     std::cout << "expecting " << totalData << " elements from senders" << std::endl;
-    // }
 
     std::vector<double> sendBuffer;
     MpiOrchestrator::buildSendBuffer(data, localSolution, sendBuffer, sendDataSize);
@@ -66,7 +57,6 @@ int main(int argc, char** argv) {
         MpiOrchestrator::buildDisplacementBuffer(receivingDataSizesBuffer, displacements);
     }
 
-    // std::cout << "rank " << appData.worldRank << " arrived at gatherv" << std::endl;
     MPI_Gatherv(
         sendBuffer.data(), 
         sendBuffer.size(), 
@@ -78,7 +68,6 @@ int main(int argc, char** argv) {
         0, 
         MPI_COMM_WORLD
     );
-    // std::cout << "rank " << appData.worldRank << " finished gatherv" << std::endl;
 
     if (appData.worldRank == 0) {
         std::vector<std::pair<size_t, std::vector<double>>> newData;
