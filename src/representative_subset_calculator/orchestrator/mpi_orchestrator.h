@@ -49,15 +49,12 @@ class MpiOrchestrator {
         receiveBuffer.resize(totalData);
     }
 
-    static std::vector<int> buildDisplacementBuffer(const std::vector<int> &sendSizes) {
-        std::vector<int> res;
+    static void buildDisplacementBuffer(const std::vector<int> &sendSizes, std::vector<int> &displacements) {
         unsigned int seenData = 0;
         for (const auto & s : sendSizes) {
-            res.push_back(seenData);
+            displacements.push_back(seenData);
             seenData += s;
         }
-
-        return res;
     }
 
     static void rebuildData(

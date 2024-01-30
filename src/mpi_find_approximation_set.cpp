@@ -38,19 +38,35 @@ int main(int argc, char** argv) {
     Timers timers;
     RepresentativeSubsetCalculator *calculator = Orchestrator::getCalculator(appData, timers);
     std::vector<std::pair<size_t, double>> localSolution = calculator->getApproximationSet(data, appData.outputSetSize);
+    // std::cout << "rank " << appData.worldRank << " has local solution of size " << localSolution.size() << std::endl;
 
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
     unsigned int sendDataSize = MpiOrchestrator::getTotalSendData(data, localSolution);
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
     MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+    // std::cout << "rank " << appData.worldRank << " has sent gather size of " << sendDataSize << std::endl;
+
+    // if (appData.worldRank == 0) {
+    //     int totalData = 0;
+    //     for (size_t r = 0; r < appData.worldSize; r++) {
+    //         std::cout << "received " << receivingDataSizesBuffer[r] << " from rank " << r << std::endl;
+    //         totalData += receivingDataSizesBuffer[r];
+    //     }
+
+    //     std::cout << "expecting " << totalData << " elements from senders" << std::endl;
+    // }
 
     std::vector<double> sendBuffer;
     MpiOrchestrator::buildSendBuffer(data, localSolution, sendBuffer, sendDataSize);
 
     std::vector<double> receiveBuffer;
-    MpiOrchestrator::buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
-    std::vector<int> displacements = MpiOrchestrator::buildDisplacementBuffer(receivingDataSizesBuffer);
+    std::vector<int> displacements;
+    if (appData.worldRank == 0) {
+        MpiOrchestrator::buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
+        MpiOrchestrator::buildDisplacementBuffer(receivingDataSizesBuffer, displacements);
+    }
 
+    // std::cout << "rank " << appData.worldRank << " arrived at gatherv" << std::endl;
     MPI_Gatherv(
         sendBuffer.data(), 
         sendBuffer.size(), 
@@ -62,6 +78,7 @@ int main(int argc, char** argv) {
         0, 
         MPI_COMM_WORLD
     );
+    // std::cout << "rank " << appData.worldRank << " finished gatherv" << std::endl;
 
     if (appData.worldRank == 0) {
         std::vector<std::pair<size_t, std::vector<double>>> newData;

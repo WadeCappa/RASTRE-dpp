@@ -37,7 +37,7 @@ class Orchestrator {
         }
     }
 
-    static nlohmann::json buildRepresentativeSubsetOutput(
+    static nlohmann::json solutionToJson(
         const std::vector<std::pair<size_t, double>> &solution
     ) {
         std::vector<size_t> rows;
@@ -48,9 +48,15 @@ class Orchestrator {
             marginals.push_back(s.second);
         }
 
+        double totalCoverage = 0;
+        for (const auto & s : solution) {
+            totalCoverage += s.second;
+        }
+
         nlohmann::json output {
             {"rows", rows}, 
             {"marginalGains", marginals}, 
+            {"totalCoverage", totalCoverage}
         };
 
         return output;
@@ -76,7 +82,7 @@ class Orchestrator {
             {"k", appData.outputSetSize}, 
             {"algorithm", algorithmToString(appData)},
             {"epsilon", appData.epsilon},
-            {"RepresentativeRows", buildRepresentativeSubsetOutput(solution)},
+            {"RepresentativeRows", solutionToJson(solution)},
             {"timings", timers.outputToJson()},
             {"dataset", buildDatasetJson(data, appData)},
             {"worldSize", appData.worldSize}
