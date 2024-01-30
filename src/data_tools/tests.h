@@ -134,3 +134,52 @@ TEST_CASE("Testing matrix builder") {
     CHECK(matrix.totalRows() == DATA.size());
     CHECK(matrix.totalColumns() == DATA[0].size());
 }
+
+TEST_CASE("Testing blocked data loader") {
+    std::istringstream inputStream(matrixToString(DATA));
+    AsciiDataLoader dataLoader(inputStream);
+    
+    std::vector<std::vector<double>> ownedRows;
+    ownedRows.push_back(DATA[0]);
+    ownedRows.push_back(DATA[3]);
+
+    const int RANK = 1;
+    
+    std::vector<unsigned int> ownership(DATA.size(), 0);
+    ownership[0] = RANK;
+    ownership[3] = RANK;
+
+    BlockedDataLoader blockedDataLoader(dataLoader, ownership, RANK);
+    std::vector<double> element;
+    std::vector<std::vector<double>> rows;
+    while (blockedDataLoader.getNext(element)) {
+        rows.push_back(element);
+    }
+
+    CHECK(rows.size() == 2);
+    CHECK(rows == ownedRows);
+}
+
+TEST_CASE("Testing SelectiveData translation and construction") {
+    std::vector<std::pair<size_t, std::vector<double>>> mockReceiveData;
+    std::vector<size_t> mockSolutionIndicies;
+    mockSolutionIndicies.push_back(1);
+    mockSolutionIndicies.push_back(DATA.size() - 1);
+    for (const auto & i : mockSolutionIndicies) {
+        mockReceiveData.push_back(std::make_pair(i, DATA[i]));
+    }
+
+    SelectiveData selectiveData(mockReceiveData);
+    std::vector<std::pair<size_t, double>> mockSolution;
+    for (size_t i = 0; i < mockReceiveData.size(); i++) {
+        mockSolution.push_back(std::make_pair(i, 0));
+    }
+
+    auto translated = selectiveData.translateSolution(mockSolution);
+
+    for (size_t i = 0; i < mockReceiveData.size(); i++) {
+        CHECK(mockReceiveData[i].first == translated[i].first);
+    }
+
+    CHECK(mockReceiveData.size() == translated.size());
+}

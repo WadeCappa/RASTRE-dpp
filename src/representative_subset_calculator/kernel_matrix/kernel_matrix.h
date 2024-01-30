@@ -66,6 +66,7 @@ class NaiveKernelMatrix : public KernelMatrix {
 
     Eigen::MatrixXd buildKernelMatrix(const Data &data) {
         Eigen::MatrixXd rawDataMatrix(data.totalRows(), data.totalColumns());
+        #pragma omp parallel for
         for (int i = 0; i < data.totalRows(); i++) {
             rawDataMatrix.row(i) = Eigen::VectorXd::Map(data.getRow(i).data(), data.totalColumns());
         }

@@ -57,7 +57,6 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
             }
 
             double marginalGain = highestMarginal - currentScore;
-            std::cout << "naive found " << bestRow << " increased marginal by " << marginalGain << std::endl;
             res.push_back(std::make_pair(bestRow, marginalGain));
             matrix.addRow(data.getRow(bestRow));
             seen.insert(bestRow);

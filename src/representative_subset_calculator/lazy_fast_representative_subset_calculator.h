@@ -7,7 +7,7 @@
 class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
     private:
     Timers &timers;
-    double epsilon;
+    const double epsilon;
 
     struct HeapComparitor {
         const std::vector<double> &diagonals;
@@ -33,6 +33,7 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
         }
     }
 
+    // TODO: Break when marginal gain is below epsilon
     std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
         timers.totalCalculationTime.startTimer();
 
@@ -74,7 +75,6 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
 
             if (marginalGain > nextScore || solution.size() == data.totalRows() - 1) {
                 solution.push_back(std::make_pair(i, marginalGain));
-                std::cout << "lazy fast found " << i << " which increasd marginal score by " << marginalGain << std::endl;
             } else {
                 priorityQueue.push_back(i);
                 std::push_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);

@@ -7,7 +7,7 @@
 class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
     private:
     Timers &timers;
-    double epsilon;
+    const double epsilon;
 
     static std::pair<size_t, double> getNextHighestScore(
         const std::vector<double> &diagonals, 
@@ -28,7 +28,6 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             std::cout << "failed to find next highest score" << std::endl;
         }
         
-        std::cout << "FAST found " << bestRow << " which increased marginal by " << highestScore << std::endl;
         return std::make_pair(bestRow, highestScore);
     }
 
