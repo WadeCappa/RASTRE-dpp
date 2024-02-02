@@ -1,16 +1,35 @@
-#include "orchestrator.h"
 
-class MpiOrchestrator { 
+class Buffer {
     private:
+    protected:
     static const size_t DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER = 1;
     static const size_t DOUBLES_FOR_ROW_INDEX_PER_COLUMN = 1;
 
     public:
-    static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
-        Orchestrator::addCmdOptions(app, appData);
-        app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
+};
+
+class BufferBuilder : public Buffer {
+    private:
+    static unsigned int getTotalSendData(
+        const Data &data, 
+        const std::vector<std::pair<size_t, double>> &localSolution
+    ) {
+        // Need to include an additional column that marks the index of the sent row 
+        //  as well as an additional double for the sender's local solution total 
+        //  marginal gain.
+        return (data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN) * localSolution.size() + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
     }
 
+    static double getTotalCoverage(const std::vector<std::pair<size_t, double>> &solution) {
+        double totalCoverage = 0;
+        for (const auto & s : solution) {
+            totalCoverage += s.second;
+        }
+
+        return totalCoverage;
+    }
+
+    public:
     static unsigned int buildSendBuffer(
         const Data &data, 
         const std::vector<std::pair<size_t, double>> &localSolution, 
@@ -23,7 +42,7 @@ class MpiOrchestrator {
         buffer.resize(totalSendData);
 
         // First value is the local total marginal
-        buffer[0] = Orchestrator::getTotalCoverage(localSolution);
+        buffer[0] = getTotalCoverage(localSolution);
 
         // All buffer indexes need to be offset by 1 to account for the 
         //  total marginal being inserted at the beggining of the send buffer
@@ -59,15 +78,33 @@ class MpiOrchestrator {
             seenData += s;
         }
     }
+};
 
-    static void rebuildData(
+class BufferLoader : public Buffer {
+    private:
+    const std::vector<double> &binaryInput;
+    const size_t columnsPerRowInBuffer;
+    const std::vector<int> &displacements;
+    std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> newData;
+
+    public:
+    BufferLoader(
         const std::vector<double> &binaryInput, 
-        const size_t rawColumnCount,
-        const std::vector<int> &displacements,
-        std::vector<std::pair<size_t, std::vector<double>>> &newData
-    ) {
-        const size_t expectedColumns = rawColumnCount + DOUBLES_FOR_ROW_INDEX_PER_COLUMN;
-        const std::vector<size_t> expectedRowsPerRank = getExpectedRows(binaryInput, expectedColumns, displacements);
+        const size_t columnsPerRowInBuffer,
+        const std::vector<int> &displacements
+    ) : 
+    binaryInput(binaryInput), 
+    columnsPerRowInBuffer(columnsPerRowInBuffer + DOUBLES_FOR_ROW_INDEX_PER_COLUMN), 
+    displacements(displacements),
+    newData(rebuildData()) {}
+
+    std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> getNewData() {
+        return move(newData);
+    }
+
+    private:
+    std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> rebuildData() {
+        const std::vector<size_t> expectedRowsPerRank = getExpectedRows(binaryInput, columnsPerRowInBuffer, displacements);
         std::vector<size_t> rowOffsets;
         size_t totalExpectedRows = 0;
         for (const auto & numRows : expectedRowsPerRank) {
@@ -77,8 +114,7 @@ class MpiOrchestrator {
 
         const size_t numberOfBytesWithoutLocalMarginals = binaryInput.size() - displacements.size() * DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
 
-        newData.clear();
-        newData.resize(totalExpectedRows);
+        std::vector<std::pair<size_t, std::vector<double>>> *newData = new std::vector<std::pair<size_t, std::vector<double>>>(totalExpectedRows);
 
         // Because we're sending local marginals along with the data, the input data is no longer uniform.
         #pragma omp parallel for 
@@ -88,35 +124,16 @@ class MpiOrchestrator {
             #pragma omp parallel for
             for (size_t currentRow = rowOffset; currentRow < rowOffsetForNextRank; currentRow++) {
                 const size_t relativeRow = currentRow - rowOffset;
-                const size_t globalRowStart = (expectedColumns * relativeRow) + displacements[rank] + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
-                newData[currentRow] = std::make_pair(
+                const size_t globalRowStart = (columnsPerRowInBuffer * relativeRow) + displacements[rank] + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
+                newData->at(currentRow) = std::make_pair(
                     binaryInput[globalRowStart],
                     // Don't capture the first element, which is the index of the row
-                    std::vector<double>(binaryInput.begin() + globalRowStart + DOUBLES_FOR_ROW_INDEX_PER_COLUMN, binaryInput.begin() + globalRowStart + expectedColumns)
+                    std::vector<double>(binaryInput.begin() + globalRowStart + DOUBLES_FOR_ROW_INDEX_PER_COLUMN, binaryInput.begin() + globalRowStart + columnsPerRowInBuffer)
                 );
             }
         }
-    }
-
-    static nlohmann::json buildOutput(
-        const AppData &appData, 
-        const std::vector<std::pair<size_t, double>> &solution,
-        const Data &data,
-        const Timers &timers
-    ) {
-        nlohmann::json output = Orchestrator::buildOutput(appData, solution, data, timers);
-        return output;
-    }
-
-    private:
-    static unsigned int getTotalSendData(
-        const Data &data, 
-        const std::vector<std::pair<size_t, double>> &localSolution
-    ) {
-        // Need to include an additional column that marks the index of the sent row 
-        //  as well as an additional double for the sender's local solution total 
-        //  marginal gain.
-        return (data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN) * localSolution.size() + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
+    
+        return std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>>(newData);
     }
 
     static std::vector<size_t> getExpectedRows(

@@ -4,18 +4,19 @@
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
+#include "representative_subset_calculator/orchestrator/orchestrator.h"
+#include "representative_subset_calculator/buffers/bufferBuilder.h"
 
 #include <CLI/CLI.hpp>
 #include "nlohmann/json.hpp"
 
-#include <mpi.h>
 
+#include <mpi.h>
 
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};
     AppData appData;
-    MpiOrchestrator::addMpiCmdOptions(app, appData);
+    Orchestrator::addMpiCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
     MPI_Init(NULL, NULL);
@@ -41,15 +42,15 @@ int main(int argc, char** argv) {
 
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
     std::vector<double> sendBuffer;
-    unsigned int sendDataSize = MpiOrchestrator::buildSendBuffer(data, localSolution, sendBuffer);
+    unsigned int sendDataSize = BufferBuilder::buildSendBuffer(data, localSolution, sendBuffer);
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
     MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     std::vector<double> receiveBuffer;
     std::vector<int> displacements;
     if (appData.worldRank == 0) {
-        MpiOrchestrator::buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
-        MpiOrchestrator::buildDisplacementBuffer(receivingDataSizesBuffer, displacements);
+        BufferBuilder::buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
+        BufferBuilder::buildDisplacementBuffer(receivingDataSizesBuffer, displacements);
     }
 
     MPI_Gatherv(
@@ -65,14 +66,14 @@ int main(int argc, char** argv) {
     );
 
     if (appData.worldRank == 0) {
-        std::vector<std::pair<size_t, std::vector<double>>> newData;
-        MpiOrchestrator::rebuildData(receiveBuffer, data.totalColumns(), displacements, newData);
-        SelectiveData bestRows(newData);
+        BufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements);
+        auto newData = bufferLoader.getNewData();
+        SelectiveData bestRows(*newData.get());
 
         std::vector<std::pair<size_t, double>> globalSolutionWithLocalIndicies = calculator->getApproximationSet(bestRows, appData.outputSetSize);
         std::vector<std::pair<size_t, double>> solution = bestRows.translateSolution(globalSolutionWithLocalIndicies);
 
-        nlohmann::json result = MpiOrchestrator::buildOutput(appData, solution, data, timers);
+        nlohmann::json result = Orchestrator::buildMpiOutput(appData, solution, data, timers);
 
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);

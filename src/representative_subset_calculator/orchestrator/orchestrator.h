@@ -105,6 +105,21 @@ class Orchestrator {
         app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
     }
 
+    static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
+        Orchestrator::addCmdOptions(app, appData);
+        app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
+    }
+
+    static nlohmann::json buildMpiOutput(
+        const AppData &appData, 
+        const std::vector<std::pair<size_t, double>> &solution,
+        const Data &data,
+        const Timers &timers
+    ) {
+        nlohmann::json output = Orchestrator::buildOutput(appData, solution, data, timers);
+        return output;
+    }
+
     static DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
         DataLoader *dataLoader = appData.binaryInput ? dynamic_cast<DataLoader*>(new BinaryDataLoader(data)) : dynamic_cast<DataLoader*>(new AsciiDataLoader(data));
 
