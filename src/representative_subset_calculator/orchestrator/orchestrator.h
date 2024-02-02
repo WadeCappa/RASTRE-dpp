@@ -37,6 +37,15 @@ class Orchestrator {
         }
     }
 
+    static double getTotalCoverage(const std::vector<std::pair<size_t, double>> &solution) {
+        double totalCoverage = 0;
+        for (const auto & s : solution) {
+            totalCoverage += s.second;
+        }
+
+        return totalCoverage;
+    }
+
     static nlohmann::json solutionToJson(
         const std::vector<std::pair<size_t, double>> &solution
     ) {
@@ -48,15 +57,10 @@ class Orchestrator {
             marginals.push_back(s.second);
         }
 
-        double totalCoverage = 0;
-        for (const auto & s : solution) {
-            totalCoverage += s.second;
-        }
-
         nlohmann::json output {
             {"rows", rows}, 
             {"marginalGains", marginals}, 
-            {"totalCoverage", totalCoverage}
+            {"totalCoverage", getTotalCoverage(solution)}
         };
 
         return output;

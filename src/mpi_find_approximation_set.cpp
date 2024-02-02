@@ -40,12 +40,10 @@ int main(int argc, char** argv) {
     std::vector<std::pair<size_t, double>> localSolution = calculator->getApproximationSet(data, appData.outputSetSize);
 
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
-    unsigned int sendDataSize = MpiOrchestrator::getTotalSendData(data, localSolution);
+    std::vector<double> sendBuffer;
+    unsigned int sendDataSize = MpiOrchestrator::buildSendBuffer(data, localSolution, sendBuffer);
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
     MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-    std::vector<double> sendBuffer;
-    MpiOrchestrator::buildSendBuffer(data, localSolution, sendBuffer, sendDataSize);
 
     std::vector<double> receiveBuffer;
     std::vector<int> displacements;
@@ -68,7 +66,7 @@ int main(int argc, char** argv) {
 
     if (appData.worldRank == 0) {
         std::vector<std::pair<size_t, std::vector<double>>> newData;
-        MpiOrchestrator::rebuildData(receiveBuffer, data.totalColumns(), newData);
+        MpiOrchestrator::rebuildData(receiveBuffer, data.totalColumns(), displacements, newData);
         SelectiveData bestRows(newData);
 
         std::vector<std::pair<size_t, double>> globalSolutionWithLocalIndicies = calculator->getApproximationSet(bestRows, appData.outputSetSize);
