@@ -67,11 +67,11 @@ int main(int argc, char** argv) {
 
     if (appData.worldRank == 0) {
         BufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements);
-        auto newData = bufferLoader.getNewData();
+        auto newData = bufferLoader.returnNewData();
         SelectiveData bestRows(*newData.get());
 
         std::vector<std::pair<size_t, double>> globalSolutionWithLocalIndicies = calculator->getApproximationSet(bestRows, appData.outputSetSize);
-        std::vector<std::pair<size_t, double>> solution = bestRows.translateSolution(globalSolutionWithLocalIndicies);
+        std::vector<std::pair<size_t, double>> globalSolution = bestRows.translateSolution(globalSolutionWithLocalIndicies);
 
         nlohmann::json result = Orchestrator::buildMpiOutput(appData, solution, data, timers);
 

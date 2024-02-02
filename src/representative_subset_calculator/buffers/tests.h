@@ -33,18 +33,29 @@ TEST_CASE("Test to binary and back to matrix") {
     auto mockSolution = getMockSolution();
     std::vector<double> sendBuffer;
     unsigned int totalSendData = BufferBuilder::buildSendBuffer(data, mockSolution, sendBuffer);
-
+    
     std::vector<int> displacements;
     displacements.push_back(0);
 
     BufferLoader bufferLoader(sendBuffer, data.totalColumns(), displacements);
-    std::vector<std::pair<size_t, std::vector<double>>> newData = *bufferLoader.getNewData().get();
+    std::vector<std::pair<size_t, std::vector<double>>> newData = *bufferLoader.returnNewData().get();
     CHECK(newData.size() == mockSolution.size());
 
     for (size_t i = 0; i < mockSolution.size(); i++) {
         CHECK(newData[i].first == mockSolution[i].first);
         CHECK(newData[i].second == data.getRow(mockSolution[i].first));
     }
+
+    std::vector<std::pair<double, std::vector<int>>> localSolutions = *bufferLoader.returnLocalSolutions().get();
+    CHECK(localSolutions.size() == 1);
+
+    double totalScore = 0;
+    for (size_t i = 0; i < mockSolution.size(); i++) {
+        totalScore += mockSolution[i].second;
+        CHECK(mockSolution[i].first == localSolutions.back().second[i]);
+    }
+
+    CHECK(totalScore == localSolutions.back().first);
 }
 
 TEST_CASE("Mock MPI test sending and receiving a buffer") {
@@ -65,7 +76,7 @@ TEST_CASE("Mock MPI test sending and receiving a buffer") {
     }
 
     BufferLoader bufferLoader(sendBufferRank0, data.totalColumns(), displacements);
-    std::vector<std::pair<size_t, std::vector<double>>> newData = *bufferLoader.getNewData().get();
+    std::vector<std::pair<size_t, std::vector<double>>> newData = *bufferLoader.returnNewData().get();
     CHECK(newData.size() == mockSolutionRank0.size() + mockSolutionRank1.size());
 
     for (size_t i = 0; i < mockSolutionRank0.size(); i++) {

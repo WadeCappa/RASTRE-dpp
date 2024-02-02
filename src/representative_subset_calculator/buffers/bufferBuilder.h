@@ -85,7 +85,9 @@ class BufferLoader : public Buffer {
     const std::vector<double> &binaryInput;
     const size_t columnsPerRowInBuffer;
     const std::vector<int> &displacements;
+    const size_t worldSize;
     std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> newData;
+    std::unique_ptr<std::vector<std::pair<double, std::vector<int>>>> localSolutions;
 
     public:
     BufferLoader(
@@ -96,31 +98,31 @@ class BufferLoader : public Buffer {
     binaryInput(binaryInput), 
     columnsPerRowInBuffer(columnsPerRowInBuffer + DOUBLES_FOR_ROW_INDEX_PER_COLUMN), 
     displacements(displacements),
-    newData(rebuildData()) {}
+    worldSize(displacements.size()),
+    newData(rebuildData()),
+    localSolutions(getLocalSolutions()) {}
 
-    std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> getNewData() {
+    std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> returnNewData() {
         return move(newData);
+    }
+
+    std::unique_ptr<std::vector<std::pair<double, std::vector<int>>>> returnLocalSolutions() {
+        return move(localSolutions);
     }
 
     private:
     std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> rebuildData() {
-        const std::vector<size_t> expectedRowsPerRank = getExpectedRows(binaryInput, columnsPerRowInBuffer, displacements);
-        std::vector<size_t> rowOffsets;
-        size_t totalExpectedRows = 0;
-        for (const auto & numRows : expectedRowsPerRank) {
-            rowOffsets.push_back(totalExpectedRows);
-            totalExpectedRows += numRows;
-        }
-
-        const size_t numberOfBytesWithoutLocalMarginals = binaryInput.size() - displacements.size() * DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
+        std::vector<size_t> rowOffsets = getRowOffsets();
+        const size_t totalExpectedRows = rowOffsets.back();
+        const size_t numberOfBytesWithoutLocalMarginals = binaryInput.size() - worldSize * DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
 
         std::vector<std::pair<size_t, std::vector<double>>> *newData = new std::vector<std::pair<size_t, std::vector<double>>>(totalExpectedRows);
 
         // Because we're sending local marginals along with the data, the input data is no longer uniform.
         #pragma omp parallel for 
-        for (size_t rank = 0; rank < rowOffsets.size(); rank++) {
+        for (size_t rank = 0; rank < worldSize; rank++) {
             const size_t rowOffset = rowOffsets[rank];
-            const size_t rowOffsetForNextRank = rank == rowOffsets.size() - 1 ? totalExpectedRows : rowOffsets[rank + 1];
+            const size_t rowOffsetForNextRank = rank == worldSize - 1 ? totalExpectedRows : rowOffsets[rank + 1];
             #pragma omp parallel for
             for (size_t currentRow = rowOffset; currentRow < rowOffsetForNextRank; currentRow++) {
                 const size_t relativeRow = currentRow - rowOffset;
@@ -136,22 +138,46 @@ class BufferLoader : public Buffer {
         return std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>>(newData);
     }
 
-    static std::vector<size_t> getExpectedRows(
-        const std::vector<double> &binaryInput, 
-        const size_t expectedColumns,
-        const std::vector<int> &displacements
-    ) {
-        std::vector<size_t> res(displacements.size());
+    std::unique_ptr<std::vector<std::pair<double, std::vector<int>>>> getLocalSolutions() {
+        std::vector<std::pair<double, std::vector<int>>> *localSolutions = new std::vector<std::pair<double, std::vector<int>>>(worldSize);
 
-        for (size_t rank = 0; rank < displacements.size(); rank++) {
-            const size_t startOfCurrentRank = displacements[rank];
-            const size_t startOfNextRank = rank == displacements.size() - 1 ? binaryInput.size() : displacements[rank + 1];
-            const size_t numberOfBytes = startOfNextRank - startOfCurrentRank - DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
-            const size_t expectedRows = getExpectedRows(numberOfBytes, expectedColumns);
-            res[rank] = expectedRows;
+        for (size_t rank = 0; rank < worldSize; rank++) {
+            const size_t rankStart = displacements[rank];
+            localSolutions->at(rank).first = binaryInput[rankStart];
+
+            const size_t rankEnd = rank == worldSize - 1 ? binaryInput.size() : displacements[rank + 1];
+            for (
+                size_t rankCursor = rankStart + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER; 
+                rankCursor < rankEnd; 
+                rankCursor += columnsPerRowInBuffer
+            ) {
+                localSolutions->at(rank).second.push_back(binaryInput[rankCursor]);
+            }
         }
 
-        return res;
+        return std::unique_ptr<std::vector<std::pair<double, std::vector<int>>>>(localSolutions);
+    }
+
+    std::vector<size_t> getRowOffsets() {
+        std::vector<size_t> expectedRowsPerRank(worldSize);
+
+        for (size_t rank = 0; rank < worldSize; rank++) {
+            const size_t startOfCurrentRank = displacements[rank];
+            const size_t startOfNextRank = rank == worldSize - 1 ? binaryInput.size() : displacements[rank + 1];
+            const size_t numberOfBytes = startOfNextRank - startOfCurrentRank - DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
+            const size_t expectedRows = getExpectedRows(numberOfBytes, columnsPerRowInBuffer);
+            expectedRowsPerRank[rank] = expectedRows;
+        }
+
+        std::vector<size_t> rowOffsets;
+        size_t totalExpectedRows = 0;
+        for (const auto & numRows : expectedRowsPerRank) {
+            rowOffsets.push_back(totalExpectedRows);
+            totalExpectedRows += numRows;
+        }
+
+        rowOffsets.push_back(totalExpectedRows);
+        return rowOffsets;
     }
 
     static size_t getExpectedRows(const size_t numberOfBytes, const size_t columnSize) {
