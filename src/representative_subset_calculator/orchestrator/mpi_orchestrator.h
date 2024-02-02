@@ -67,7 +67,6 @@ class MpiOrchestrator {
         std::vector<std::pair<size_t, std::vector<double>>> &newData
     ) {
         const size_t expectedColumns = rawColumnCount + DOUBLES_FOR_ROW_INDEX_PER_COLUMN;
-        std::cout << "expected columns " << expectedColumns << std::endl;
         const std::vector<size_t> expectedRowsPerRank = getExpectedRows(binaryInput, expectedColumns, displacements);
         std::vector<size_t> rowOffsets;
         size_t totalExpectedRows = 0;
