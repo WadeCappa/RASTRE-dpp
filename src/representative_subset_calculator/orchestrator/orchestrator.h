@@ -37,30 +37,20 @@ class Orchestrator {
         }
     }
 
-    static double getTotalCoverage(const std::vector<std::pair<size_t, double>> &solution) {
-        double totalCoverage = 0;
-        for (const auto & s : solution) {
-            totalCoverage += s.second;
-        }
-
-        return totalCoverage;
-    }
+ 
 
     static nlohmann::json solutionToJson(
-        const std::vector<std::pair<size_t, double>> &solution
+        std::pair<double, std::vector<int>> &solution
     ) {
         std::vector<size_t> rows;
-        std::vector<double> marginals;
 
-        for (const auto & s : solution) {
-            rows.push_back(s.first);
-            marginals.push_back(s.second);
+        for (auto & s : solution.second) {
+            rows.push_back(s);
         }
 
         nlohmann::json output {
             {"rows", rows}, 
-            {"marginalGains", marginals}, 
-            {"totalCoverage", getTotalCoverage(solution)}
+            {"totalCoverage", solution.first}
         };
 
         return output;
@@ -78,7 +68,7 @@ class Orchestrator {
 
     static nlohmann::json buildOutput(
         const AppData &appData, 
-        const std::vector<std::pair<size_t, double>> &solution,
+        std::pair<double, std::vector<int>> &solution,
         const Data &data,
         const Timers &timers
     ) {
@@ -112,7 +102,7 @@ class Orchestrator {
 
     static nlohmann::json buildMpiOutput(
         const AppData &appData, 
-        const std::vector<std::pair<size_t, double>> &solution,
+        std::pair<double, std::vector<int>> &solution,
         const Data &data,
         const Timers &timers
     ) {

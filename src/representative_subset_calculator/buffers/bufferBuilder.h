@@ -87,7 +87,7 @@ class BufferLoader : public Buffer {
     const std::vector<int> &displacements;
     const size_t worldSize;
     std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> newData;
-    std::unique_ptr<std::vector<std::pair<double, std::vector<int>>>> localSolutions;
+    std::pair<double, std::vector<int>> bestLocalSolution;
 
     public:
     BufferLoader(
@@ -100,15 +100,16 @@ class BufferLoader : public Buffer {
     displacements(displacements),
     worldSize(displacements.size()),
     newData(rebuildData()),
-    localSolutions(getLocalSolutions()) {}
+    bestLocalSolution(getBestLocalSolution()) {}
 
     std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> returnNewData() {
         return move(newData);
     }
 
-    std::unique_ptr<std::vector<std::pair<double, std::vector<int>>>> returnLocalSolutions() {
-        return move(localSolutions);
+    std::pair<double, std::vector<int>> returnbestLocalSolution() {
+        return this->bestLocalSolution;
     }
+
 
     private:
     std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> rebuildData() {
@@ -138,25 +139,40 @@ class BufferLoader : public Buffer {
         return std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>>(newData);
     }
 
-    std::unique_ptr<std::vector<std::pair<double, std::vector<int>>>> getLocalSolutions() {
-        std::vector<std::pair<double, std::vector<int>>> *localSolutions = new std::vector<std::pair<double, std::vector<int>>>(worldSize);
+    std::pair<double, std::vector<int>> getBestLocalSolution() {
+        
+
+        std::pair<double, std::vector<int>> bestLocalSolution;
+        // identify best local solution
+        double localMaxCoverage = -1;
+        size_t maxRank = -1;
 
         for (size_t rank = 0; rank < worldSize; rank++) {
             const size_t rankStart = displacements[rank];
-            localSolutions->at(rank).first = binaryInput[rankStart];
 
-            const size_t rankEnd = rank == worldSize - 1 ? binaryInput.size() : displacements[rank + 1];
-            for (
-                size_t rankCursor = rankStart + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER; 
-                rankCursor < rankEnd; 
-                rankCursor += columnsPerRowInBuffer
-            ) {
-                localSolutions->at(rank).second.push_back(binaryInput[rankCursor]);
+            if (binaryInput[rankStart] >= localMaxCoverage) {
+                localMaxCoverage = binaryInput[rankStart];
+                maxRank = rank;
             }
+
+        }
+         
+        bestLocalSolution.first = localMaxCoverage;
+        // extract best local solution
+        const size_t rankStart = displacements[maxRank];
+        const size_t rankEnd = maxRank == worldSize - 1 ? binaryInput.size() : displacements[maxRank + 1];
+        for (
+            size_t rankCursor = rankStart + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER; 
+            rankCursor < rankEnd; 
+            rankCursor += columnsPerRowInBuffer
+        ) {
+            bestLocalSolution.second.push_back(binaryInput[rankCursor]);
         }
 
-        return std::unique_ptr<std::vector<std::pair<double, std::vector<int>>>>(localSolutions);
+        return bestLocalSolution;
     }
+
+    
 
     std::vector<size_t> getRowOffsets() {
         std::vector<size_t> expectedRowsPerRank(worldSize);

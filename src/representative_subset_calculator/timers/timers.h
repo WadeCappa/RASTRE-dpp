@@ -31,11 +31,14 @@ class Timers {
     };
 
     public:
-    SingleTimer totalCalculationTime;
+    SingleTimer totalCalculationTime, localCalculationTime, localMatrixCalculationTime, globalCalculationTime, globalMatrixCalculationTime, communicationTime;
 
     nlohmann::json outputToJson() const {
         nlohmann::json output {
-            {"totalCalculationTime", totalCalculationTime.getTotalTime()}
+            {"totalCalculationTime", totalCalculationTime.getTotalTime()},
+            {"localCalculationTime", localCalculationTime.getTotalTime()},
+            {"globalCalculationTime", globalCalculationTime.getTotalTime()},
+            {"communicationTime", communicationTime.getTotalTime()}
         };
     
         return output;

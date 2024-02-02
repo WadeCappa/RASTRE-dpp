@@ -26,7 +26,14 @@ int main(int argc, char** argv) {
     Timers timers;
     RepresentativeSubsetCalculator *calculator = Orchestrator::getCalculator(appData, timers);
     std::vector<std::pair<size_t, double>> solution = calculator->getApproximationSet(data, appData.outputSetSize);
-    nlohmann::json result = Orchestrator::buildOutput(appData, solution, data, timers);
+
+    std::pair<double, std::vector<int>> finalSolution;
+    finalSolution.first = 0;
+    for (auto & s : solution) {
+        finalSolution.first += s.second;
+        finalSolution.second.push_back(s.first);
+    }
+    nlohmann::json result = Orchestrator::buildOutput(appData, finalSolution, data, timers);
 
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);

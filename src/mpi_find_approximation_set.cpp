@@ -38,8 +38,12 @@ int main(int argc, char** argv) {
 
     Timers timers;
     RepresentativeSubsetCalculator *calculator = Orchestrator::getCalculator(appData, timers);
-    std::vector<std::pair<size_t, double>> localSolution = calculator->getApproximationSet(data, appData.outputSetSize);
 
+    if (appData.worldRank == 0)
+        timers.localCalculationTime.startTimer();
+    std::vector<std::pair<size_t, double>> localSolution = calculator->getApproximationSet(data, appData.outputSetSize);
+    if (appData.worldRank == 0)
+        timers.localCalculationTime.stopTimer();
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
     std::vector<double> sendBuffer;
     unsigned int sendDataSize = BufferBuilder::buildSendBuffer(data, localSolution, sendBuffer);
@@ -53,6 +57,8 @@ int main(int argc, char** argv) {
         BufferBuilder::buildDisplacementBuffer(receivingDataSizesBuffer, displacements);
     }
 
+    if (appData.worldRank == 0)
+        timers.communicationTime.startTimer();
     MPI_Gatherv(
         sendBuffer.data(), 
         sendBuffer.size(), 
@@ -65,15 +71,37 @@ int main(int argc, char** argv) {
         MPI_COMM_WORLD
     );
 
+    if (appData.worldRank == 0)
+        timers.communicationTime.stopTimer();
+
     if (appData.worldRank == 0) {
         BufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements);
         auto newData = bufferLoader.returnNewData();
         SelectiveData bestRows(*newData.get());
-
+        timers.globalCalculationTime.startTimer();
         std::vector<std::pair<size_t, double>> globalSolutionWithLocalIndicies = calculator->getApproximationSet(bestRows, appData.outputSetSize);
+        timers.globalCalculationTime.stopTimer();
         std::vector<std::pair<size_t, double>> globalSolution = bestRows.translateSolution(globalSolutionWithLocalIndicies);
 
-        nlohmann::json result = Orchestrator::buildMpiOutput(appData, solution, data, timers);
+        double globalCoverage = 0;
+        for (auto & s : globalSolution) {
+            globalCoverage += s.second;
+        }
+
+        auto bestLocal = bufferLoader.returnbestLocalSolution();
+
+
+        std::pair<double, std::vector<int>> finalSolution;
+        nlohmann::json result;
+        if (bestLocal.first > globalCoverage) 
+            result = Orchestrator::buildMpiOutput(appData, bestLocal, data, timers);
+        else {
+            finalSolution.first = globalCoverage;
+            for (auto & s : globalSolution) {
+                finalSolution.second.push_back(s.first);
+            }  
+            result = Orchestrator::buildMpiOutput(appData, finalSolution, data, timers);          
+        }
 
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
@@ -84,3 +112,12 @@ int main(int argc, char** argv) {
     MPI_Finalize();
     return EXIT_SUCCESS;
 }
+
+   static double getTotalCoverage(const std::vector<std::pair<size_t, double>> &solution) {
+        double totalCoverage = 0;
+        for (const auto & s : solution) {
+            totalCoverage += s.second;
+        }
+
+        return totalCoverage;
+    }
