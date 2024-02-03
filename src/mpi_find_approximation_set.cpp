@@ -34,7 +34,8 @@ int main(int argc, char** argv) {
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
     DataLoader *dataLoader = Orchestrator::buildMpiDataLoader(appData, inputFile, rowToRank);
-    NaiveData data(*dataLoader);
+    NaiveData baseData(*dataLoader);
+    LocalData data(baseData, rowToRank, appData.worldRank);
     inputFile.close();
 
     delete dataLoader;

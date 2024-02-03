@@ -22,7 +22,7 @@ class BufferBuilder : public Buffer {
 
     public:
     static unsigned int buildSendBuffer(
-        const Data &data, 
+        const LocalData &data, 
         const RepresentativeSubset &localSolution, 
         std::vector<double> &buffer
     ) {
@@ -41,7 +41,7 @@ class BufferBuilder : public Buffer {
         #pragma parallel for
         for (size_t rowIndex = 0; rowIndex < numberOfRows; rowIndex++) {
             const auto & row = data.getRow(solutionRows[rowIndex]);
-            buffer[rowSize * rowIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER] = solutionRows[rowIndex];
+            buffer[rowSize * rowIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER] = data.getRemoteIndexForRow(solutionRows[rowIndex]);
             for (size_t columnIndex = DOUBLES_FOR_ROW_INDEX_PER_COLUMN; columnIndex < rowSize; columnIndex++) {
                 double v = row[columnIndex - DOUBLES_FOR_ROW_INDEX_PER_COLUMN];
                 buffer[rowSize * rowIndex + columnIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER] = v;
