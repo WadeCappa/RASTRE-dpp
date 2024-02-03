@@ -72,25 +72,13 @@ int main(int argc, char** argv) {
     timers.communicationTime.stopTimer();
 
     if (appData.worldRank == 0) {
-        BufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements);
-        auto newData = bufferLoader.returnNewData();
-        SelectiveData bestRows(*newData.get());
-        
         std::unique_ptr<RepresentativeSubsetCalculator> globalCalculator(Orchestrator::getCalculator(appData));
-
-        timers.globalCalculationTime.startTimer();
-        NaiveRepresentativeSubset globalSolution(move(globalCalculator), bestRows, appData.outputSetSize, timers);
-        timers.globalCalculationTime.stopTimer();
-
-        RepresentativeSubset *bestLocal = bufferLoader.returnBestLocalSolution();
-        if (globalSolution.getScore() > bestLocal->getScore()) {
-            delete bestLocal;
-            bestLocal = &globalSolution;
-        }
+        GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers);
+        std::unique_ptr<RepresentativeSubset> globalSolution(bufferLoader.getSolution(move(globalCalculator), appData.outputSetSize));
 
         timers.totalCalculationTime.stopTimer();
 
-        nlohmann::json result = Orchestrator::buildMpiOutput(appData, *bestLocal, data, timers);
+        nlohmann::json result = Orchestrator::buildMpiOutput(appData, *globalSolution.get(), data, timers);
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);

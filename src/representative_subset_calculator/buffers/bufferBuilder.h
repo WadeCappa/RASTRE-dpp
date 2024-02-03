@@ -73,33 +73,53 @@ class BufferBuilder : public Buffer {
 };
 
 class BufferLoader : public Buffer {
+    public:
+    virtual std::unique_ptr<RepresentativeSubset> getSolution(
+        std::unique_ptr<RepresentativeSubsetCalculator> calculator,
+        const size_t k
+    ) = 0;
+};
+
+class GlobalBufferLoader : public BufferLoader {
     private:
+    Timers& timers;
     const std::vector<double> &binaryInput;
     const size_t columnsPerRowInBuffer;
     const std::vector<int> &displacements;
     const size_t worldSize;
-    std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> newData;
 
     public:
-    BufferLoader(
+    std::unique_ptr<RepresentativeSubset> getSolution(std::unique_ptr<RepresentativeSubsetCalculator> calculator, const size_t k) {
+        auto newData = this->rebuildData();
+        SelectiveData bestRows(*newData);
+
+        timers.globalCalculationTime.startTimer();
+        RepresentativeSubset* globalSolution = 
+            dynamic_cast<RepresentativeSubset*>(new NaiveRepresentativeSubset(move(calculator), bestRows, k, timers));
+        timers.globalCalculationTime.stopTimer();
+
+        RepresentativeSubset *bestLocal = this->getBestLocalSolution();
+        if (globalSolution->getScore() > bestLocal->getScore()) {
+            delete bestLocal;
+            return std::unique_ptr<RepresentativeSubset>(globalSolution);
+        } else {
+            delete globalSolution;
+            return std::unique_ptr<RepresentativeSubset>(bestLocal);
+        }
+    }
+
+    GlobalBufferLoader(
         const std::vector<double> &binaryInput, 
         const size_t columnsPerRowInBuffer,
-        const std::vector<int> &displacements
+        const std::vector<int> &displacements,
+        Timers &timers
     ) : 
+    timers(timers),
     binaryInput(binaryInput), 
     columnsPerRowInBuffer(columnsPerRowInBuffer + DOUBLES_FOR_ROW_INDEX_PER_COLUMN), 
     displacements(displacements),
-    worldSize(displacements.size()),
-    newData(rebuildData())
+    worldSize(displacements.size())
     {}
-
-    std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> returnNewData() {
-        return move(newData);
-    }
-
-    RepresentativeSubset* returnBestLocalSolution() {
-        return this->getBestLocalSolution();
-    }
 
     private:
     std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> rebuildData() {
