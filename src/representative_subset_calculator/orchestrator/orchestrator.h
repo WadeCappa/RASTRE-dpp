@@ -37,8 +37,6 @@ class Orchestrator {
         }
     }
 
- 
-
     static nlohmann::json solutionToJson(
         const RepresentativeSubset &solution
     ) {

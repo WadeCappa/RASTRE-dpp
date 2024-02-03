@@ -90,7 +90,7 @@ class SelectiveData : public Data {
 
     std::vector<std::pair<size_t, double>> translateSolution(
         const std::vector<std::pair<size_t, double>> &localSolution
-    ) {
+    ) const {
         std::vector<std::pair<size_t, double>> globalSolution;
         for (const auto & i : localSolution) {
             globalSolution.push_back(std::make_pair(

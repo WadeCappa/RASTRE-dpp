@@ -41,8 +41,8 @@ int main(int argc, char** argv) {
 
     Timers timers;
     timers.totalCalculationTime.startTimer();
-    std::unique_ptr<RepresentativeSubsetCalculator> calculator(Orchestrator::getCalculator(appData, timers));
-    NaiveRepresentativeSubset localSolution(calculator, data, appData.outputSetSize, timers);
+    std::unique_ptr<RepresentativeSubsetCalculator> calculator(Orchestrator::getCalculator(appData));
+    NaiveRepresentativeSubset localSolution(move(calculator), data, appData.outputSetSize, timers);
 
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
     std::vector<double> sendBuffer;
@@ -76,32 +76,21 @@ int main(int argc, char** argv) {
         auto newData = bufferLoader.returnNewData();
         SelectiveData bestRows(*newData.get());
         
+        std::unique_ptr<RepresentativeSubsetCalculator> globalCalculator(Orchestrator::getCalculator(appData));
+
         timers.globalCalculationTime.startTimer();
-        std::vector<std::pair<size_t, double>> globalSolutionWithLocalIndicies = calculator->getApproximationSet(bestRows, appData.outputSetSize);
+        NaiveRepresentativeSubset globalSolution(move(globalCalculator), bestRows, appData.outputSetSize, timers);
         timers.globalCalculationTime.stopTimer();
 
-        std::vector<std::pair<size_t, double>> globalSolution = bestRows.translateSolution(globalSolutionWithLocalIndicies);
-
-        double globalCoverage = 0;
-        for (auto & s : globalSolution) {
-            globalCoverage += s.second;
+        RepresentativeSubset *bestLocal = bufferLoader.returnBestLocalSolution();
+        if (globalSolution.getScore() > bestLocal->getScore()) {
+            delete bestLocal;
+            bestLocal = &globalSolution;
         }
 
-        auto bestLocal = bufferLoader.returnBestLocalSolution();
-
-        std::pair<double, std::vector<size_t>> finalSolution;
         timers.totalCalculationTime.stopTimer();
-        nlohmann::json result;
-        if (bestLocal.first > globalCoverage) 
-            result = Orchestrator::buildMpiOutput(appData, bestLocal, data, timers);
-        else {
-            finalSolution.first = globalCoverage;
-            for (auto & s : globalSolution) {
-                finalSolution.second.push_back(s.first);
-            }  
-            result = Orchestrator::buildMpiOutput(appData, finalSolution, data, timers);          
-        }
 
+        nlohmann::json result = Orchestrator::buildMpiOutput(appData, *bestLocal, data, timers);
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);
