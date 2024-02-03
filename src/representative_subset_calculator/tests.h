@@ -1,4 +1,5 @@
 #include <set>
+#include "timers/timers.h"
 #include "naive_representative_subset_calculator.h"
 #include "lazy_representative_subset_calculator.h"
 #include "fast_representative_subset_calculator.h"
@@ -12,6 +13,7 @@ static const NaiveData data(
 );
 
 #include "kernel_matrix/tests.h"
+#include "representative_subset.h"
 #include "orchestrator/tests.h"
 #include "buffers/tests.h"
 
@@ -19,8 +21,7 @@ static const size_t k = DATA.size();
 static const double epsilon = 0.01;
 
 TEST_CASE("Testing Naive representative set finder") {
-    Timers timers;
-    NaiveRepresentativeSubsetCalculator calculator(timers);
+    NaiveRepresentativeSubsetCalculator calculator;
     std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
     
     CHECK(res.size() == k);
@@ -34,8 +35,7 @@ TEST_CASE("Testing Naive representative set finder") {
 }
 
 TEST_CASE("Testing lazy-naive set finder") {
-    Timers timers;
-    LazyRepresentativeSubsetCalculator calculator(timers);
+    LazyRepresentativeSubsetCalculator calculator;
     std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
 
     CHECK(res.size() == k);
@@ -49,8 +49,7 @@ TEST_CASE("Testing lazy-naive set finder") {
 }
 
 TEST_CASE("Testing FAST set finder") {
-    Timers timers;
-    FastRepresentativeSubsetCalculator calculator(timers, epsilon);
+    FastRepresentativeSubsetCalculator calculator(epsilon);
     std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
 
     CHECK(res.size() == k);
@@ -64,8 +63,7 @@ TEST_CASE("Testing FAST set finder") {
 }
 
 TEST_CASE("Testing LAZYFAST set finder") {
-    Timers timers;
-    LazyFastRepresentativeSubsetCalculator calculator(timers, epsilon);
+    LazyFastRepresentativeSubsetCalculator calculator(epsilon);
     std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
 
     CHECK(res.size() == k);
@@ -88,12 +86,10 @@ void checkSolutionsAreEquivalent(const std::vector<std::pair<size_t, double>> &a
 }
 
 TEST_CASE("All calculators have the same result") {
-    Timers timers;
-
-    auto naiveRes = NaiveRepresentativeSubsetCalculator(timers).getApproximationSet(data, k);
-    auto lazyRes = LazyRepresentativeSubsetCalculator(timers).getApproximationSet(data, k);
-    auto fastRes = FastRepresentativeSubsetCalculator(timers, epsilon).getApproximationSet(data, k);
-    auto lazyFastRes = LazyFastRepresentativeSubsetCalculator(timers, epsilon).getApproximationSet(data, k);
+    auto naiveRes = NaiveRepresentativeSubsetCalculator().getApproximationSet(data, k);
+    auto lazyRes = LazyRepresentativeSubsetCalculator().getApproximationSet(data, k);
+    auto fastRes = FastRepresentativeSubsetCalculator(epsilon).getApproximationSet(data, k);
+    auto lazyFastRes = LazyFastRepresentativeSubsetCalculator(epsilon).getApproximationSet(data, k);
 
     checkSolutionsAreEquivalent(naiveRes, lazyRes);
     checkSolutionsAreEquivalent(lazyRes, fastRes);

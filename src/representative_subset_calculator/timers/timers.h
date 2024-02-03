@@ -31,7 +31,10 @@ class Timers {
     };
 
     public:
-    SingleTimer totalCalculationTime, localCalculationTime, localMatrixCalculationTime, globalCalculationTime, globalMatrixCalculationTime, communicationTime;
+    SingleTimer totalCalculationTime;
+    SingleTimer localCalculationTime;
+    SingleTimer globalCalculationTime;
+    SingleTimer communicationTime;
 
     nlohmann::json outputToJson() const {
         nlohmann::json output {

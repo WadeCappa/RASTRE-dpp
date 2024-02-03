@@ -106,10 +106,9 @@ class BufferLoader : public Buffer {
         return move(newData);
     }
 
-    std::pair<double, std::vector<int>> returnbestLocalSolution() {
+    std::pair<double, std::vector<int>> returnBestLocalSolution() {
         return this->bestLocalSolution;
     }
-
 
     private:
     std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> rebuildData() {
@@ -140,8 +139,6 @@ class BufferLoader : public Buffer {
     }
 
     std::pair<double, std::vector<int>> getBestLocalSolution() {
-        
-
         std::pair<double, std::vector<int>> bestLocalSolution;
         // identify best local solution
         double localMaxCoverage = -1;
@@ -171,8 +168,6 @@ class BufferLoader : public Buffer {
 
         return bestLocalSolution;
     }
-
-    
 
     std::vector<size_t> getRowOffsets() {
         std::vector<size_t> expectedRowsPerRank(worldSize);

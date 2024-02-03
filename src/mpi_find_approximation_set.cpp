@@ -1,14 +1,17 @@
 #include "data_tools/normalizer.h"
 #include "data_tools/matrix_builder.h"
+#include "representative_subset_calculator/timers/timers.h"
 #include "representative_subset_calculator/naive_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
+#include "representative_subset_calculator/representative_subset.h"
 #include "representative_subset_calculator/orchestrator/orchestrator.h"
+
 #include "representative_subset_calculator/buffers/bufferBuilder.h"
 
 #include <CLI/CLI.hpp>
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 
 #include <mpi.h>
@@ -37,13 +40,10 @@ int main(int argc, char** argv) {
     delete dataLoader;
 
     Timers timers;
-    RepresentativeSubsetCalculator *calculator = Orchestrator::getCalculator(appData, timers);
+    timers.totalCalculationTime.startTimer();
+    std::unique_ptr<RepresentativeSubsetCalculator> calculator(Orchestrator::getCalculator(appData, timers));
+    NaiveRepresentativeSubset localSolution(calculator, data, appData.outputSetSize, timers);
 
-    if (appData.worldRank == 0)
-        timers.localCalculationTime.startTimer();
-    std::vector<std::pair<size_t, double>> localSolution = calculator->getApproximationSet(data, appData.outputSetSize);
-    if (appData.worldRank == 0)
-        timers.localCalculationTime.stopTimer();
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
     std::vector<double> sendBuffer;
     unsigned int sendDataSize = BufferBuilder::buildSendBuffer(data, localSolution, sendBuffer);
@@ -57,8 +57,7 @@ int main(int argc, char** argv) {
         BufferBuilder::buildDisplacementBuffer(receivingDataSizesBuffer, displacements);
     }
 
-    if (appData.worldRank == 0)
-        timers.communicationTime.startTimer();
+    timers.communicationTime.startTimer();
     MPI_Gatherv(
         sendBuffer.data(), 
         sendBuffer.size(), 
@@ -70,17 +69,17 @@ int main(int argc, char** argv) {
         0, 
         MPI_COMM_WORLD
     );
-
-    if (appData.worldRank == 0)
-        timers.communicationTime.stopTimer();
+    timers.communicationTime.stopTimer();
 
     if (appData.worldRank == 0) {
         BufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements);
         auto newData = bufferLoader.returnNewData();
         SelectiveData bestRows(*newData.get());
+        
         timers.globalCalculationTime.startTimer();
         std::vector<std::pair<size_t, double>> globalSolutionWithLocalIndicies = calculator->getApproximationSet(bestRows, appData.outputSetSize);
         timers.globalCalculationTime.stopTimer();
+
         std::vector<std::pair<size_t, double>> globalSolution = bestRows.translateSolution(globalSolutionWithLocalIndicies);
 
         double globalCoverage = 0;
@@ -88,10 +87,10 @@ int main(int argc, char** argv) {
             globalCoverage += s.second;
         }
 
-        auto bestLocal = bufferLoader.returnbestLocalSolution();
+        auto bestLocal = bufferLoader.returnBestLocalSolution();
 
-
-        std::pair<double, std::vector<int>> finalSolution;
+        std::pair<double, std::vector<size_t>> finalSolution;
+        timers.totalCalculationTime.stopTimer();
         nlohmann::json result;
         if (bestLocal.first > globalCoverage) 
             result = Orchestrator::buildMpiOutput(appData, bestLocal, data, timers);

@@ -9,7 +9,6 @@
 
 class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
     private:
-    Timers &timers;
 
     struct HeapComparitor {
         bool operator()(const std::pair<size_t, double> a, const std::pair<size_t, double> b) {
@@ -18,11 +17,9 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
     };
 
     public:
-    LazyRepresentativeSubsetCalculator(Timers &timers) : timers(timers) {}
+    LazyRepresentativeSubsetCalculator() {}
 
     std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
-        timers.totalCalculationTime.startTimer();
-
         std::vector<std::pair<size_t, double>> subsetRows;
         std::vector<std::pair<size_t, double>> heap;
         for (size_t index = 0; index < data.totalRows(); index++) {
