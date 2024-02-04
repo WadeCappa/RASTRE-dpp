@@ -71,12 +71,12 @@ class LocalData : public Data {
         std::vector<size_t> res;
 
         for (size_t remoteIndex = 0; remoteIndex < rankMapping.size(); remoteIndex++) {
-            if (rankMapping.size() == rank) {
+            if (rankMapping[remoteIndex] == rank) {
                 res.push_back(remoteIndex);
             }
         }
 
-        return move(res);
+        return res;
     }
 
     public:

@@ -8,7 +8,8 @@ static const unsigned int RANK = 0;
 
 TEST_CASE("Testing the get total send data method") {
     std::vector<double> sendBuffer;
-    unsigned int totalSendData = BufferBuilder::buildSendBuffer(LocalData(data, ROW_TO_RANK, RANK), MOCK_SOLUTION, sendBuffer);
+    LocalData localData(data, ROW_TO_RANK, RANK);
+    unsigned int totalSendData = BufferBuilder::buildSendBuffer(localData, MOCK_SOLUTION, sendBuffer);
     CHECK(totalSendData == (data.totalColumns() + 1) * MOCK_SOLUTION.getNumberOfRows() + 1);
     CHECK(sendBuffer.size() == totalSendData);
 }

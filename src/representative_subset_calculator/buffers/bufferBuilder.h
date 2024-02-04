@@ -27,7 +27,7 @@ class BufferBuilder : public Buffer {
         std::vector<double> &buffer
     ) {
         // Need to include an additional column that marks the index of the sent row
-        const unsigned int totalSendData = getTotalSendData(data, localSolution);
+        const unsigned int totalSendData = getTotalSendData(dynamic_cast<const Data&>(data), localSolution);
         const size_t rowSize = data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN;
         const size_t numberOfRows = localSolution.getNumberOfRows();
         buffer.resize(totalSendData);
