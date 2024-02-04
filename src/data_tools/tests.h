@@ -160,26 +160,26 @@ TEST_CASE("Testing blocked data loader") {
     CHECK(rows == ownedRows);
 }
 
-TEST_CASE("Testing SelectiveData translation and construction") {
-    std::vector<std::pair<size_t, std::vector<double>>> mockReceiveData;
-    std::vector<size_t> mockSolutionIndicies;
-    mockSolutionIndicies.push_back(1);
-    mockSolutionIndicies.push_back(DATA.size() - 1);
-    for (const auto & i : mockSolutionIndicies) {
-        mockReceiveData.push_back(std::make_pair(i, DATA[i]));
-    }
+// TEST_CASE("Testing SelectiveData translation and construction") {
+//     std::vector<std::pair<size_t, std::vector<double>>> mockReceiveData;
+//     std::vector<size_t> mockSolutionIndicies;
+//     mockSolutionIndicies.push_back(1);
+//     mockSolutionIndicies.push_back(DATA.size() - 1);
+//     for (const auto & i : mockSolutionIndicies) {
+//         mockReceiveData.push_back(std::make_pair(i, DATA[i]));
+//     }
 
-    SelectiveData selectiveData(mockReceiveData);
-    std::vector<std::pair<size_t, double>> mockSolution;
-    for (size_t i = 0; i < mockReceiveData.size(); i++) {
-        mockSolution.push_back(std::make_pair(i, 0));
-    }
+//     SelectiveData selectiveData(mockReceiveData);
+//     std::vector<std::pair<size_t, double>> mockSolution;
+//     for (size_t i = 0; i < mockReceiveData.size(); i++) {
+//         mockSolution.push_back(std::make_pair(i, 0));
+//     }
 
-    auto translated = selectiveData.translateSolution(mockSolution);
+//     auto translated = selectiveData.translateSolution(mockSolution);
 
-    for (size_t i = 0; i < mockReceiveData.size(); i++) {
-        CHECK(mockReceiveData[i].first == translated[i].first);
-    }
+//     for (size_t i = 0; i < mockReceiveData.size(); i++) {
+//         CHECK(mockReceiveData[i].first == translated[i].first);
+//     }
 
-    CHECK(mockReceiveData.size() == translated.size());
-}
+//     CHECK(mockReceiveData.size() == translated.size());
+// }

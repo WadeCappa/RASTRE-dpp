@@ -129,17 +129,12 @@ class SelectiveData : public Data {
         return this->columns;
     }
 
-    std::vector<std::pair<size_t, double>> translateSolution(
-        const std::vector<std::pair<size_t, double>> &localSolution
-    ) const {
-        std::vector<std::pair<size_t, double>> globalSolution;
-        for (const auto & i : localSolution) {
-            globalSolution.push_back(std::make_pair(
-                this->base[i.first].first,
-                i.second
-            ));
+    std::vector<size_t> translateRows(const std::vector<size_t> &rows) const {
+        std::vector<size_t> globalRows;
+        for (const auto & i : rows) {
+            globalRows.push_back(this->base[i].first);
         }
 
-        return globalSolution;
+        return move(globalRows);
     }
 };

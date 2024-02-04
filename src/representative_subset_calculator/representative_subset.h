@@ -5,6 +5,11 @@ class RepresentativeSubset {
     virtual double getScore() const = 0;
     virtual std::vector<size_t> getRows() const = 0;
     virtual size_t getNumberOfRows() const = 0;
+
+    static std::unique_ptr<RepresentativeSubset> translate(
+        const RepresentativeSubset &copy,
+        const SelectiveData &data
+    );
 };
 
 class DummyRepresentativeSubset : public RepresentativeSubset {
@@ -55,19 +60,6 @@ class NaiveRepresentativeSubset : public RepresentativeSubset {
         this->setState(res);
     }
 
-    NaiveRepresentativeSubset(
-        // This calculator will be mutated, should never be re-used.
-        std::unique_ptr<RepresentativeSubsetCalculator> calculator, 
-        const SelectiveData &data,
-        const size_t desiredRows,
-        Timers &timers
-    ) {
-        timers.globalCalculationTime.startTimer();
-        auto res = calculator->getApproximationSet(data, desiredRows);
-        timers.globalCalculationTime.stopTimer();
-        this->setState(data.translateSolution(res));
-    }
-
     double getScore() const {
         return score;
     }
@@ -79,4 +71,17 @@ class NaiveRepresentativeSubset : public RepresentativeSubset {
     size_t getNumberOfRows() const {
         return this->rows.size();
     }
+
 };
+
+std::unique_ptr<RepresentativeSubset> RepresentativeSubset::translate(
+    const RepresentativeSubset &copy,
+    const SelectiveData &data
+) {
+    std::unique_ptr<RepresentativeSubset> res(new DummyRepresentativeSubset(
+        data.translateRows(copy.getRows()),
+        copy.getScore()
+    ));
+
+    return move(res);
+}

@@ -101,10 +101,10 @@ class GlobalBufferLoader : public BufferLoader {
         RepresentativeSubset *bestLocal = this->getBestLocalSolution();
         if (globalSolution->getScore() > bestLocal->getScore()) {
             delete bestLocal;
-            return std::unique_ptr<RepresentativeSubset>(globalSolution);
+            return this->buildSolution(globalSolution, bestRows);
         } else {
             delete globalSolution;
-            return std::unique_ptr<RepresentativeSubset>(bestLocal);
+            return this->buildSolution(bestLocal, bestRows);
         }
     }
 
@@ -122,6 +122,10 @@ class GlobalBufferLoader : public BufferLoader {
     {}
 
     private:
+    std::unique_ptr<RepresentativeSubset> buildSolution(RepresentativeSubset *solution, const SelectiveData &data) {
+        return std::unique_ptr<RepresentativeSubset>(RepresentativeSubset::translate(*solution, data));
+    }
+
     std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> rebuildData() {
         std::vector<size_t> rowOffsets = getRowOffsets();
         const size_t totalExpectedRows = rowOffsets.back();
