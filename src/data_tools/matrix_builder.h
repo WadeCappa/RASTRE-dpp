@@ -62,6 +62,47 @@ class NaiveData : public Data {
     }
 };
 
+class LocalData : public Data {
+    private:
+    const Data &base;
+    const std::vector<size_t> localRowToGlobalRow;
+
+    std::vector<size_t> getMapping(const Data &base, const std::vector<unsigned int> &rankMapping, const unsigned int rank) {
+        std::vector<size_t> res;
+
+        for (size_t remoteIndex = 0; remoteIndex < rankMapping.size(); remoteIndex++) {
+            if (rankMapping[remoteIndex] == rank) {
+                res.push_back(remoteIndex);
+            }
+        }
+
+        return res;
+    }
+
+    public:
+    LocalData(
+        const Data &base, 
+        const std::vector<unsigned int> &rankMapping, 
+        const unsigned int rank
+    ) : base(base), localRowToGlobalRow(getMapping(base, rankMapping, rank)) {}
+
+    const std::vector<double>& getRow(size_t i) const {
+        return this->base.getRow(i);
+    }
+
+    size_t totalRows() const {
+        return this->base.totalRows();
+    }
+
+    size_t totalColumns() const {
+        return this->base.totalColumns();
+    }
+
+    size_t getRemoteIndexForRow(const size_t localRowIndex) const {
+        return this->localRowToGlobalRow[localRowIndex];
+    }
+};
+
 class SelectiveData : public Data {
     private:
     const std::vector<std::pair<size_t, std::vector<double>>> &base;
@@ -90,7 +131,7 @@ class SelectiveData : public Data {
 
     std::vector<std::pair<size_t, double>> translateSolution(
         const std::vector<std::pair<size_t, double>> &localSolution
-    ) {
+    ) const {
         std::vector<std::pair<size_t, double>> globalSolution;
         for (const auto & i : localSolution) {
             globalSolution.push_back(std::make_pair(

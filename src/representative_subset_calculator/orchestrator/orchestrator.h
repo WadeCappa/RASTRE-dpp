@@ -38,25 +38,11 @@ class Orchestrator {
     }
 
     static nlohmann::json solutionToJson(
-        const std::vector<std::pair<size_t, double>> &solution
+        const RepresentativeSubset &solution
     ) {
-        std::vector<size_t> rows;
-        std::vector<double> marginals;
-
-        for (const auto & s : solution) {
-            rows.push_back(s.first);
-            marginals.push_back(s.second);
-        }
-
-        double totalCoverage = 0;
-        for (const auto & s : solution) {
-            totalCoverage += s.second;
-        }
-
         nlohmann::json output {
-            {"rows", rows}, 
-            {"marginalGains", marginals}, 
-            {"totalCoverage", totalCoverage}
+            {"rows", solution.getRows()}, 
+            {"totalCoverage", solution.getScore()}
         };
 
         return output;
@@ -74,7 +60,7 @@ class Orchestrator {
 
     static nlohmann::json buildOutput(
         const AppData &appData, 
-        const std::vector<std::pair<size_t, double>> &solution,
+        const RepresentativeSubset &solution,
         const Data &data,
         const Timers &timers
     ) {
@@ -101,6 +87,21 @@ class Orchestrator {
         app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
     }
 
+    static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
+        Orchestrator::addCmdOptions(app, appData);
+        app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
+    }
+
+    static nlohmann::json buildMpiOutput(
+        const AppData &appData, 
+        const RepresentativeSubset &solution,
+        const Data &data,
+        const Timers &timers
+    ) {
+        nlohmann::json output = Orchestrator::buildOutput(appData, solution, data, timers);
+        return output;
+    }
+
     static DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
         DataLoader *dataLoader = appData.binaryInput ? dynamic_cast<DataLoader*>(new BinaryDataLoader(data)) : dynamic_cast<DataLoader*>(new AsciiDataLoader(data));
 
@@ -121,16 +122,16 @@ class Orchestrator {
     }
 
 
-    static RepresentativeSubsetCalculator* getCalculator(const AppData &appData, Timers &timers) {
+    static RepresentativeSubsetCalculator* getCalculator(const AppData &appData) {
         switch (appData.algorithm) {
             case 0:
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new NaiveRepresentativeSubsetCalculator(timers));
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new NaiveRepresentativeSubsetCalculator());
             case 1:
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyRepresentativeSubsetCalculator(timers));
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyRepresentativeSubsetCalculator());
             case 2:
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new FastRepresentativeSubsetCalculator(timers, appData.epsilon));
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new FastRepresentativeSubsetCalculator(appData.epsilon));
             case 3: 
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyFastRepresentativeSubsetCalculator(timers, appData.epsilon));
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyFastRepresentativeSubsetCalculator(appData.epsilon));
             default:
                 throw new std::invalid_argument("Could not find algorithm");
         }

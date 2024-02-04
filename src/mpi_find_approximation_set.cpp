@@ -1,21 +1,25 @@
 #include "data_tools/normalizer.h"
 #include "data_tools/matrix_builder.h"
+#include "representative_subset_calculator/timers/timers.h"
 #include "representative_subset_calculator/naive_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
+#include "representative_subset_calculator/representative_subset.h"
+#include "representative_subset_calculator/orchestrator/orchestrator.h"
+
+#include "representative_subset_calculator/buffers/bufferBuilder.h"
 
 #include <CLI/CLI.hpp>
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
+
 
 #include <mpi.h>
-
 
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};
     AppData appData;
-    MpiOrchestrator::addMpiCmdOptions(app, appData);
+    Orchestrator::addMpiCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
     MPI_Init(NULL, NULL);
@@ -30,30 +34,31 @@ int main(int argc, char** argv) {
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
     DataLoader *dataLoader = Orchestrator::buildMpiDataLoader(appData, inputFile, rowToRank);
-    NaiveData data(*dataLoader);
+    NaiveData baseData(*dataLoader);
+    LocalData data(baseData, rowToRank, appData.worldRank);
     inputFile.close();
 
     delete dataLoader;
 
     Timers timers;
-    RepresentativeSubsetCalculator *calculator = Orchestrator::getCalculator(appData, timers);
-    std::vector<std::pair<size_t, double>> localSolution = calculator->getApproximationSet(data, appData.outputSetSize);
+    timers.totalCalculationTime.startTimer();
+    std::unique_ptr<RepresentativeSubsetCalculator> calculator(Orchestrator::getCalculator(appData));
+    NaiveRepresentativeSubset localSolution(move(calculator), data, appData.outputSetSize, timers);
 
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
-    unsigned int sendDataSize = MpiOrchestrator::getTotalSendData(data, localSolution);
+    std::vector<double> sendBuffer;
+    unsigned int sendDataSize = BufferBuilder::buildSendBuffer(data, localSolution, sendBuffer);
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
     MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-    std::vector<double> sendBuffer;
-    MpiOrchestrator::buildSendBuffer(data, localSolution, sendBuffer, sendDataSize);
 
     std::vector<double> receiveBuffer;
     std::vector<int> displacements;
     if (appData.worldRank == 0) {
-        MpiOrchestrator::buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
-        MpiOrchestrator::buildDisplacementBuffer(receivingDataSizesBuffer, displacements);
+        BufferBuilder::buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
+        BufferBuilder::buildDisplacementBuffer(receivingDataSizesBuffer, displacements);
     }
 
+    timers.communicationTime.startTimer();
     MPI_Gatherv(
         sendBuffer.data(), 
         sendBuffer.size(), 
@@ -65,17 +70,16 @@ int main(int argc, char** argv) {
         0, 
         MPI_COMM_WORLD
     );
+    timers.communicationTime.stopTimer();
 
     if (appData.worldRank == 0) {
-        std::vector<std::pair<size_t, std::vector<double>>> newData;
-        MpiOrchestrator::rebuildData(receiveBuffer, data.totalColumns(), newData);
-        SelectiveData bestRows(newData);
+        std::unique_ptr<RepresentativeSubsetCalculator> globalCalculator(Orchestrator::getCalculator(appData));
+        GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers);
+        std::unique_ptr<RepresentativeSubset> globalSolution(bufferLoader.getSolution(move(globalCalculator), appData.outputSetSize));
 
-        std::vector<std::pair<size_t, double>> globalSolutionWithLocalIndicies = calculator->getApproximationSet(bestRows, appData.outputSetSize);
-        std::vector<std::pair<size_t, double>> solution = bestRows.translateSolution(globalSolutionWithLocalIndicies);
+        timers.totalCalculationTime.stopTimer();
 
-        nlohmann::json result = MpiOrchestrator::buildOutput(appData, solution, data, timers);
-
+        nlohmann::json result = Orchestrator::buildMpiOutput(appData, *globalSolution.get(), data, timers);
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);

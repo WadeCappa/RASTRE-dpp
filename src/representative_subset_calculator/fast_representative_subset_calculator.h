@@ -6,7 +6,6 @@
 
 class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
     private:
-    Timers &timers;
     const double epsilon;
 
     static std::pair<size_t, double> getNextHighestScore(
@@ -32,15 +31,13 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
     }
 
   public:
-    FastRepresentativeSubsetCalculator(Timers &timers, const double epsilon) : timers(timers), epsilon(epsilon) {
+    FastRepresentativeSubsetCalculator(const double epsilon) : epsilon(epsilon) {
         if (this->epsilon < 0) {
             throw std::invalid_argument("Epsilon is less than 0.");
         }
     }
 
     std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
-        timers.totalCalculationTime.startTimer();
-
         std::vector<std::pair<size_t, double>> solution;
         std::unordered_set<size_t> seen;
 
@@ -71,7 +68,6 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             bestScore = getNextHighestScore(diagonals, seen);
             if (bestScore.second <= this->epsilon) {
                 std::cout << "score of " << bestScore.second << " was less than " << this->epsilon << ". " << std::endl;
-                timers.totalCalculationTime.stopTimer();
                 return solution;
             }
 
@@ -80,7 +76,6 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             solution.push_back(std::make_pair(j, bestScore.second));
         }
     
-        timers.totalCalculationTime.stopTimer();
         return solution;
     }
 };
