@@ -3,21 +3,16 @@
 #include <set>
 #include <limits>
 
-#include "timers/timers.h"
 #include "similarity_matrix/similarity_matrix.h"
-
 #include "representative_subset_calculator.h"
 
 class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
     private: 
-    Timers &timers;
 
     public:
-    NaiveRepresentativeSubsetCalculator(Timers &timers) : timers(timers) {}
+    NaiveRepresentativeSubsetCalculator() {}
 
     std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
-        timers.totalCalculationTime.startTimer();
-
         std::vector<std::pair<size_t, double>> res;
         SimilarityMatrix matrix; 
         std::set<size_t> seen;
@@ -52,7 +47,6 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
 
             if (bestRow == -1) {
                 std::cout << "FAILED to add element to matrix that increased marginal" << std::endl;
-                timers.totalCalculationTime.stopTimer();
                 return res;
             }
 
@@ -63,7 +57,6 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
             currentScore = highestMarginal;
         }
 
-        timers.totalCalculationTime.stopTimer();
         return res;
     }
 };

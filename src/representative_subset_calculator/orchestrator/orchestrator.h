@@ -37,20 +37,12 @@ class Orchestrator {
         }
     }
 
- 
-
     static nlohmann::json solutionToJson(
-        std::pair<double, std::vector<int>> &solution
+        const RepresentativeSubset &solution
     ) {
-        std::vector<size_t> rows;
-
-        for (auto & s : solution.second) {
-            rows.push_back(s);
-        }
-
         nlohmann::json output {
-            {"rows", rows}, 
-            {"totalCoverage", solution.first}
+            {"rows", solution.getRows()}, 
+            {"totalCoverage", solution.getScore()}
         };
 
         return output;
@@ -68,7 +60,7 @@ class Orchestrator {
 
     static nlohmann::json buildOutput(
         const AppData &appData, 
-        std::pair<double, std::vector<int>> &solution,
+        const RepresentativeSubset &solution,
         const Data &data,
         const Timers &timers
     ) {
@@ -102,7 +94,7 @@ class Orchestrator {
 
     static nlohmann::json buildMpiOutput(
         const AppData &appData, 
-        std::pair<double, std::vector<int>> &solution,
+        const RepresentativeSubset &solution,
         const Data &data,
         const Timers &timers
     ) {
@@ -130,16 +122,16 @@ class Orchestrator {
     }
 
 
-    static RepresentativeSubsetCalculator* getCalculator(const AppData &appData, Timers &timers) {
+    static RepresentativeSubsetCalculator* getCalculator(const AppData &appData) {
         switch (appData.algorithm) {
             case 0:
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new NaiveRepresentativeSubsetCalculator(timers));
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new NaiveRepresentativeSubsetCalculator());
             case 1:
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyRepresentativeSubsetCalculator(timers));
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyRepresentativeSubsetCalculator());
             case 2:
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new FastRepresentativeSubsetCalculator(timers, appData.epsilon));
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new FastRepresentativeSubsetCalculator(appData.epsilon));
             case 3: 
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyFastRepresentativeSubsetCalculator(timers, appData.epsilon));
+                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyFastRepresentativeSubsetCalculator(appData.epsilon));
             default:
                 throw new std::invalid_argument("Could not find algorithm");
         }

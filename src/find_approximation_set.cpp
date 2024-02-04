@@ -1,9 +1,11 @@
 #include "data_tools/normalizer.h"
 #include "data_tools/matrix_builder.h"
+#include "representative_subset_calculator/timers/timers.h"
 #include "representative_subset_calculator/naive_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
+#include "representative_subset_calculator/representative_subset.h"
 #include "representative_subset_calculator/orchestrator/orchestrator.h"
 
 #include <CLI/CLI.hpp>
@@ -24,17 +26,14 @@ int main(int argc, char** argv) {
     delete dataLoader;
 
     Timers timers;
-    RepresentativeSubsetCalculator *calculator = Orchestrator::getCalculator(appData, timers);
-    std::vector<std::pair<size_t, double>> solution = calculator->getApproximationSet(data, appData.outputSetSize);
+    timers.totalCalculationTime.startTimer();
 
-    std::pair<double, std::vector<int>> finalSolution;
-    finalSolution.first = 0;
-    for (auto & s : solution) {
-        finalSolution.first += s.second;
-        finalSolution.second.push_back(s.first);
-    }
-    nlohmann::json result = Orchestrator::buildOutput(appData, finalSolution, data, timers);
+    std::unique_ptr<RepresentativeSubsetCalculator> calculator(Orchestrator::getCalculator(appData));
+    NaiveRepresentativeSubset solution(move(calculator), data, appData.outputSetSize, timers);
 
+    timers.totalCalculationTime.stopTimer();
+
+    nlohmann::json result = Orchestrator::buildOutput(appData, solution, data, timers);
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
     outputFile << result.dump(2);

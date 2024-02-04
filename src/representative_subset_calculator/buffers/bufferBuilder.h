@@ -12,44 +12,36 @@ class BufferBuilder : public Buffer {
     private:
     static unsigned int getTotalSendData(
         const Data &data, 
-        const std::vector<std::pair<size_t, double>> &localSolution
+        const RepresentativeSubset &localSolution
     ) {
         // Need to include an additional column that marks the index of the sent row 
         //  as well as an additional double for the sender's local solution total 
         //  marginal gain.
-        return (data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN) * localSolution.size() + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
-    }
-
-    static double getTotalCoverage(const std::vector<std::pair<size_t, double>> &solution) {
-        double totalCoverage = 0;
-        for (const auto & s : solution) {
-            totalCoverage += s.second;
-        }
-
-        return totalCoverage;
+        return (data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN) * localSolution.getNumberOfRows() + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
     }
 
     public:
     static unsigned int buildSendBuffer(
-        const Data &data, 
-        const std::vector<std::pair<size_t, double>> &localSolution, 
+        const LocalData &data, 
+        const RepresentativeSubset &localSolution, 
         std::vector<double> &buffer
     ) {
         // Need to include an additional column that marks the index of the sent row
-        const unsigned int totalSendData = getTotalSendData(data, localSolution);
+        const unsigned int totalSendData = getTotalSendData(dynamic_cast<const Data&>(data), localSolution);
         const size_t rowSize = data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN;
-        const size_t numberOfRows = localSolution.size();
+        const size_t numberOfRows = localSolution.getNumberOfRows();
         buffer.resize(totalSendData);
 
         // First value is the local total marginal
-        buffer[0] = getTotalCoverage(localSolution);
+        buffer[0] = localSolution.getScore();
+        std::vector<size_t> solutionRows = localSolution.getRows();
 
         // All buffer indexes need to be offset by 1 to account for the 
         //  total marginal being inserted at the beggining of the send buffer
         #pragma parallel for
         for (size_t rowIndex = 0; rowIndex < numberOfRows; rowIndex++) {
-            const auto & row = data.getRow(localSolution[rowIndex].first);
-            buffer[rowSize * rowIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER] = localSolution[rowIndex].first;
+            const auto & row = data.getRow(solutionRows[rowIndex]);
+            buffer[rowSize * rowIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER] = data.getRemoteIndexForRow(solutionRows[rowIndex]);
             for (size_t columnIndex = DOUBLES_FOR_ROW_INDEX_PER_COLUMN; columnIndex < rowSize; columnIndex++) {
                 double v = row[columnIndex - DOUBLES_FOR_ROW_INDEX_PER_COLUMN];
                 buffer[rowSize * rowIndex + columnIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER] = v;
@@ -81,35 +73,53 @@ class BufferBuilder : public Buffer {
 };
 
 class BufferLoader : public Buffer {
+    public:
+    virtual std::unique_ptr<RepresentativeSubset> getSolution(
+        std::unique_ptr<RepresentativeSubsetCalculator> calculator,
+        const size_t k
+    ) = 0;
+};
+
+class GlobalBufferLoader : public BufferLoader {
     private:
+    Timers& timers;
     const std::vector<double> &binaryInput;
     const size_t columnsPerRowInBuffer;
     const std::vector<int> &displacements;
     const size_t worldSize;
-    std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> newData;
-    std::pair<double, std::vector<int>> bestLocalSolution;
 
     public:
-    BufferLoader(
+    std::unique_ptr<RepresentativeSubset> getSolution(std::unique_ptr<RepresentativeSubsetCalculator> calculator, const size_t k) {
+        auto newData = this->rebuildData();
+        SelectiveData bestRows(*newData);
+
+        timers.globalCalculationTime.startTimer();
+        RepresentativeSubset* globalSolution = 
+            dynamic_cast<RepresentativeSubset*>(new NaiveRepresentativeSubset(move(calculator), bestRows, k, timers));
+        timers.globalCalculationTime.stopTimer();
+
+        RepresentativeSubset *bestLocal = this->getBestLocalSolution();
+        if (globalSolution->getScore() > bestLocal->getScore()) {
+            delete bestLocal;
+            return std::unique_ptr<RepresentativeSubset>(globalSolution);
+        } else {
+            delete globalSolution;
+            return std::unique_ptr<RepresentativeSubset>(bestLocal);
+        }
+    }
+
+    GlobalBufferLoader(
         const std::vector<double> &binaryInput, 
         const size_t columnsPerRowInBuffer,
-        const std::vector<int> &displacements
+        const std::vector<int> &displacements,
+        Timers &timers
     ) : 
+    timers(timers),
     binaryInput(binaryInput), 
     columnsPerRowInBuffer(columnsPerRowInBuffer + DOUBLES_FOR_ROW_INDEX_PER_COLUMN), 
     displacements(displacements),
-    worldSize(displacements.size()),
-    newData(rebuildData()),
-    bestLocalSolution(getBestLocalSolution()) {}
-
-    std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> returnNewData() {
-        return move(newData);
-    }
-
-    std::pair<double, std::vector<int>> returnbestLocalSolution() {
-        return this->bestLocalSolution;
-    }
-
+    worldSize(displacements.size())
+    {}
 
     private:
     std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> rebuildData() {
@@ -139,11 +149,9 @@ class BufferLoader : public Buffer {
         return std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>>(newData);
     }
 
-    std::pair<double, std::vector<int>> getBestLocalSolution() {
-        
-
-        std::pair<double, std::vector<int>> bestLocalSolution;
-        // identify best local solution
+    RepresentativeSubset* getBestLocalSolution() {
+        std::vector<size_t> rows;
+        double coverage;
         double localMaxCoverage = -1;
         size_t maxRank = -1;
 
@@ -157,7 +165,7 @@ class BufferLoader : public Buffer {
 
         }
          
-        bestLocalSolution.first = localMaxCoverage;
+        coverage = localMaxCoverage;
         // extract best local solution
         const size_t rankStart = displacements[maxRank];
         const size_t rankEnd = maxRank == worldSize - 1 ? binaryInput.size() : displacements[maxRank + 1];
@@ -166,13 +174,11 @@ class BufferLoader : public Buffer {
             rankCursor < rankEnd; 
             rankCursor += columnsPerRowInBuffer
         ) {
-            bestLocalSolution.second.push_back(binaryInput[rankCursor]);
+            rows.push_back(binaryInput[rankCursor]);
         }
 
-        return bestLocalSolution;
+        return dynamic_cast<RepresentativeSubset*>(new DummyRepresentativeSubset(rows, coverage));
     }
-
-    
 
     std::vector<size_t> getRowOffsets() {
         std::vector<size_t> expectedRowsPerRank(worldSize);
