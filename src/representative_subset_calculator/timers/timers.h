@@ -35,13 +35,17 @@ class Timers {
     SingleTimer localCalculationTime;
     SingleTimer globalCalculationTime;
     SingleTimer communicationTime;
+    SingleTimer bufferEncodingTime;
+    SingleTimer bufferDecodingTime;
 
     nlohmann::json outputToJson() const {
         nlohmann::json output {
             {"totalCalculationTime", totalCalculationTime.getTotalTime()},
             {"localCalculationTime", localCalculationTime.getTotalTime()},
             {"globalCalculationTime", globalCalculationTime.getTotalTime()},
-            {"communicationTime", communicationTime.getTotalTime()}
+            {"communicationTime", communicationTime.getTotalTime()},
+            {"bufferEncodingTime", bufferEncodingTime.getTotalTime()},
+            {"bufferDecodingTime", bufferDecodingTime.getTotalTime()}
         };
     
         return output;

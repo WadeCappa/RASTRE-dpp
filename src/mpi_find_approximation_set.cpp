@@ -46,17 +46,24 @@ int main(int argc, char** argv) {
     NaiveRepresentativeSubset localSolution(move(calculator), data, appData.outputSetSize, timers);
 
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
+    timers.bufferEncodingTime.startTimer();
     std::vector<double> sendBuffer;
     unsigned int sendDataSize = BufferBuilder::buildSendBuffer(data, localSolution, sendBuffer);
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
-    MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+    timers.bufferEncodingTime.stopTimer();
 
+    timers.communicationTime.startTimer();
+    MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+    timers.communicationTime.stopTimer();
+
+    timers.bufferEncodingTime.startTimer();
     std::vector<double> receiveBuffer;
     std::vector<int> displacements;
     if (appData.worldRank == 0) {
         BufferBuilder::buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
         BufferBuilder::buildDisplacementBuffer(receivingDataSizesBuffer, displacements);
     }
+    timers.bufferEncodingTime.stopTimer();
 
     timers.communicationTime.startTimer();
     MPI_Gatherv(
