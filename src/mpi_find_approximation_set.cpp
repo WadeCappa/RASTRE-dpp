@@ -89,12 +89,3 @@ int main(int argc, char** argv) {
     MPI_Finalize();
     return EXIT_SUCCESS;
 }
-
-   static double getTotalCoverage(const std::vector<std::pair<size_t, double>> &solution) {
-        double totalCoverage = 0;
-        for (const auto & s : solution) {
-            totalCoverage += s.second;
-        }
-
-        return totalCoverage;
-    }
