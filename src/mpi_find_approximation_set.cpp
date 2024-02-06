@@ -6,13 +6,12 @@
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/representative_subset.h"
-#include "representative_subset_calculator/orchestrator/orchestrator.h"
+#include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 
 #include "representative_subset_calculator/buffers/bufferBuilder.h"
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
-
 
 #include <mpi.h>
 
@@ -31,16 +30,18 @@ int main(int argc, char** argv) {
 
     std::vector<unsigned int> rowToRank = Orchestrator::getRowToRank(appData, seed);
 
+    Timers timers;
+    timers.loadingDatasetTime.startTimer();
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
     DataLoader *dataLoader = Orchestrator::buildMpiDataLoader(appData, inputFile, rowToRank);
     NaiveData baseData(*dataLoader);
     LocalData data(baseData, rowToRank, appData.worldRank);
     inputFile.close();
+    timers.loadingDatasetTime.stopTimer();
 
     delete dataLoader;
 
-    Timers timers;
     timers.totalCalculationTime.startTimer();
     std::unique_ptr<RepresentativeSubsetCalculator> calculator(Orchestrator::getCalculator(appData));
     NaiveRepresentativeSubset localSolution(move(calculator), data, appData.outputSetSize, timers);
