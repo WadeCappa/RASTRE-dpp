@@ -18,7 +18,7 @@
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};
     AppData appData;
-    Orchestrator::addMpiCmdOptions(app, appData);
+    MpiOrchestrator::addMpiCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
     MPI_Init(NULL, NULL);
@@ -28,13 +28,13 @@ int main(int argc, char** argv) {
     unsigned int seed = (unsigned int)time(0);
     MPI_Bcast(&seed, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 
-    std::vector<unsigned int> rowToRank = Orchestrator::getRowToRank(appData, seed);
+    std::vector<unsigned int> rowToRank = MpiOrchestrator::getRowToRank(appData, seed);
 
     Timers timers;
     timers.loadingDatasetTime.startTimer();
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
-    DataLoader *dataLoader = Orchestrator::buildMpiDataLoader(appData, inputFile, rowToRank);
+    DataLoader *dataLoader = MpiOrchestrator::buildMpiDataLoader(appData, inputFile, rowToRank);
     NaiveData baseData(*dataLoader);
     LocalData data(baseData, rowToRank, appData.worldRank);
     inputFile.close();
@@ -42,8 +42,12 @@ int main(int argc, char** argv) {
 
     delete dataLoader;
 
+    timers.barrierTime.startTimer();
+    // MPI_Barrier(MPI_COMM_WORLD);
+    timers.barrierTime.stopTimer();
+
     timers.totalCalculationTime.startTimer();
-    std::unique_ptr<RepresentativeSubsetCalculator> calculator(Orchestrator::getCalculator(appData));
+    std::unique_ptr<RepresentativeSubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
     NaiveRepresentativeSubset localSolution(move(calculator), data, appData.outputSetSize, timers);
 
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
@@ -80,19 +84,37 @@ int main(int argc, char** argv) {
     );
     timers.communicationTime.stopTimer();
 
+
     if (appData.worldRank == 0) {
-        std::unique_ptr<RepresentativeSubsetCalculator> globalCalculator(Orchestrator::getCalculator(appData));
+        std::unique_ptr<RepresentativeSubsetCalculator> globalCalculator(MpiOrchestrator::getCalculator(appData));
         GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers);
         std::unique_ptr<RepresentativeSubset> globalSolution(bufferLoader.getSolution(move(globalCalculator), appData.outputSetSize));
 
         timers.totalCalculationTime.stopTimer();
 
-        nlohmann::json result = Orchestrator::buildMpiOutput(appData, *globalSolution.get(), data, timers);
+        nlohmann::json result = MpiOrchestrator::buildMpiOutput(appData, *globalSolution.get(), data, timers);
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);
         outputFile.close();
     }
+
+
+    MpiOrchestrator::Metadata metadata(  
+                                (double)data.totalRows(), 
+                                // to insert NNZs here,
+                                timers.barrierTime.getTotalTime(),
+                                timers.totalCalculationTime.getTotalTime(),
+                                timers.localCalculationTime.getTotalTime(),
+                                timers.globalCalculationTime.getTotalTime(),
+                                timers.communicationTime.getTotalTime(),
+                                timers.bufferEncodingTime.getTotalTime(),
+                                timers.bufferDecodingTime.getTotalTime(),
+                                timers.loadingDatasetTime.getTotalTime()
+                            );
+
+    
+
 
     MPI_Finalize();
     return EXIT_SUCCESS;

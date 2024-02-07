@@ -30,6 +30,7 @@ class Timers {
         }
     };
 
+    SingleTimer barrierTime;
     SingleTimer totalCalculationTime;
     SingleTimer localCalculationTime;
     SingleTimer globalCalculationTime;
@@ -40,6 +41,7 @@ class Timers {
 
     nlohmann::json outputToJson() const {
         nlohmann::json output {
+            {"barrierTime", barrierTime.getTotalTime()},
             {"totalCalculationTime", totalCalculationTime.getTotalTime()},
             {"localCalculationTime", localCalculationTime.getTotalTime()},
             {"globalCalculationTime", globalCalculationTime.getTotalTime()},
