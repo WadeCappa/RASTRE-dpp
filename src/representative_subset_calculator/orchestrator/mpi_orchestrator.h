@@ -63,7 +63,7 @@ class MpiOrchestrator : public Orchestrator {
     ) {
         nlohmann::json output = Orchestrator::buildOutputBase(appData, solution, data, timers);
 
-
+        output.push_back({"timers", getTimersFromMachines(timers, appData.worldRank, appData.worldSize)});
 
         return output;
     }
