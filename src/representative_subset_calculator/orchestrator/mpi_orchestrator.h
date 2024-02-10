@@ -22,8 +22,8 @@ class MpiOrchestrator : public Orchestrator {
         int receiveTotal = 0;
         std::vector<int> displacements(worldSize, 0);
         for (size_t rank = 0; rank < worldSize; rank++) {
-            displacements[i] = receiveTotal;
-            receiveTotal += receiveSizes[i];
+            displacements[rank] = receiveTotal;
+            receiveTotal += receiveSizes[rank];
         }
 
         std::vector<char> receiveBuffer(receiveTotal);
@@ -41,18 +41,19 @@ class MpiOrchestrator : public Orchestrator {
             MPI_COMM_WORLD
         );
 
-        std::string timerData(receiveBuffer.start(), receiveBuffer.end());
+        std::string timerData(receiveBuffer.begin(), receiveBuffer.end());
 
         nlohmann::json output;
         for (size_t rank = 0; rank < worldSize; rank++) {
+            const size_t end = rank == worldSize - 1 ? timerData.size() : displacements[rank + 1];
             output.push_back(timerData.substr(
                 displacements[rank],
-                (rank == worldSize - 1 ? timerData.size() : displacements[rank + 1]) - displacements[rank];
+                end - displacements[rank]
             ));
         }
 
         // return as json
-        return receiveBufferMetadata;
+        return output;
     }
 
     static nlohmann::json buildMpiOutput(

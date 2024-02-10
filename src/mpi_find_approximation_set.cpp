@@ -84,7 +84,6 @@ int main(int argc, char** argv) {
     );
     timers.communicationTime.stopTimer();
 
-
     if (appData.worldRank == 0) {
         std::unique_ptr<RepresentativeSubsetCalculator> globalCalculator(MpiOrchestrator::getCalculator(appData));
         GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers);
@@ -97,6 +96,11 @@ int main(int argc, char** argv) {
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);
         outputFile.close();
+    } else {
+        // used to load global timers on rank 0
+        std::vector<size_t> rows;
+        DummyRepresentativeSubset dummyData(rows, 0);
+        MpiOrchestrator::buildMpiOutput(appData, dummyData, data, timers);
     }
 
     MPI_Finalize();
