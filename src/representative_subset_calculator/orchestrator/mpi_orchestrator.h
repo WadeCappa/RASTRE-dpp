@@ -4,105 +4,57 @@
 class MpiOrchestrator : public Orchestrator {
 
     public:
+    static nlohmann::json getTimersFromMachines(
+        const Timers &localTimers,
+        const int worldRank,
+        const int worldSize
+    ) {
+        nlohmann::json localTimerJson = localTimers.outputToJson();
+        std::ostringstream outputStream;
+        outputStream << localTimerJson.dump(2);
+        std::string localTimeData(outputStream.str());
 
-    class Metadata {
+        // send timer string lengths
+        int localSendSize = localTimeData.size();
+        std::vector<int> receiveSizes(worldSize, 0);
+        MPI_Gather(&localSendSize, 1, MPI_INT, receiveSizes.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-        private:
-        double rowsPerRank;
-        // double nnzsPerRank;
-        double barrierTime;
-        double totalCalculationTime;
-        double localCalculationTime;
-        double globalCalculationTime;
-        double communicationTime;
-        double bufferEncodingTime;
-        double bufferDecodingTime;
-        double loadingDatasetTime;
-
-        public:
-
-        Metadata(double rowsPerRank, 
-                // double nnzsPerRank, 
-                double barrierTime, 
-                double totalCalculationTime, 
-                double localCalculationTime, 
-                double globalCalculationTime, 
-                double communicationTime, 
-                double bufferEncodingTime, 
-                double bufferDecodingTime, 
-                double loadingDatasetTime) : 
-                
-                rowsPerRank(rowsPerRank), 
-                // nnzsPerRank(nnzsPerRank), 
-                barrierTime(barrierTime), 
-                totalCalculationTime(totalCalculationTime), 
-                localCalculationTime(localCalculationTime), 
-                globalCalculationTime(globalCalculationTime), 
-                communicationTime(communicationTime), 
-                bufferEncodingTime(bufferEncodingTime), 
-                bufferDecodingTime(bufferDecodingTime), 
-                loadingDatasetTime(loadingDatasetTime)   {}
-
-
-        std::vector<double> sendMetadata(int worldSize, MPI_Comm comm) {
-
-            std::vector<double> sendBufferMetadata;
-            
-            sendBufferMetadata.push_back(rowsPerRank);
-            // sendBufferMetadata.push_back(nnzsPerRank);
-            sendBufferMetadata.push_back(barrierTime);
-            sendBufferMetadata.push_back(totalCalculationTime);
-            sendBufferMetadata.push_back(localCalculationTime);
-            sendBufferMetadata.push_back(globalCalculationTime);
-            sendBufferMetadata.push_back(communicationTime);
-            sendBufferMetadata.push_back(bufferEncodingTime);
-            sendBufferMetadata.push_back(loadingDatasetTime);
-
-            std::vector<double> receiveBufferMetadata(worldSize * sendBufferMetadata.size());
-            std::vector<int> count(worldSize, sendBufferMetadata.size());
-            std::vector<int> displacements(worldSize);
-
-            for(size_t i = 0; i < count.size(); i++)
-                displacements[i] = i * count[i];
-
-            MPI_Gatherv(
-                sendBufferMetadata.data(), 
-                sendBufferMetadata.size(), 
-                MPI_DOUBLE, 
-                receiveBufferMetadata.data(), 
-                count.data(), 
-                displacements.data(),
-                MPI_DOUBLE, 
-                0, 
-                comm
-            );
-
-            return receiveBufferMetadata;
-
+        int receiveTotal = 0;
+        std::vector<int> displacements(worldSize, 0);
+        for (size_t rank = 0; rank < worldSize; rank++) {
+            displacements[i] = receiveTotal;
+            receiveTotal += receiveSizes[i];
         }
 
+        std::vector<char> receiveBuffer(receiveTotal);
 
-        nlohmann::json buildMpiOutputWithMetadata(
-            const AppData &appData, 
-            const RepresentativeSubset &solution,
-            const Data &data,
-            const Timers &timers, 
-            int worldSize, 
-            MPI_Comm comm
-        ) {
-            nlohmann::json output = Orchestrator::buildOutputBase(appData, solution, data, timers);
-            std::vector<double> receiveBufferMetadata = sendMetadata(worldSize, comm);
+        // send timer strings
+        MPI_Gatherv(
+            localTimeData.data(), 
+            localSendSize, 
+            MPI_CHAR, 
+            receiveBuffer.data(), 
+            receiveSizes.data(), 
+            displacements.data(), 
+            MPI_CHAR, 
+            0,
+            MPI_COMM_WORLD
+        );
 
+        std::string timerData(receiveBuffer.start(), receiveBuffer.end());
 
-            // Logic to interpret receiveBufferMetadata and insert into JSON goes here. 
-
-
-
-            return output;
+        nlohmann::json output;
+        for (size_t rank = 0; rank < worldSize; rank++) {
+            output.push_back(timerData.substr(
+                displacements[rank],
+                (rank == worldSize - 1 ? timerData.size() : displacements[rank + 1]) - displacements[rank];
+            ));
         }
-    };
- 
-    
+
+        // return as json
+        return receiveBufferMetadata;
+    }
+
     static nlohmann::json buildMpiOutput(
         const AppData &appData, 
         const RepresentativeSubset &solution,
@@ -110,6 +62,9 @@ class MpiOrchestrator : public Orchestrator {
         const Timers &timers
     ) {
         nlohmann::json output = Orchestrator::buildOutputBase(appData, solution, data, timers);
+
+
+
         return output;
     }
 };

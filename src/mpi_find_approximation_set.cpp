@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
     delete dataLoader;
 
     timers.barrierTime.startTimer();
-    // MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
     timers.barrierTime.stopTimer();
 
     timers.totalCalculationTime.startTimer();
@@ -98,23 +98,6 @@ int main(int argc, char** argv) {
         outputFile << result.dump(2);
         outputFile.close();
     }
-
-
-    MpiOrchestrator::Metadata metadata(  
-                                (double)data.totalRows(), 
-                                // to insert NNZs here,
-                                timers.barrierTime.getTotalTime(),
-                                timers.totalCalculationTime.getTotalTime(),
-                                timers.localCalculationTime.getTotalTime(),
-                                timers.globalCalculationTime.getTotalTime(),
-                                timers.communicationTime.getTotalTime(),
-                                timers.bufferEncodingTime.getTotalTime(),
-                                timers.bufferDecodingTime.getTotalTime(),
-                                timers.loadingDatasetTime.getTotalTime()
-                            );
-
-    
-
 
     MPI_Finalize();
     return EXIT_SUCCESS;
