@@ -1,4 +1,5 @@
 #include "orchestrator.h"
+#include <algorithm>
 #include <mpi.h>
 
 class MpiOrchestrator : public Orchestrator {
@@ -11,7 +12,7 @@ class MpiOrchestrator : public Orchestrator {
     ) {
         nlohmann::json localTimerJson = localTimers.outputToJson();
         std::ostringstream outputStream;
-        outputStream << localTimerJson.dump(2);
+        outputStream << localTimerJson.dump();
         std::string localTimeData(outputStream.str());
 
         // send timer string lengths
@@ -41,15 +42,15 @@ class MpiOrchestrator : public Orchestrator {
             MPI_COMM_WORLD
         );
 
-        std::string timerData(receiveBuffer.begin(), receiveBuffer.end());
-
         nlohmann::json output;
-        for (size_t rank = 0; rank < worldSize; rank++) {
-            const size_t end = rank == worldSize - 1 ? timerData.size() : displacements[rank + 1];
-            output.push_back(timerData.substr(
-                displacements[rank],
-                end - displacements[rank]
-            ));
+        if (worldRank == 0) {
+            std::string timerData(receiveBuffer.begin(), receiveBuffer.end());
+
+            for (size_t rank = 0; rank < worldSize; rank++) {
+                const size_t end = rank == worldSize - 1 ? timerData.size() : displacements[rank + 1];
+                std::string rawJson(timerData.substr(displacements[rank], end - displacements[rank]));
+                output.push_back(nlohmann::json::parse(rawJson));
+            }
         }
 
         // return as json
@@ -60,7 +61,8 @@ class MpiOrchestrator : public Orchestrator {
         const AppData &appData, 
         const RepresentativeSubset &solution,
         const Data &data,
-        const Timers &timers
+        const Timers &timers,
+        const std::vector<unsigned int> &rowToRank
     ) {
         nlohmann::json output = Orchestrator::buildOutputBase(appData, solution, data, timers);
 

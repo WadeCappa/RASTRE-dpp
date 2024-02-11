@@ -91,16 +91,17 @@ int main(int argc, char** argv) {
 
         timers.totalCalculationTime.stopTimer();
 
-        nlohmann::json result = MpiOrchestrator::buildMpiOutput(appData, *globalSolution.get(), data, timers);
+        nlohmann::json result = MpiOrchestrator::buildMpiOutput(appData, *globalSolution.get(), data, timers, rowToRank);
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);
         outputFile.close();
     } else {
         // used to load global timers on rank 0
+        timers.totalCalculationTime.stopTimer();
         std::vector<size_t> rows;
         DummyRepresentativeSubset dummyData(rows, 0);
-        MpiOrchestrator::buildMpiOutput(appData, dummyData, data, timers);
+        MpiOrchestrator::buildMpiOutput(appData, dummyData, data, timers, rowToRank);
     }
 
     MPI_Finalize();
