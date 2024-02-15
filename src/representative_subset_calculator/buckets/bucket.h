@@ -4,6 +4,12 @@
 #include "similarity_matrix/similarity_matrix.h"
 #include "representative_subset_calculator.h"
 
+typedef struct origin {
+    int source;
+    int seed;
+} Origin;
+
+
 class ThresholdBucket 
 {
     private:
