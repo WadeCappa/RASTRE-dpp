@@ -90,8 +90,10 @@ class GlobalBufferLoader : public BufferLoader {
 
     public:
     std::unique_ptr<RepresentativeSubset> getSolution(std::unique_ptr<RepresentativeSubsetCalculator> calculator, const size_t k) {
+        this->timers.bufferDecodingTime.startTimer();
         auto newData = this->rebuildData();
         SelectiveData bestRows(*newData);
+        this->timers.bufferDecodingTime.stopTimer();
 
         timers.globalCalculationTime.startTimer();
         RepresentativeSubset* globalSolution = 

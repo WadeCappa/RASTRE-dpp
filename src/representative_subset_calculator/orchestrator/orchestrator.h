@@ -64,16 +64,8 @@ class Orchestrator {
         const Data &data,
         const Timers &timers
     ) {
-        nlohmann::json output {
-            {"k", appData.outputSetSize}, 
-            {"algorithm", algorithmToString(appData)},
-            {"epsilon", appData.epsilon},
-            {"RepresentativeRows", solutionToJson(solution)},
-            {"timings", timers.outputToJson()},
-            {"dataset", buildDatasetJson(data, appData)},
-            {"worldSize", appData.worldSize}
-        };
-
+        nlohmann::json output = buildOutputBase(appData, solution, data, timers);
+        output.push_back({"timings", timers.outputToJson()});
         return output;
     }
 
@@ -90,16 +82,6 @@ class Orchestrator {
     static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
         Orchestrator::addCmdOptions(app, appData);
         app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
-    }
-
-    static nlohmann::json buildMpiOutput(
-        const AppData &appData, 
-        const RepresentativeSubset &solution,
-        const Data &data,
-        const Timers &timers
-    ) {
-        nlohmann::json output = Orchestrator::buildOutput(appData, solution, data, timers);
-        return output;
     }
 
     static DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
@@ -149,5 +131,23 @@ class Orchestrator {
         }
 
         return rowToRank;
+    }
+
+    static nlohmann::json buildOutputBase(
+        const AppData &appData, 
+        const RepresentativeSubset &solution,
+        const Data &data,
+        const Timers &timers
+    ) { 
+        nlohmann::json output {
+            {"k", appData.outputSetSize}, 
+            {"algorithm", algorithmToString(appData)},
+            {"epsilon", appData.epsilon},
+            {"RepresentativeRows", solutionToJson(solution)},
+            {"dataset", buildDatasetJson(data, appData)},
+            {"worldSize", appData.worldSize}
+        };
+
+        return output;
     }
 };

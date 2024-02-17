@@ -4,7 +4,7 @@
 #include <nlohmann/json.hpp>
 
 class Timers {
-    private:
+    public:
     class SingleTimer {
         private:
         std::chrono::high_resolution_clock::time_point start;
@@ -30,18 +30,25 @@ class Timers {
         }
     };
 
-    public:
+    SingleTimer barrierTime;
     SingleTimer totalCalculationTime;
     SingleTimer localCalculationTime;
     SingleTimer globalCalculationTime;
     SingleTimer communicationTime;
+    SingleTimer bufferEncodingTime;
+    SingleTimer bufferDecodingTime;
+    SingleTimer loadingDatasetTime;
 
     nlohmann::json outputToJson() const {
         nlohmann::json output {
+            {"barrierTime", barrierTime.getTotalTime()},
             {"totalCalculationTime", totalCalculationTime.getTotalTime()},
             {"localCalculationTime", localCalculationTime.getTotalTime()},
             {"globalCalculationTime", globalCalculationTime.getTotalTime()},
-            {"communicationTime", communicationTime.getTotalTime()}
+            {"communicationTime", communicationTime.getTotalTime()},
+            {"bufferEncodingTime", bufferEncodingTime.getTotalTime()},
+            {"bufferDecodingTime", bufferDecodingTime.getTotalTime()},
+            {"loadingDatasetTime", loadingDatasetTime.getTotalTime()}
         };
     
         return output;

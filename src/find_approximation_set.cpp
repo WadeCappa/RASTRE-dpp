@@ -17,15 +17,17 @@ int main(int argc, char** argv) {
     Orchestrator::addCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
+    Timers timers;
+    timers.loadingDatasetTime.startTimer();
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
     DataLoader *dataLoader = Orchestrator::buildDataLoader(appData, inputFile);
     NaiveData data(*dataLoader);
     inputFile.close();
+    timers.loadingDatasetTime.stopTimer();
 
     delete dataLoader;
 
-    Timers timers;
     timers.totalCalculationTime.startTimer();
 
     std::unique_ptr<RepresentativeSubsetCalculator> calculator(Orchestrator::getCalculator(appData));
