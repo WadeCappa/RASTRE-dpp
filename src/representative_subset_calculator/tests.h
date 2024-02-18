@@ -19,8 +19,8 @@ static const NaiveData data(
 static const size_t k = DATA.size();
 static const double epsilon = 0.01;
 
-static void testCalculator(SubsetCalculator &calculator) {
-    std::unique_ptr<Subset> res = calculator.getApproximationSet(data, k);
+static std::unique_ptr<Subset> testCalculator(SubsetCalculator *calculator) {
+    std::unique_ptr<Subset> res = calculator->getApproximationSet(move(NaiveMutableSubset::makeNew()), data, k);
 
     CHECK(res->size() == k);
     std::set<size_t> seen;
@@ -29,26 +29,25 @@ static void testCalculator(SubsetCalculator &calculator) {
         CHECK(seen.find(row) == seen.end());
         seen.insert(row);
     }
+
+    delete calculator;
+    return move(res);
 }
 
 TEST_CASE("Testing Naive representative set finder") {
-    NaiveSubsetCalculator calculator;
-    testCalculator(calculator);
+    testCalculator(new NaiveSubsetCalculator());
 }
 
 TEST_CASE("Testing lazy-naive set finder") {
-    LazySubsetCalculator calculator;
-    testCalculator(calculator);
+    testCalculator(new LazySubsetCalculator());
 }
 
 TEST_CASE("Testing FAST set finder") {
-    FastSubsetCalculator calculator(epsilon);
-    testCalculator(calculator);
+    testCalculator(new FastSubsetCalculator(epsilon));
 }
 
 TEST_CASE("Testing LAZYFAST set finder") {
-    LazyFastSubsetCalculator calculator(epsilon);
-    testCalculator(calculator);
+    testCalculator(new LazyFastSubsetCalculator(epsilon));
 }
 
 void checkSolutionsAreEquivalent(const Subset &a, const Subset &b) {
@@ -62,10 +61,10 @@ void checkSolutionsAreEquivalent(const Subset &a, const Subset &b) {
 }
 
 TEST_CASE("All calculators have the same result") {
-    auto naiveRes = NaiveSubsetCalculator().getApproximationSet(data, k);
-    auto lazyRes = LazySubsetCalculator().getApproximationSet(data, k);
-    auto fastRes = FastSubsetCalculator(epsilon).getApproximationSet(data, k);
-    auto lazyFastRes = LazyFastSubsetCalculator(epsilon).getApproximationSet(data, k);
+    auto naiveRes = testCalculator(new NaiveSubsetCalculator());
+    auto lazyRes = testCalculator(new LazySubsetCalculator());
+    auto fastRes = testCalculator(new FastSubsetCalculator(epsilon));
+    auto lazyFastRes = testCalculator(new LazyFastSubsetCalculator(epsilon));
 
     checkSolutionsAreEquivalent(*naiveRes.get(), *lazyRes.get());
     checkSolutionsAreEquivalent(*lazyRes.get(), *fastRes.get());

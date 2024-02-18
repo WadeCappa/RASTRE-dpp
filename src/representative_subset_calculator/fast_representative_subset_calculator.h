@@ -37,8 +37,7 @@ class FastSubsetCalculator : public SubsetCalculator {
         }
     }
 
-    std::unique_ptr<Subset> getApproximationSet(const Data &data, size_t k) {
-        MutableSubset* solution = new MutableSubset(); 
+    std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
         std::unordered_set<size_t> seen;
 
         NaiveKernelMatrix kernelMatrix(data);
@@ -46,13 +45,12 @@ class FastSubsetCalculator : public SubsetCalculator {
 
         std::vector<std::vector<double>> c(data.totalRows(), std::vector<double>());
 
-        // Modifies the solution set
         auto bestScore = getNextHighestScore(diagonals, seen);
         size_t j = bestScore.first;
         seen.insert(j);
-        solution->addRow(j, bestScore.second);
+        consumer->addRow(j, bestScore.second);
 
-        while (solution->size() < k) {
+        while (consumer->size() < k) {
             #pragma omp parallel for 
             for (size_t i = 0; i < data.totalRows(); i++) {
                 if (seen.find(i) != seen.end()) {
@@ -64,18 +62,17 @@ class FastSubsetCalculator : public SubsetCalculator {
                 diagonals[i] -= std::pow(e, 2);
             }
 
-            // Modifies the solution set
             bestScore = getNextHighestScore(diagonals, seen);
             if (bestScore.second <= this->epsilon) {
                 std::cout << "score of " << bestScore.second << " was less than " << this->epsilon << ". " << std::endl;
-                return MutableSubset::upcast(solution);
+                return MutableSubset::upcast(move(consumer));
             }
 
             j = bestScore.first;
             seen.insert(j);
-            solution->addRow(j, bestScore.second);
+            consumer->addRow(j, bestScore.second);
         }
     
-        return MutableSubset::upcast(solution);
+        return MutableSubset::upcast(move(consumer));
     }
 };

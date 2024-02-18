@@ -19,8 +19,7 @@ class LazySubsetCalculator : public SubsetCalculator {
     public:
     LazySubsetCalculator() {}
 
-    std::unique_ptr<Subset> getApproximationSet(const Data &data, size_t k) {
-        MutableSubset* solution = new MutableSubset();
+    std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
         std::vector<std::pair<size_t, double>> heap;
         for (size_t index = 0; index < data.totalRows(); index++) {
             const auto & d = data.getRow(index);
@@ -35,7 +34,7 @@ class LazySubsetCalculator : public SubsetCalculator {
 
         double currentScore = 0;
 
-        while (solution->size() < k) {
+        while (consumer->size() < k) {
             auto top = heap.front();
             std::pop_heap(heap.begin(),heap.end(), comparitor); 
             heap.pop_back();
@@ -48,7 +47,7 @@ class LazySubsetCalculator : public SubsetCalculator {
 
             if (marginal >= nextElement.second) {
                 double marginalGain = marginal - currentScore;
-                solution->addRow(top.first, marginalGain);
+                consumer->addRow(top.first, marginalGain);
                 matrix.addRow(data.getRow(top.first));
                 currentScore = marginal;
             } else {
@@ -58,6 +57,6 @@ class LazySubsetCalculator : public SubsetCalculator {
             }
         }
 
-        return MutableSubset::upcast(solution);
+        return MutableSubset::upcast(move(consumer));
     }
 };

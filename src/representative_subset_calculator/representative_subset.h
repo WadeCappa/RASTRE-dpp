@@ -15,22 +15,27 @@ class Subset {
 };
 
 class MutableSubset : public Subset {
+    public:
+    virtual void addRow(const size_t row, const double marginalGain) = 0;
+
+    static std::unique_ptr<Subset> upcast(std::unique_ptr<MutableSubset> mutableSubset) {
+        return std::unique_ptr<Subset>(move(mutableSubset));
+    }
+
+};
+
+class NaiveMutableSubset : public MutableSubset {
     private:
     double score;
     std::vector<size_t> rows;
 
     public:
-    MutableSubset() : score(0), rows(std::vector<size_t>()) {}
-    MutableSubset(const std::vector<size_t> &rows, const double score) : rows(rows), score(score) {}
+    NaiveMutableSubset() : score(0), rows(std::vector<size_t>()) {}
+    NaiveMutableSubset(const std::vector<size_t> &rows, const double score) : rows(rows), score(score) {}
 
     void addRow(const size_t row, const double marginalGain) {
         this->rows.push_back(row);
         this->score += marginalGain;
-    }
-
-    static std::unique_ptr<Subset> upcast(MutableSubset* mutableSubset) {
-        Subset* immutableSubset = dynamic_cast<Subset*>(mutableSubset);
-        return std::unique_ptr<Subset>(immutableSubset);
     }
 
     double getScore() const {
@@ -61,13 +66,17 @@ class MutableSubset : public Subset {
 
         return output;
     }
+
+    static std::unique_ptr<MutableSubset> makeNew() {
+        return std::unique_ptr<MutableSubset>(dynamic_cast<MutableSubset*>(new NaiveMutableSubset()));
+    }
 };
 
 std::unique_ptr<Subset> Subset::of(
     const std::vector<size_t> &rows, 
     const double score
 ) {
-    Subset* subset = dynamic_cast<Subset*>(new MutableSubset(rows, score));
+    Subset* subset = dynamic_cast<Subset*>(new NaiveMutableSubset(rows, score));
     return std::unique_ptr<Subset>(subset);
 }
 

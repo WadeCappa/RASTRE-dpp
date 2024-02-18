@@ -12,8 +12,7 @@ class NaiveSubsetCalculator : public SubsetCalculator {
     public:
     NaiveSubsetCalculator() {}
 
-    std::unique_ptr<Subset> getApproximationSet(const Data &data, size_t k) {
-        MutableSubset* solution = new MutableSubset();
+    std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
         SimilarityMatrix matrix; 
         std::set<size_t> seen;
 
@@ -50,12 +49,12 @@ class NaiveSubsetCalculator : public SubsetCalculator {
             }
 
             double marginalGain = highestMarginal - currentScore;
-            solution->addRow(bestRow, marginalGain);
+            consumer->addRow(bestRow, marginalGain);
             matrix.addRow(data.getRow(bestRow));
             seen.insert(bestRow);
             currentScore = highestMarginal;
         }
 
-        return MutableSubset::upcast(solution);
+        return MutableSubset::upcast(move(consumer));
     }
 };
