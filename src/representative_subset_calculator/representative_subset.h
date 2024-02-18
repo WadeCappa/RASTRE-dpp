@@ -11,6 +11,7 @@ class RepresentativeSubset {
     virtual const size_t* end() const = 0;
 
     static std::unique_ptr<RepresentativeSubset> of(const std::vector<size_t> &rows, const double score);
+    static std::unique_ptr<RepresentativeSubset> empty();
 };
 
 class MutableRepresentativeSubset : public RepresentativeSubset {
@@ -68,6 +69,11 @@ std::unique_ptr<RepresentativeSubset> RepresentativeSubset::of(
 ) {
     RepresentativeSubset* subset = dynamic_cast<RepresentativeSubset*>(new MutableRepresentativeSubset(rows, score));
     return std::unique_ptr<RepresentativeSubset>(subset);
+}
+
+std::unique_ptr<RepresentativeSubset> RepresentativeSubset::empty() {
+    std::vector<size_t> emptyRows;
+    return RepresentativeSubset::of(emptyRows, 0);
 }
 
 // class NaiveRepresentativeSubset : public RepresentativeSubset {
