@@ -37,17 +37,6 @@ class Orchestrator {
         }
     }
 
-    static nlohmann::json solutionToJson(
-        const RepresentativeSubset &solution
-    ) {
-        nlohmann::json output {
-            {"rows", solution.getRows()}, 
-            {"totalCoverage", solution.getScore()}
-        };
-
-        return output;
-    }
-
     static nlohmann::json buildDatasetJson(const Data &data, const AppData &appData) {
         nlohmann::json output {
             {"rows", data.totalRows()},
@@ -143,7 +132,7 @@ class Orchestrator {
             {"k", appData.outputSetSize}, 
             {"algorithm", algorithmToString(appData)},
             {"epsilon", appData.epsilon},
-            {"RepresentativeRows", solutionToJson(solution)},
+            {"RepresentativeRows", solution.toJson()},
             {"dataset", buildDatasetJson(data, appData)},
             {"worldSize", appData.worldSize}
         };

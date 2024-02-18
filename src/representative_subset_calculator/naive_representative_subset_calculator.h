@@ -12,8 +12,8 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
     public:
     NaiveRepresentativeSubsetCalculator() {}
 
-    std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
-        std::vector<std::pair<size_t, double>> res;
+    std::unique_ptr<RepresentativeSubset> getApproximationSet(const Data &data, size_t k) {
+        MutableRepresentativeSubset* solution = new MutableRepresentativeSubset();
         SimilarityMatrix matrix; 
         std::set<size_t> seen;
 
@@ -46,17 +46,16 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
             }
 
             if (bestRow == -1) {
-                std::cout << "FAILED to add element to matrix that increased marginal" << std::endl;
-                return res;
+                throw std::invalid_argument("FAILED to add element to matrix that increased marginal");
             }
 
             double marginalGain = highestMarginal - currentScore;
-            res.push_back(std::make_pair(bestRow, marginalGain));
+            solution->addRow(bestRow, marginalGain);
             matrix.addRow(data.getRow(bestRow));
             seen.insert(bestRow);
             currentScore = highestMarginal;
         }
 
-        return res;
+        return MutableRepresentativeSubset::upcast(solution);
     }
 };

@@ -16,10 +16,10 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
         }
     };
 
-    static std::vector<double> getSlice(const std::vector<double> &row, const std::vector<std::pair<size_t, double>> solution, size_t count) {
+    static std::vector<double> getSlice(const std::vector<double> &row, const MutableRepresentativeSubset* solution, size_t count) {
         std::vector<double> res(count);
         for (size_t i = 0; i < count ; i++) {
-            res[i] = row[solution[i].first];
+            res[i] = row[solution->getRow(i)];
         }
 
         return res;
@@ -33,8 +33,8 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
     }
 
     // TODO: Break when marginal gain is below epsilon
-    std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
-        std::vector<std::pair<size_t, double>> solution;
+    std::unique_ptr<RepresentativeSubset> getApproximationSet(const Data &data, size_t k) {
+        MutableRepresentativeSubset* solution = new MutableRepresentativeSubset();
         std::unordered_set<size_t> seen;
         std::vector<std::vector<double>> v(data.totalRows(), std::vector<double>(data.totalRows()));
         std::vector<size_t> u(data.totalRows(), 0);
@@ -52,32 +52,32 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
         HeapComparitor comparitor(diagonals);
         std::make_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
 
-        while (solution.size() < k) {
+        while (solution->size() < k) {
             size_t i = priorityQueue.front();
             std::pop_heap(priorityQueue.begin(),priorityQueue.end(), comparitor); 
             priorityQueue.pop_back();
 
             // update row
-            for (size_t t = u[i]; t < solution.size(); t++) {
-                size_t j_t = solution[t].first; 
+            for (size_t t = u[i]; t < solution->size(); t++) {
+                size_t j_t = solution->getRow(t); 
                 double dotProduct = KernelMatrix::getDotProduct(this->getSlice(v[i], solution, t), this->getSlice(v[j_t], solution, t));
                 v[i][j_t] = (kernelMatrix.get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t]);
                 diagonals[i] -= std::pow(v[i][j_t], 2);
             }
 
-            u[i] = solution.size();
+            u[i] = solution->size();
             
             double marginalGain = std::log(diagonals[i]);
             double nextScore = std::log(diagonals[priorityQueue.front()]);
 
-            if (marginalGain > nextScore || solution.size() == data.totalRows() - 1) {
-                solution.push_back(std::make_pair(i, marginalGain));
+            if (marginalGain > nextScore || solution->size() == data.totalRows() - 1) {
+                solution->addRow(i, marginalGain);
             } else {
                 priorityQueue.push_back(i);
                 std::push_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
             }
         }
 
-        return solution;
+        return MutableRepresentativeSubset::upcast(solution);
     }
 };

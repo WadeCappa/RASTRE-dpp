@@ -129,17 +129,14 @@ class SelectiveData : public Data {
         return this->columns;
     }
 
-    std::vector<std::pair<size_t, double>> translateSolution(
-        const std::vector<std::pair<size_t, double>> &localSolution
+    std::unique_ptr<RepresentativeSubset> translateSolution(
+        const std::unique_ptr<RepresentativeSubset> localSolution
     ) const {
-        std::vector<std::pair<size_t, double>> globalSolution;
-        for (const auto & i : localSolution) {
-            globalSolution.push_back(std::make_pair(
-                this->base[i.first].first,
-                i.second
-            ));
+        std::vector<size_t> translatedRows;
+        for (const auto & relativeRow : *localSolution.get()) {
+            translatedRows.push_back(this->base[relativeRow].first);
         }
 
-        return globalSolution;
+        return RepresentativeSubset::of(translatedRows, localSolution->getScore());
     }
 };

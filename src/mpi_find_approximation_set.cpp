@@ -1,11 +1,11 @@
 #include "data_tools/normalizer.h"
 #include "data_tools/matrix_builder.h"
 #include "representative_subset_calculator/timers/timers.h"
+#include "representative_subset_calculator/representative_subset.h"
 #include "representative_subset_calculator/naive_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/representative_subset.h"
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 
 #include "representative_subset_calculator/buffers/bufferBuilder.h"

@@ -19,8 +19,8 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
     public:
     LazyRepresentativeSubsetCalculator() {}
 
-    std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
-        std::vector<std::pair<size_t, double>> subsetRows;
+    std::unique_ptr<RepresentativeSubset> getApproximationSet(const Data &data, size_t k) {
+        MutableRepresentativeSubset* solution = new MutableRepresentativeSubset();
         std::vector<std::pair<size_t, double>> heap;
         for (size_t index = 0; index < data.totalRows(); index++) {
             const auto & d = data.getRow(index);
@@ -35,7 +35,7 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
 
         double currentScore = 0;
 
-        while (subsetRows.size() < k) {
+        while (solution->size() < k) {
             auto top = heap.front();
             std::pop_heap(heap.begin(),heap.end(), comparitor); 
             heap.pop_back();
@@ -48,7 +48,7 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
 
             if (marginal >= nextElement.second) {
                 double marginalGain = marginal - currentScore;
-                subsetRows.push_back(std::make_pair(top.first, marginalGain));
+                solution->addRow(top.first, marginalGain);
                 matrix.addRow(data.getRow(top.first));
                 currentScore = marginal;
             } else {
@@ -58,6 +58,6 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             }
         }
 
-        return subsetRows;
+        return MutableRepresentativeSubset::upcast(solution);
     }
 };
