@@ -21,7 +21,6 @@ class MutableSubset : public Subset {
     static std::unique_ptr<Subset> upcast(std::unique_ptr<MutableSubset> mutableSubset) {
         return std::unique_ptr<Subset>(move(mutableSubset));
     }
-
 };
 
 class NaiveMutableSubset : public MutableSubset {
@@ -84,56 +83,3 @@ std::unique_ptr<Subset> Subset::empty() {
     std::vector<size_t> emptyRows;
     return Subset::of(emptyRows, 0);
 }
-
-// class NaiveSubset : public Subset {
-//     private:
-//     double score;
-//     std::vector<size_t> rows;
-
-//     void setState(const std::vector<std::pair<size_t, double>> &res) {
-//         this->score = 0;
-//         for (const auto & s : res) {
-//             this->score += s.second;
-//             this->rows.push_back(s.first);
-//         }
-//     }
-
-//     public:
-//     NaiveSubset(
-//         // This calculator will be mutated, should never be re-used.
-//         std::unique_ptr<SubsetCalculator> calculator, 
-//         const Data &data,
-//         const size_t desiredRows,
-//         Timers &timers
-//     ) {
-//         timers.localCalculationTime.startTimer();
-//         auto res = calculator->getApproximationSet(data, desiredRows);
-//         timers.localCalculationTime.stopTimer();
-//         this->setState(res);
-//     }
-
-//     NaiveSubset(
-//         // This calculator will be mutated, should never be re-used.
-//         std::unique_ptr<SubsetCalculator> calculator, 
-//         const SelectiveData &data,
-//         const size_t desiredRows,
-//         Timers &timers
-//     ) {
-//         timers.globalCalculationTime.startTimer();
-//         auto res = calculator->getApproximationSet(data, desiredRows);
-//         timers.globalCalculationTime.stopTimer();
-//         this->setState(data.translateSolution(res));
-//     }
-
-//     double getScore() const {
-//         return score;
-//     }
-
-//     std::vector<size_t> getRows() const {
-//         return rows;
-//     }
-
-//     size_t size() const {
-//         return this->rows.size();
-//     }
-// };

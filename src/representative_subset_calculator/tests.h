@@ -20,7 +20,7 @@ static const size_t k = DATA.size();
 static const double epsilon = 0.01;
 
 static std::unique_ptr<Subset> testCalculator(SubsetCalculator *calculator) {
-    std::unique_ptr<Subset> res = calculator->getApproximationSet(move(NaiveMutableSubset::makeNew()), data, k);
+    std::unique_ptr<Subset> res = calculator->getApproximationSet(data, k);
 
     CHECK(res->size() == k);
     std::set<size_t> seen;
