@@ -48,7 +48,10 @@ int main(int argc, char** argv) {
 
     timers.totalCalculationTime.startTimer();
     std::unique_ptr<RepresentativeSubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
+
+    timers.localCalculationTime.startTimer();
     std::unique_ptr<RepresentativeSubset> localSolution(calculator->getApproximationSet(data, appData.outputSetSize));
+    timers.localCalculationTime.stopTimer();
 
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
     timers.bufferEncodingTime.startTimer();
