@@ -129,14 +129,14 @@ class SelectiveData : public Data {
         return this->columns;
     }
 
-    std::unique_ptr<RepresentativeSubset> translateSolution(
-        const std::unique_ptr<RepresentativeSubset> localSolution
+    std::unique_ptr<Subset> translateSolution(
+        const std::unique_ptr<Subset> localSolution
     ) const {
         std::vector<size_t> translatedRows;
         for (const auto & relativeRow : *localSolution.get()) {
             translatedRows.push_back(this->base[relativeRow].first);
         }
 
-        return RepresentativeSubset::of(translatedRows, localSolution->getScore());
+        return Subset::of(translatedRows, localSolution->getScore());
     }
 };

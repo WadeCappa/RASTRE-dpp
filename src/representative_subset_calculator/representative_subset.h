@@ -1,7 +1,7 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 
-class RepresentativeSubset {
+class Subset {
     public:
     virtual double getScore() const = 0;
     virtual size_t getRow(const size_t index) const = 0;
@@ -10,27 +10,27 @@ class RepresentativeSubset {
     virtual const size_t* begin() const = 0;
     virtual const size_t* end() const = 0;
 
-    static std::unique_ptr<RepresentativeSubset> of(const std::vector<size_t> &rows, const double score);
-    static std::unique_ptr<RepresentativeSubset> empty();
+    static std::unique_ptr<Subset> of(const std::vector<size_t> &rows, const double score);
+    static std::unique_ptr<Subset> empty();
 };
 
-class MutableRepresentativeSubset : public RepresentativeSubset {
+class MutableSubset : public Subset {
     private:
     double score;
     std::vector<size_t> rows;
 
     public:
-    MutableRepresentativeSubset() : score(0), rows(std::vector<size_t>()) {}
-    MutableRepresentativeSubset(const std::vector<size_t> &rows, const double score) : rows(rows), score(score) {}
+    MutableSubset() : score(0), rows(std::vector<size_t>()) {}
+    MutableSubset(const std::vector<size_t> &rows, const double score) : rows(rows), score(score) {}
 
     void addRow(const size_t row, const double marginalGain) {
         this->rows.push_back(row);
         this->score += marginalGain;
     }
 
-    static std::unique_ptr<RepresentativeSubset> upcast(MutableRepresentativeSubset* mutableSubset) {
-        RepresentativeSubset* immutableSubset = dynamic_cast<RepresentativeSubset*>(mutableSubset);
-        return std::unique_ptr<RepresentativeSubset>(immutableSubset);
+    static std::unique_ptr<Subset> upcast(MutableSubset* mutableSubset) {
+        Subset* immutableSubset = dynamic_cast<Subset*>(mutableSubset);
+        return std::unique_ptr<Subset>(immutableSubset);
     }
 
     double getScore() const {
@@ -63,20 +63,20 @@ class MutableRepresentativeSubset : public RepresentativeSubset {
     }
 };
 
-std::unique_ptr<RepresentativeSubset> RepresentativeSubset::of(
+std::unique_ptr<Subset> Subset::of(
     const std::vector<size_t> &rows, 
     const double score
 ) {
-    RepresentativeSubset* subset = dynamic_cast<RepresentativeSubset*>(new MutableRepresentativeSubset(rows, score));
-    return std::unique_ptr<RepresentativeSubset>(subset);
+    Subset* subset = dynamic_cast<Subset*>(new MutableSubset(rows, score));
+    return std::unique_ptr<Subset>(subset);
 }
 
-std::unique_ptr<RepresentativeSubset> RepresentativeSubset::empty() {
+std::unique_ptr<Subset> Subset::empty() {
     std::vector<size_t> emptyRows;
-    return RepresentativeSubset::of(emptyRows, 0);
+    return Subset::of(emptyRows, 0);
 }
 
-// class NaiveRepresentativeSubset : public RepresentativeSubset {
+// class NaiveSubset : public Subset {
 //     private:
 //     double score;
 //     std::vector<size_t> rows;
@@ -90,9 +90,9 @@ std::unique_ptr<RepresentativeSubset> RepresentativeSubset::empty() {
 //     }
 
 //     public:
-//     NaiveRepresentativeSubset(
+//     NaiveSubset(
 //         // This calculator will be mutated, should never be re-used.
-//         std::unique_ptr<RepresentativeSubsetCalculator> calculator, 
+//         std::unique_ptr<SubsetCalculator> calculator, 
 //         const Data &data,
 //         const size_t desiredRows,
 //         Timers &timers
@@ -103,9 +103,9 @@ std::unique_ptr<RepresentativeSubset> RepresentativeSubset::empty() {
 //         this->setState(res);
 //     }
 
-//     NaiveRepresentativeSubset(
+//     NaiveSubset(
 //         // This calculator will be mutated, should never be re-used.
-//         std::unique_ptr<RepresentativeSubsetCalculator> calculator, 
+//         std::unique_ptr<SubsetCalculator> calculator, 
 //         const SelectiveData &data,
 //         const size_t desiredRows,
 //         Timers &timers

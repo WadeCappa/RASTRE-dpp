@@ -171,12 +171,12 @@ TEST_CASE("Testing SelectiveData translation and construction") {
     }
 
     SelectiveData selectiveData(mockReceiveData);
-    MutableRepresentativeSubset *mockSolution = new MutableRepresentativeSubset();
+    MutableSubset *mockSolution = new MutableSubset();
     for (size_t i = 0; i < mockReceiveData.size(); i++) {
         mockSolution->addRow(i, 0);
     }
 
-    auto translated = selectiveData.translateSolution(MutableRepresentativeSubset::upcast(mockSolution));
+    auto translated = selectiveData.translateSolution(MutableSubset::upcast(mockSolution));
 
     for (size_t i = 0; i < mockReceiveData.size(); i++) {
         CHECK(mockReceiveData[i].first == translated->getRow(i));

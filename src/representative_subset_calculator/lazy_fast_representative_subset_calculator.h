@@ -4,7 +4,7 @@
 #include <unordered_set>
 #include <optional>
 
-class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
+class LazyFastSubsetCalculator : public SubsetCalculator {
     private:
     const double epsilon;
 
@@ -16,7 +16,7 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
         }
     };
 
-    static std::vector<double> getSlice(const std::vector<double> &row, const MutableRepresentativeSubset* solution, size_t count) {
+    static std::vector<double> getSlice(const std::vector<double> &row, const MutableSubset* solution, size_t count) {
         std::vector<double> res(count);
         for (size_t i = 0; i < count ; i++) {
             res[i] = row[solution->getRow(i)];
@@ -26,15 +26,15 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
     }
 
     public:
-    LazyFastRepresentativeSubsetCalculator(const double epsilon) : epsilon(epsilon) {
+    LazyFastSubsetCalculator(const double epsilon) : epsilon(epsilon) {
         if (this->epsilon < 0) {
             throw std::invalid_argument("Epsilon is less than 0.");
         }
     }
 
     // TODO: Break when marginal gain is below epsilon
-    std::unique_ptr<RepresentativeSubset> getApproximationSet(const Data &data, size_t k) {
-        MutableRepresentativeSubset* solution = new MutableRepresentativeSubset();
+    std::unique_ptr<Subset> getApproximationSet(const Data &data, size_t k) {
+        MutableSubset* solution = new MutableSubset();
         std::unordered_set<size_t> seen;
         std::vector<std::vector<double>> v(data.totalRows(), std::vector<double>(data.totalRows()));
         std::vector<size_t> u(data.totalRows(), 0);
@@ -78,6 +78,6 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
             }
         }
 
-        return MutableRepresentativeSubset::upcast(solution);
+        return MutableSubset::upcast(solution);
     }
 };

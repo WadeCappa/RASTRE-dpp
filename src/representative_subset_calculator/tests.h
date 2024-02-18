@@ -19,8 +19,8 @@ static const NaiveData data(
 static const size_t k = DATA.size();
 static const double epsilon = 0.01;
 
-static void testCalculator(RepresentativeSubsetCalculator &calculator) {
-    std::unique_ptr<RepresentativeSubset> res = calculator.getApproximationSet(data, k);
+static void testCalculator(SubsetCalculator &calculator) {
+    std::unique_ptr<Subset> res = calculator.getApproximationSet(data, k);
 
     CHECK(res->size() == k);
     std::set<size_t> seen;
@@ -32,26 +32,26 @@ static void testCalculator(RepresentativeSubsetCalculator &calculator) {
 }
 
 TEST_CASE("Testing Naive representative set finder") {
-    NaiveRepresentativeSubsetCalculator calculator;
+    NaiveSubsetCalculator calculator;
     testCalculator(calculator);
 }
 
 TEST_CASE("Testing lazy-naive set finder") {
-    LazyRepresentativeSubsetCalculator calculator;
+    LazySubsetCalculator calculator;
     testCalculator(calculator);
 }
 
 TEST_CASE("Testing FAST set finder") {
-    FastRepresentativeSubsetCalculator calculator(epsilon);
+    FastSubsetCalculator calculator(epsilon);
     testCalculator(calculator);
 }
 
 TEST_CASE("Testing LAZYFAST set finder") {
-    LazyFastRepresentativeSubsetCalculator calculator(epsilon);
+    LazyFastSubsetCalculator calculator(epsilon);
     testCalculator(calculator);
 }
 
-void checkSolutionsAreEquivalent(const RepresentativeSubset &a, const RepresentativeSubset &b) {
+void checkSolutionsAreEquivalent(const Subset &a, const Subset &b) {
     CHECK(a.size() == b.size());
     for (size_t i = 0; i < a.size() && i < b.size(); i++) {
         CHECK(a.getRow(i) == b.getRow(i));
@@ -62,10 +62,10 @@ void checkSolutionsAreEquivalent(const RepresentativeSubset &a, const Representa
 }
 
 TEST_CASE("All calculators have the same result") {
-    auto naiveRes = NaiveRepresentativeSubsetCalculator().getApproximationSet(data, k);
-    auto lazyRes = LazyRepresentativeSubsetCalculator().getApproximationSet(data, k);
-    auto fastRes = FastRepresentativeSubsetCalculator(epsilon).getApproximationSet(data, k);
-    auto lazyFastRes = LazyFastRepresentativeSubsetCalculator(epsilon).getApproximationSet(data, k);
+    auto naiveRes = NaiveSubsetCalculator().getApproximationSet(data, k);
+    auto lazyRes = LazySubsetCalculator().getApproximationSet(data, k);
+    auto fastRes = FastSubsetCalculator(epsilon).getApproximationSet(data, k);
+    auto lazyFastRes = LazyFastSubsetCalculator(epsilon).getApproximationSet(data, k);
 
     checkSolutionsAreEquivalent(*naiveRes.get(), *lazyRes.get());
     checkSolutionsAreEquivalent(*lazyRes.get(), *fastRes.get());

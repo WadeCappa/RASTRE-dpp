@@ -4,7 +4,7 @@
 #include <unordered_set>
 #include "kernel_matrix/kernel_matrix.h"
 
-class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
+class FastSubsetCalculator : public SubsetCalculator {
     private:
     const double epsilon;
 
@@ -31,14 +31,14 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
     }
 
   public:
-    FastRepresentativeSubsetCalculator(const double epsilon) : epsilon(epsilon) {
+    FastSubsetCalculator(const double epsilon) : epsilon(epsilon) {
         if (this->epsilon < 0) {
             throw std::invalid_argument("Epsilon is less than 0.");
         }
     }
 
-    std::unique_ptr<RepresentativeSubset> getApproximationSet(const Data &data, size_t k) {
-        MutableRepresentativeSubset* solution = new MutableRepresentativeSubset(); 
+    std::unique_ptr<Subset> getApproximationSet(const Data &data, size_t k) {
+        MutableSubset* solution = new MutableSubset(); 
         std::unordered_set<size_t> seen;
 
         NaiveKernelMatrix kernelMatrix(data);
@@ -68,7 +68,7 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             bestScore = getNextHighestScore(diagonals, seen);
             if (bestScore.second <= this->epsilon) {
                 std::cout << "score of " << bestScore.second << " was less than " << this->epsilon << ". " << std::endl;
-                return MutableRepresentativeSubset::upcast(solution);
+                return MutableSubset::upcast(solution);
             }
 
             j = bestScore.first;
@@ -76,6 +76,6 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             solution->addRow(j, bestScore.second);
         }
     
-        return MutableRepresentativeSubset::upcast(solution);
+        return MutableSubset::upcast(solution);
     }
 };

@@ -12,7 +12,7 @@ class BufferBuilder : public Buffer {
     private:
     static unsigned int getTotalSendData(
         const Data &data, 
-        const RepresentativeSubset &localSolution
+        const Subset &localSolution
     ) {
         // Need to include an additional column that marks the index of the sent row 
         //  as well as an additional double for the sender's local solution total 
@@ -23,7 +23,7 @@ class BufferBuilder : public Buffer {
     public:
     static unsigned int buildSendBuffer(
         const LocalData &data, 
-        const RepresentativeSubset &localSolution, 
+        const Subset &localSolution, 
         std::vector<double> &buffer
     ) {
         // Need to include an additional column that marks the index of the sent row
@@ -73,8 +73,8 @@ class BufferBuilder : public Buffer {
 
 class BufferLoader : public Buffer {
     public:
-    virtual std::unique_ptr<RepresentativeSubset> getSolution(
-        std::unique_ptr<RepresentativeSubsetCalculator> calculator,
+    virtual std::unique_ptr<Subset> getSolution(
+        std::unique_ptr<SubsetCalculator> calculator,
         const size_t k
     ) = 0;
 };
@@ -88,7 +88,7 @@ class GlobalBufferLoader : public BufferLoader {
     const size_t worldSize;
 
     public:
-    std::unique_ptr<RepresentativeSubset> getSolution(std::unique_ptr<RepresentativeSubsetCalculator> calculator, const size_t k) {
+    std::unique_ptr<Subset> getSolution(std::unique_ptr<SubsetCalculator> calculator, const size_t k) {
         this->timers.bufferDecodingTime.startTimer();
         auto newData = this->rebuildData();
         SelectiveData bestRows(*newData);
@@ -96,12 +96,12 @@ class GlobalBufferLoader : public BufferLoader {
 
         timers.globalCalculationTime.startTimer();
 
-        std::unique_ptr<RepresentativeSubset> untranslatedSolution(calculator->getApproximationSet(bestRows, k));
-        std::unique_ptr<RepresentativeSubset> globalResult(bestRows.translateSolution(move(untranslatedSolution)));
+        std::unique_ptr<Subset> untranslatedSolution(calculator->getApproximationSet(bestRows, k));
+        std::unique_ptr<Subset> globalResult(bestRows.translateSolution(move(untranslatedSolution)));
 
         timers.globalCalculationTime.stopTimer();
 
-        std::unique_ptr<RepresentativeSubset> bestLocal = this->getBestLocalSolution();
+        std::unique_ptr<Subset> bestLocal = this->getBestLocalSolution();
         if (globalResult->getScore() > bestLocal->getScore()) {
             return globalResult; 
         } else {
@@ -150,7 +150,7 @@ class GlobalBufferLoader : public BufferLoader {
         return std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>>(newData);
     }
 
-    std::unique_ptr<RepresentativeSubset> getBestLocalSolution() {
+    std::unique_ptr<Subset> getBestLocalSolution() {
         std::vector<size_t> rows;
         double coverage;
         double localMaxCoverage = -1;
@@ -178,7 +178,7 @@ class GlobalBufferLoader : public BufferLoader {
             rows.push_back(binaryInput[rankCursor]);
         }
 
-        return RepresentativeSubset::of(rows, coverage);
+        return Subset::of(rows, coverage);
     }
 
     std::vector<size_t> getRowOffsets() {

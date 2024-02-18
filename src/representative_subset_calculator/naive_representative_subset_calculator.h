@@ -6,14 +6,14 @@
 #include "similarity_matrix/similarity_matrix.h"
 #include "representative_subset_calculator.h"
 
-class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
+class NaiveSubsetCalculator : public SubsetCalculator {
     private: 
 
     public:
-    NaiveRepresentativeSubsetCalculator() {}
+    NaiveSubsetCalculator() {}
 
-    std::unique_ptr<RepresentativeSubset> getApproximationSet(const Data &data, size_t k) {
-        MutableRepresentativeSubset* solution = new MutableRepresentativeSubset();
+    std::unique_ptr<Subset> getApproximationSet(const Data &data, size_t k) {
+        MutableSubset* solution = new MutableSubset();
         SimilarityMatrix matrix; 
         std::set<size_t> seen;
 
@@ -56,6 +56,6 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
             currentScore = highestMarginal;
         }
 
-        return MutableRepresentativeSubset::upcast(solution);
+        return MutableSubset::upcast(solution);
     }
 };

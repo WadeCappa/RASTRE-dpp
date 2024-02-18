@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <algorithm>
 
-class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
+class LazySubsetCalculator : public SubsetCalculator {
     private:
 
     struct HeapComparitor {
@@ -17,10 +17,10 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
     };
 
     public:
-    LazyRepresentativeSubsetCalculator() {}
+    LazySubsetCalculator() {}
 
-    std::unique_ptr<RepresentativeSubset> getApproximationSet(const Data &data, size_t k) {
-        MutableRepresentativeSubset* solution = new MutableRepresentativeSubset();
+    std::unique_ptr<Subset> getApproximationSet(const Data &data, size_t k) {
+        MutableSubset* solution = new MutableSubset();
         std::vector<std::pair<size_t, double>> heap;
         for (size_t index = 0; index < data.totalRows(); index++) {
             const auto & d = data.getRow(index);
@@ -58,6 +58,6 @@ class LazyRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
             }
         }
 
-        return MutableRepresentativeSubset::upcast(solution);
+        return MutableSubset::upcast(solution);
     }
 };

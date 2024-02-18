@@ -2,13 +2,13 @@
 #include <cstdlib>
 #include "bufferBuilder.h"
 
-static const std::unique_ptr<RepresentativeSubset> MOCK_SOLUTION(
-    RepresentativeSubset::of(std::vector<size_t>{0, DATA.size()-1}, 15)
+static const std::unique_ptr<Subset> MOCK_SOLUTION(
+    Subset::of(std::vector<size_t>{0, DATA.size()-1}, 15)
 );
 static const std::vector<unsigned int> ROW_TO_RANK(DATA.size(), 0);
 static const unsigned int RANK = 0;
 
-static std::vector<size_t> getRows(const RepresentativeSubset &solution) {
+static std::vector<size_t> getRows(const Subset &solution) {
     std::vector<size_t> rows;
     for (size_t i = 0; i < solution.size(); i++) {
         rows.push_back(solution.getRow(i));
@@ -46,8 +46,8 @@ TEST_CASE("Getting solution from a buffer") {
 
     Timers timers;
     GlobalBufferLoader bufferLoader(sendBuffer, data.totalColumns(), displacements, timers);
-    std::unique_ptr<RepresentativeSubset> receivedSolution(bufferLoader.getSolution(
-        std::unique_ptr<RepresentativeSubsetCalculator>(new NaiveRepresentativeSubsetCalculator()), 
+    std::unique_ptr<Subset> receivedSolution(bufferLoader.getSolution(
+        std::unique_ptr<SubsetCalculator>(new NaiveSubsetCalculator()), 
         MOCK_SOLUTION->size()
     ));
 

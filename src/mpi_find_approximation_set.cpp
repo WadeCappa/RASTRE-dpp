@@ -47,10 +47,10 @@ int main(int argc, char** argv) {
     timers.barrierTime.stopTimer();
 
     timers.totalCalculationTime.startTimer();
-    std::unique_ptr<RepresentativeSubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
+    std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
 
     timers.localCalculationTime.startTimer();
-    std::unique_ptr<RepresentativeSubset> localSolution(calculator->getApproximationSet(data, appData.outputSetSize));
+    std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(data, appData.outputSetSize));
     timers.localCalculationTime.stopTimer();
 
     // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
@@ -88,9 +88,9 @@ int main(int argc, char** argv) {
     timers.communicationTime.stopTimer();
 
     if (appData.worldRank == 0) {
-        std::unique_ptr<RepresentativeSubsetCalculator> globalCalculator(MpiOrchestrator::getCalculator(appData));
+        std::unique_ptr<SubsetCalculator> globalCalculator(MpiOrchestrator::getCalculator(appData));
         GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers);
-        std::unique_ptr<RepresentativeSubset> globalSolution(bufferLoader.getSolution(move(globalCalculator), appData.outputSetSize));
+        std::unique_ptr<Subset> globalSolution(bufferLoader.getSolution(move(globalCalculator), appData.outputSetSize));
 
         timers.totalCalculationTime.stopTimer();
 
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
     } else {
         // used to load global timers on rank 0
         timers.totalCalculationTime.stopTimer();
-        auto dummyResult = RepresentativeSubset::empty();
+        auto dummyResult = Subset::empty();
 
         MpiOrchestrator::buildMpiOutput(appData, *dummyResult.get(), data, timers, rowToRank);
     }

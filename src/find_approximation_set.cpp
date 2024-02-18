@@ -30,8 +30,8 @@ int main(int argc, char** argv) {
 
     timers.totalCalculationTime.startTimer();
 
-    std::unique_ptr<RepresentativeSubsetCalculator> calculator(Orchestrator::getCalculator(appData));
-    std::unique_ptr<RepresentativeSubset> solution = calculator->getApproximationSet(data, appData.outputSetSize);
+    std::unique_ptr<SubsetCalculator> calculator(Orchestrator::getCalculator(appData));
+    std::unique_ptr<Subset> solution = calculator->getApproximationSet(data, appData.outputSetSize);
 
     timers.totalCalculationTime.stopTimer();
 
