@@ -1,5 +1,6 @@
 #include "bucket.h"
 #include <mpi.h>
+#include <queue>
 
 static const int DOUBLES_FOR_ROW_INDEX = 1;
 
@@ -10,7 +11,24 @@ class StreamingReceiver {
 
 class SeiveStreamingReceiver : public StreamingReceiver {
     private:
-    const int totalReceiveBufferSize;
+    class CandidateSeed {
+        private:
+        std::vector<double> data;
+        unsigned int globalRow;
+
+        public:
+        CandidateSeed(const unsigned int row, const std::vector<double> &data) : data(data), globalRow(row) {}
+
+        const std::vector<double> &getData() {
+            return this->data;
+        }
+
+        unsigned int getRow() {
+            return this->globalRow;
+        }
+    };
+
+    unsigned int bucketsInitialized;
 
     struct ReceiveBuffers {
         private:
@@ -22,67 +40,120 @@ class SeiveStreamingReceiver : public StreamingReceiver {
         
         std::vector<MaybePoplulatedBuffer> buffers;
         std::vector<size_t> rankToCurrentSeed;
+        std::vector<bool> seenFirstElementFromRank;
 
-        MaybePoplulatedBuffer &getBuffer(const int rank, const int seed) {
-            return buffers[(rank * rankToCurrentSeed.size()) + seed];
+        MaybePoplulatedBuffer &getBuffer(const int rank) {
+            return buffers[rank];
+        }
+
+        void listenForNextSeed(const unsigned int rank) {
+            MaybePoplulatedBuffer &buffer(getBuffer(rank));
+            MPI_Irecv(
+                buffer.buffer.data(), buffer.buffer.size(), 
+                MPI_DOUBLE, rank, MPI_ANY_TAG, 
+                MPI_COMM_WORLD, &buffer.request
+            );
+        }
+
+        bool shouldInitializeBuckets() {
+            bool seenAllElements = true;
+            for (const bool seen : seenFirstElementFromRank) {
+                seenAllElements = seenAllElements && seen;
+            }
+
+            return seenAllElements;
         }
 
         public:
-        ReceiveBuffers(const int worldSize, const size_t rowSize, const int threads, const int k) 
+        ReceiveBuffers(const int worldSize, const size_t rowSize, const int k) 
         : 
-            buffers(worldSize * k, MaybePoplulatedBuffer(rowSize + DOUBLES_FOR_ROW_INDEX)),
-            rankToCurrentSeed(worldSize, 0)
+            buffers(worldSize, MaybePoplulatedBuffer(rowSize + DOUBLES_FOR_ROW_INDEX)),
+            rankToCurrentSeed(worldSize, 0),
+            seenFirstElementFromRank(worldSize, false)
         {
             for (size_t rank = 0; rank < worldSize; rank++) {
-                for (size_t seed = 0; seed < k; seed++) {
-                    MaybePoplulatedBuffer &buffer(getBuffer(rank, seed));
-                    MPI_Irecv(
-                        buffer.buffer.data(), buffer.buffer.size(), 
-                        MPI_DOUBLE, rank, seed, 
-                        MPI_COMM_WORLD, &buffer.request
-                    );
-                }
+                listenForNextSeed(rank);
             }
         }
 
-        const std::vector<double> &receiveNextSeed() {
+        CandidateSeed* receiveNextSeed(bool &bucketsInitializedFlag) {
+            int localDummyValue = 0;
             while (true) {
                 for (size_t rank = 0; rank < this->rankToCurrentSeed.size(); rank++) {
                     const size_t currentSeed = this->rankToCurrentSeed[rank];
                     int flag;
                     MPI_Status status;
-                    MPI_Test(&(getBuffer(rank, currentSeed).request), &flag, &status);
+                    MPI_Test(&(getBuffer(rank).request), &flag, &status);
                     if (flag == 1) {
                         this->rankToCurrentSeed[rank]++;
-                        return getBuffer(rank, currentSeed).buffer;
+                        CandidateSeed *nextSeed = new CandidateSeed(status.MPI_TAG, getBuffer(rank).buffer);
+                        listenForNextSeed(rank);
+                        seenFirstElementFromRank[rank] = true;
+                        
+                        // By side effect, determine if buckets should be initailized 
+                        if (bucketsInitializedFlag == false) {
+                            bucketsInitializedFlag = shouldInitializeBuckets();
+                        }
+
+                        return nextSeed;
                     }
                 }
+            
+                // Prevents the while(true) loop from being optimized out of the compiled code
+                # pragma omp atomic
+                localDummyValue++;
             }
         }
     };
 
     ReceiveBuffers buffers;
     std::vector<ThresholdBucket> buckets;
+    std::vector<CandidateSeed*> availableBuffers;
+    size_t firstUnavailableBuffer;
+    const int worldSize;
+    const int k;
 
     public:
-    SeiveStreamingReceiver(const int worldSize, const size_t rowSize, const int threads, const int k) 
+    SeiveStreamingReceiver(const int worldSize, const size_t rowSize, const int k) 
     : 
-        totalReceiveBufferSize(rowSize + DOUBLES_FOR_ROW_INDEX),
-        buffers(worldSize, rowSize + DOUBLES_FOR_ROW_INDEX, threads, k)
+        buffers(worldSize, rowSize + DOUBLES_FOR_ROW_INDEX, k),
+        availableBuffers(worldSize * k, nullptr),
+        firstUnavailableBuffer(0),
+        worldSize(worldSize),
+        k(k),
+        bucketsInitialized(0)
     {}
     
-    std::unique_ptr<Subset> stream() {
-        
+    std::unique_ptr<Subset> stream(const int threads) {
+        #pragma omp parallel num_threads(threads)
+        {
+            const int threadId = omp_get_thread_num();
+            if (threadId == 0) {
+                listenForSeeds(this->worldSize, this->k);
+            } else {
+                // Subtract the listening threads
+                processSeeds(threads - 1);
+            }
+        }
     }
 
     private:
-    void listenForSeeds() {
-        while (true) {
-            const std::vector<double> &data = buffers.receiveNextSeed();
-        } 
+    void listenForSeeds(const int worldSize, const int k) {
+        bool shouldInitializeBuckets = false;
+        for (int receivedSeeds = 0; receivedSeeds < k * worldSize; receivedSeeds++) {
+            availableBuffers[this->firstUnavailableBuffer] = buffers.receiveNextSeed(shouldInitializeBuckets);
+            this->firstUnavailableBuffer++;
+        }
     }
 
-    void processSeeds() {
+    void processSeeds(const int threadsForProcessing) {
+        unsigned int localDummyValue;
+        while (bucketsInitialized == 0) {
+            // Prevents the while(true) loop from being optimized out of the compiled code
+            # pragma omp atomic
+            localDummyValue++;
+        }
+
 
     }
 };
@@ -90,9 +161,11 @@ class SeiveStreamingReceiver : public StreamingReceiver {
 class StreamingSubset : public MutableSubset {
     private:
     std::unique_ptr<MutableSubset> base;
+    const LocalData &data;
+    std::vector<MPI_Request> sends;
 
     public:
-    StreamingSubset() : base(NaiveMutableSubset::makeNew()) {}
+    StreamingSubset(const LocalData& data) : data(data), base(NaiveMutableSubset::makeNew()) {}
 
     double getScore() const {
         return base->getScore();
@@ -119,6 +192,12 @@ class StreamingSubset : public MutableSubset {
     }
 
     void addRow(const size_t row, const double marginalGain) {
-        // Overload this for streaming. When something has been added, send to the global node.
+        const std::vector<double>& rowToSend(this->data.getRow(row));
+        sends.push_back(MPI_Request());
+        MPI_Request *request = &sends.back();
+        
+        // Use the row index as the tag
+        MPI_Isend(rowToSend.data(), rowToSend.size(), MPI_DOUBLE, 0, data.getRemoteIndexForRow(row), MPI_COMM_WORLD, request);
+        this->base->addRow(row, marginalGain);
     }
 };
