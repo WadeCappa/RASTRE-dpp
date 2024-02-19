@@ -15,6 +15,7 @@ static const NaiveData data(
 #include "kernel_matrix/tests.h"
 #include "orchestrator/tests.h"
 #include "buffers/tests.h"
+#include "streaming/tests.h"
 
 static const size_t k = DATA.size();
 static const double epsilon = 0.01;

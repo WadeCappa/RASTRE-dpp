@@ -72,7 +72,7 @@ class SeiveStreamingReceiver : public StreamingReceiver {
     {}
     
     std::unique_ptr<Subset> stream() {
-
+        
     }
 
     private:

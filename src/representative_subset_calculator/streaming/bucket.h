@@ -19,20 +19,16 @@ class ThresholdBucket
         k(k)
     {}
 
-    size_t getUtility() 
-    {
+    size_t getUtility() {
         return this->solution->getScore();
     }
 
-    std::unique_ptr<Subset> returnSolution()
-    {
+    std::unique_ptr<Subset> returnSolutionDestroyBucket() {
         return MutableSubset::upcast(move(this->solution));
     }
 
-    bool attemptInsert(size_t rowIndex, std::vector<double> data) 
-    {
-        if (this->solution->size() >= this->k)
-        {
+    bool attemptInsert(size_t rowIndex, std::vector<double> data) {
+        if (this->solution->size() >= this->k) {
             return false;
         }
 
