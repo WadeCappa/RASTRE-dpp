@@ -12,13 +12,6 @@ class ThresholdBucket
     public:
     ThresholdBucket(const double threshold, const int k) : marginalGainThreshold(threshold), k(k), solution(NaiveMutableSubset::makeNew()) {}
 
-    ThresholdBucket(size_t deltaZero, int k, double epsilon, size_t numBucket) 
-    : 
-        solution(NaiveMutableSubset::makeNew()), 
-        marginalGainThreshold(((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, numBucket)),
-        k(k)
-    {}
-
     size_t getUtility() {
         return this->solution->getScore();
     }
@@ -27,7 +20,7 @@ class ThresholdBucket
         return MutableSubset::upcast(move(this->solution));
     }
 
-    bool attemptInsert(size_t rowIndex, std::vector<double> data) {
+    bool attemptInsert(size_t rowIndex, const std::vector<double> &data) {
         if (this->solution->size() >= this->k) {
             return false;
         }

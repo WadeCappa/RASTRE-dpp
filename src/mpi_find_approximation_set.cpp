@@ -9,7 +9,7 @@
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 
 #include "representative_subset_calculator/buffers/bufferBuilder.h"
-#include "representative_subset_calculator/streaming/streaming.h"
+// #include "representative_subset_calculator/streaming/streaming.h"
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
