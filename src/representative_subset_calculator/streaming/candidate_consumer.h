@@ -74,6 +74,7 @@ class SeiveCandidateConsumer : public CandidateConsumer {
             this->buckets.push_back(ThresholdBucket(threshold, k));
         }
 
+        #pragma omp parallel for
         for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
             for (size_t seedIndex = 0; seedIndex < seeds.size(); seedIndex++) {
                 const auto & seed = this->seeds[seedIndex];
@@ -91,6 +92,7 @@ class SeiveCandidateConsumer : public CandidateConsumer {
     }
 
     void tryInsertSeedIntoBuckets(std::unique_ptr<CandidateSeed> seed) {
+        #pragma omp parallel for
         for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
             this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
         }

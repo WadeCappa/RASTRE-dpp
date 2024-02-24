@@ -1,10 +1,4 @@
 
-
-class Receiver {
-    public:
-    virtual std::unique_ptr<CandidateSeed> receiveNextSeed() = 0;
-}
-
 class SeiveReceiver : Receiver {
     private:
     struct MaybePoplulatedBuffer {
@@ -34,8 +28,6 @@ class SeiveReceiver : Receiver {
     SeiveReceiver(const int worldSize, const size_t rowSize, const int k) 
     : 
         buffers(worldSize, MaybePoplulatedBuffer(rowSize)),
-        rankToCurrentSeed(worldSize, 0),
-        seenFirstElementFromRank(worldSize, false),
         rank(0)
     {
         for (size_t rank = 0; rank < worldSize; rank++) {
@@ -43,7 +35,7 @@ class SeiveReceiver : Receiver {
         }
     }
 
-    std::unique_ptr<CandidateSeed> receiveNextSeed() {
+    std::unique_ptr<CandidateSeed> receiveNextSeed(bool &stillReceiving) {
         int localDummyValue = 0;
         while (true) {
             for (; this->rank < this->rankToCurrentSeed.size(); this->rank++) {

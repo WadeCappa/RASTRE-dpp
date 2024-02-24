@@ -3,6 +3,8 @@
 #include "bucket.h"
 #include "candidate_seed.h"
 #include "candidate_consumer.h"
+#include "receiver_interface.h"
+#include "greedy_streamer.h"
 
 static const double EVERYTHING_ALLOWED_THRESHOLD = 0.0000001;
 static const double EVERYTHING_DISALLOWED_THRESHOLD = 0.999;
@@ -18,6 +20,40 @@ std::unique_ptr<CandidateSeed> buildSeed() {
     const unsigned int rank = 0;
 
     return buildSeed(row, rank);
+}
+
+class FakeReceiver : public Receiver {
+    private:
+    size_t nextIndex;
+    unsigned int nextRank;
+    const unsigned int worldSize;
+
+    public:
+    FakeReceiver(const unsigned int worldSize) : nextIndex(0), worldSize(worldSize), nextRank(0) {}
+
+    std::unique_ptr<CandidateSeed> receiveNextSeed(bool &stillReceiving) {
+        std::unique_ptr<CandidateSeed> nextSeed(buildSeed(nextIndex, nextRank));
+        nextIndex++;
+        nextRank = (nextRank + 1) % worldSize;
+
+        stillReceiving = nextIndex < DATA.size();
+
+        return nextSeed;
+    }
+};
+
+void assertSolutionIsValid(std::unique_ptr<Subset> solution) {
+    CHECK(solution->getScore() > 0);
+    CHECK(solution->size() > 0);
+
+    std::set<size_t> seen;
+    for (const auto & seed : *solution.get()) {
+        const auto & row = seed;
+        CHECK(seen.find(row) == seen.end());
+        seen.insert(row);
+    }
+
+    std::cout << solution->toJson().dump(2) << std::endl;
 }
 
 TEST_CASE("Bucket can insert at threshold") {
@@ -82,15 +118,34 @@ TEST_CASE("Consumer can find a solution") {
     }
 
     std::unique_ptr<Subset> solution(consumer.getBestSolutionDestroyConsumer());
-    CHECK(solution->getScore() > 0);
-    CHECK(solution->size() > 0);
+    assertSolutionIsValid(move(solution));
+}
 
-    std::set<size_t> seen;
-    for (const auto & seed : *solution.get()) {
-        const auto & row = seed;
-        CHECK(seen.find(row) == seen.end());
-        seen.insert(row);
+TEST_CASE("Test fake receiver") {
+    const unsigned int worldSize = DATA.size() / 2;
+    FakeReceiver receiver(worldSize);
+
+    size_t count = 0;
+    bool stillReceiving = true; 
+    while (stillReceiving) {
+        count++;
+        std::unique_ptr<CandidateSeed> nextSeed(receiver.receiveNextSeed(stillReceiving));
+        CHECK(nextSeed->getRow() >= 0);
+        CHECK(nextSeed->getRow() < DATA.size());
+        CHECK(nextSeed->getOriginRank() >= 0);
+        CHECK(nextSeed->getOriginRank() < worldSize);
+        CHECK(nextSeed->getData() == DATA[nextSeed->getRow()]);
     }
 
-    std::cout << solution->toJson().dump(2) << std::endl;
+    CHECK(count == DATA.size());
+}
+
+TEST_CASE("Testing streaming with fake receiver") {
+    const unsigned int worldSize = DATA.size() / 2;
+    FakeReceiver receiver(worldSize);
+    SeiveCandidateConsumer consumer(worldSize, DATA.size(), EPSILON);
+
+    SeiveGreedyStreamer streamer(receiver, consumer);
+    std::unique_ptr<Subset> solution(streamer.resolveStream());
+    assertSolutionIsValid(move(solution));
 }
