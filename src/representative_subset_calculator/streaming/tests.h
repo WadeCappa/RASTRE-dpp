@@ -45,28 +45,49 @@ class FakeReceiver : public Receiver {
 
 class FakeRankBuffer : public RankBuffer {
     private:
-    bool shouldReturnSeed;
     const unsigned int rank;
+    const unsigned int worldSize;
+    const size_t totalGlobalRows;
+    const unsigned int totalSeedsToSend;
+
     size_t nextRowToReturn;
+    bool shouldReturnSeed;
+    unsigned int seedsSent;
 
     public:
-    FakeRankBuffer(const unsigned int rank) : shouldReturnSeed(false), nextRowToReturn(0), rank(rank) {}
+    FakeRankBuffer(
+        const unsigned int rank, 
+        const unsigned int worldSize
+    ) : 
+        shouldReturnSeed(false), 
+        nextRowToReturn(0), 
+        rank(rank), 
+        worldSize(worldSize), 
+        totalGlobalRows(DATA.size()),
+        totalSeedsToSend(DATA.size() / worldSize),
+        seedsSent(0)
+    {}
 
     CandidateSeed* askForData() {
         if (this->shouldReturnSeed) {
-            size_t row = this->nextRowToReturn;
-            CandidateSeed *nextSeed = new CandidateSeed(row, DATA[row], this->rank);
-            this->shouldReturnSeed = false;
-            this->nextRowToReturn++;
-            return nextSeed;
+            if ((this->nextRowToReturn + this->rank) % this->worldSize == 0) {
+                size_t row = this->nextRowToReturn;
+                CandidateSeed *nextSeed = new CandidateSeed(row, DATA[row], this->rank);
+                this->shouldReturnSeed = false;
+                this->nextRowToReturn++;
+                this->seedsSent++;
+                return nextSeed;
+            } else {
+                this->nextRowToReturn++;
+            }
         } else {
             this->shouldReturnSeed = true;
-            return nullptr;
         }
+        return nullptr;
     }
 
     bool stillReceiving() {
-        return this->nextRowToReturn < DATA.size();
+        return this->seedsSent < this->totalSeedsToSend;
     }
 };
 
@@ -80,8 +101,15 @@ void assertSolutionIsValid(std::unique_ptr<Subset> solution) {
         CHECK(seen.find(row) == seen.end());
         seen.insert(row);
     }
+}
 
-    std::cout << solution->toJson().dump(2) << std::endl;
+std::vector<std::unique_ptr<RankBuffer>> buildFakeBuffers(const unsigned int worldSize) {
+    std::vector<std::unique_ptr<RankBuffer>> buffers;
+    for (size_t rank = 0; rank < worldSize; rank++) {
+        buffers.push_back(std::unique_ptr<RankBuffer>(new FakeRankBuffer(rank, worldSize)));
+    }
+
+    return buffers;
 }
 
 TEST_CASE("Bucket can insert at threshold") {
@@ -179,7 +207,7 @@ TEST_CASE("Testing streaming with fake receiver") {
 }
 
 TEST_CASE("Testing the fake buffer") {
-    std::unique_ptr<RankBuffer> fakeBuffer(new FakeRankBuffer(0));
+    std::unique_ptr<RankBuffer> fakeBuffer(new FakeRankBuffer(0, 1));
 
     size_t expectedRow = 0;
     while (fakeBuffer->stillReceiving()) {
@@ -196,12 +224,7 @@ TEST_CASE("Testing the fake buffer") {
 
 TEST_CASE("Testing the naiveReceiver with fake buffers") {
     const unsigned int worldSize = 1;
-    std::vector<std::unique_ptr<RankBuffer>> buffers;
-    for (size_t rank = 0; rank < worldSize; rank++) {
-        buffers.push_back(std::unique_ptr<RankBuffer>(new FakeRankBuffer(rank)));
-    }
-
-    NaiveReceiver receiver(move(buffers), worldSize);
+    NaiveReceiver receiver(buildFakeBuffers(1), worldSize);
 
     size_t expectedRow = 0;
     bool moreData = true;
@@ -213,4 +236,30 @@ TEST_CASE("Testing the naiveReceiver with fake buffers") {
     }
 
     CHECK(expectedRow == DATA.size());
+}
+
+TEST_CASE("Testing multiple buffers") {
+    const unsigned int worldSize = DATA.size()/2;
+    NaiveReceiver receiver(buildFakeBuffers(worldSize), worldSize);
+
+    size_t expectedRow = 0;
+    bool moreData = true;
+    while (moreData) {
+        std::unique_ptr<CandidateSeed> nextElement = receiver.receiveNextSeed(moreData);
+        CHECK(nextElement->getRow() == expectedRow);
+        CHECK(nextElement->getData() == DATA[expectedRow]);
+        expectedRow++;
+    }
+
+    CHECK(expectedRow == DATA.size());
+}
+
+TEST_CASE("Testing end to end without MPI") {
+    const unsigned int worldSize = DATA.size()/2;
+    NaiveReceiver receiver(buildFakeBuffers(worldSize), worldSize);
+    SeiveCandidateConsumer consumer(worldSize, DATA.size(), EPSILON);
+
+    SeiveGreedyStreamer streamer(receiver, consumer);
+    std::unique_ptr<Subset> solution(streamer.resolveStream());
+    assertSolutionIsValid(move(solution));
 }

@@ -4,7 +4,7 @@ class Receiver {
     virtual std::unique_ptr<CandidateSeed> receiveNextSeed(bool &stillReceiving) = 0;
 };
 
-class NaiveReceiver : Receiver {
+class NaiveReceiver : public Receiver {
     private:
     
     std::vector<std::unique_ptr<RankBuffer>> buffers;
