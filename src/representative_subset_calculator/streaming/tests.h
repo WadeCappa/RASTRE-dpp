@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include "communication_constants.h"
 #include "send_request.h"
 #include "bucket.h"
 #include "candidate_seed.h"
@@ -89,6 +90,10 @@ class FakeRankBuffer : public RankBuffer {
 
     bool stillReceiving() {
         return this->seedsSent < this->totalSeedsToSend;
+    }
+
+    unsigned int getRank() const {
+        return this->rank;
     }
 };
 
@@ -225,7 +230,7 @@ TEST_CASE("Testing the fake buffer") {
 
 TEST_CASE("Testing the naiveReceiver with fake buffers") {
     const unsigned int worldSize = 1;
-    NaiveReceiver receiver(buildFakeBuffers(1), worldSize);
+    NaiveReceiver receiver(buildFakeBuffers(1));
 
     size_t expectedRow = 0;
     bool moreData = true;
@@ -241,7 +246,7 @@ TEST_CASE("Testing the naiveReceiver with fake buffers") {
 
 TEST_CASE("Testing multiple buffers") {
     const unsigned int worldSize = DATA.size()/2;
-    NaiveReceiver receiver(buildFakeBuffers(worldSize), worldSize);
+    NaiveReceiver receiver(buildFakeBuffers(worldSize));
 
     size_t expectedRow = 0;
     bool moreData = true;
@@ -257,7 +262,7 @@ TEST_CASE("Testing multiple buffers") {
 
 TEST_CASE("Testing end to end without MPI") {
     const unsigned int worldSize = DATA.size()/2;
-    NaiveReceiver receiver(buildFakeBuffers(worldSize), worldSize);
+    NaiveReceiver receiver(buildFakeBuffers(worldSize));
     SeiveCandidateConsumer consumer(worldSize, DATA.size(), EPSILON);
 
     SeiveGreedyStreamer streamer(receiver, consumer);

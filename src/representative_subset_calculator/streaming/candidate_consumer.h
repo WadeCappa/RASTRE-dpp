@@ -1,3 +1,4 @@
+#include <unordered_set>
 
 class CandidateConsumer {
     public:
@@ -7,35 +8,30 @@ class CandidateConsumer {
 
 class SeiveCandidateConsumer : public CandidateConsumer {
     private:
-    const unsigned int worldSize;
+    const unsigned int numberOfSenders;
     std::vector<std::unique_ptr<CandidateSeed>> seeds;
-    std::vector<bool> seenFirstElementForRank;
+    std::unordered_set<unsigned int> seenFirstElement;
     std::vector<ThresholdBucket> buckets;
-    unsigned int ranksThatHaveSentFirstSeeds;
     const unsigned int k;
     const double epsilon;
 
     public:
     SeiveCandidateConsumer(
-        unsigned int worldSize, unsigned int k, double epsilon
-    ) 
-    : 
-        worldSize(worldSize),
-        seenFirstElementForRank(std::vector<bool>(worldSize, false)),
-        ranksThatHaveSentFirstSeeds(0),
+        unsigned int numberOfSenders, unsigned int k, double epsilon
+    ) : 
+        numberOfSenders(numberOfSenders),
         k(k),
         epsilon(epsilon)
     {}
 
     void accept(std::unique_ptr<CandidateSeed> seed) {
         if (!this->bucketsInitialized()) {
-            if (this->seenFirstElementForRank[seed->getOriginRank()] == false) {
-                this->seenFirstElementForRank[seed->getOriginRank()] = true; 
-                ranksThatHaveSentFirstSeeds++;
+            if (this->seenFirstElement.find(seed->getOriginRank()) == this->seenFirstElement.end()) {
+                std::cout << "found new seed from " << seed->getOriginRank() << std::endl;
+                this->seenFirstElement.insert(seed->getOriginRank());
             }
-
             this->seeds.push_back(move(seed));
-            if (ranksThatHaveSentFirstSeeds == worldSize) {
+            if (this->seenFirstElement.size() == numberOfSenders) {
                 this->initBuckets();
             }
         } else {

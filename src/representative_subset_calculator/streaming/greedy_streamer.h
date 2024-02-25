@@ -25,6 +25,7 @@ class SeiveGreedyStreamer : public GreedyStreamer {
             consumer.accept(move(nextSeed));
         }
 
+        std::cout << "getting best consumer, destroying in process" << std::endl;
         return consumer.getBestSolutionDestroyConsumer();
     }
 };

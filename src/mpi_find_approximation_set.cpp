@@ -15,6 +15,7 @@
 
 #include <mpi.h>
 
+#include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/streaming/send_request.h"
 #include "representative_subset_calculator/streaming/bucket.h"
 #include "representative_subset_calculator/streaming/candidate_seed.h"
@@ -100,26 +101,40 @@ void streaming(
     const std::vector<unsigned int> &rowToRank, 
     Timers &timers
 ) {
+    // This is hacky. We only do this because the receiver doesn't load any data and therefore
+    //  doesn't know the rowsize of the input. Just load one row instead.
+    unsigned int rowSize = data.totalColumns();
+    std::vector<unsigned int> rowSizes(appData.worldSize);
+    MPI_Gather(&rowSize, 1, MPI_INT, rowSizes.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+    rowSize = rowSizes.back();
+
     if (appData.worldRank == 0) {
+        std::cout << "rank 0 entered into the streaming function and knows the total columns of "<< rowSize << std::endl;
         timers.totalCalculationTime.startTimer();
-        std::unique_ptr<Receiver> receiver(MpiReceiver::buildReceiver(appData.worldSize, data.totalColumns(), appData.outputSetSize));
-        SeiveCandidateConsumer consumer(appData.worldSize, appData.outputSetSize, appData.distributedEpsilon);
+        std::unique_ptr<Receiver> receiver(MpiReceiver::buildReceiver(appData.worldSize, rowSize, appData.outputSetSize));
+        SeiveCandidateConsumer consumer(appData.worldSize - 1, appData.outputSetSize, appData.distributedEpsilon);
         SeiveGreedyStreamer streamer(*receiver.get(), consumer);
+        std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
         std::unique_ptr<Subset> solution(streamer.resolveStream());
-        timers.totalCalculationTime.startTimer();
+        timers.totalCalculationTime.stopTimer();
+        std::cout << "rank 0 finished receiving" << std::endl;
 
         nlohmann::json result = MpiOrchestrator::buildMpiOutput(appData, *solution.get(), data, timers, rowToRank);
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);
         outputFile.close();
+        std::cout << "rank 0 outout all information" << std::endl;
     } else {
+        std::cout << "rank " << appData.worldRank << " entered streaming function and know the total columns of " << data.totalColumns() << std::endl;
         timers.totalCalculationTime.startTimer();
         std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, appData.outputSetSize));
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
+        std::cout << "rank " << appData.worldRank << " ready to start streaming local seeds" << std::endl;
 
         timers.localCalculationTime.startTimer();
-        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(data, appData.outputSetSize));
+        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), data, appData.outputSetSize));
+        std::cout << "rank " << appData.worldRank << " finished streaming local seeds" << std::endl;
         timers.localCalculationTime.stopTimer();
         timers.totalCalculationTime.stopTimer();
 

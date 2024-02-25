@@ -56,7 +56,7 @@ class StreamingSubset : public MutableSubset {
                 this->sends.pop();
             } else {
                 this->sends.front()->sendAndBlock(
-                    this->sends.size() == 1 ? -1 : 0
+                    this->sends.size() == 1 ? CommunicationConstants::getStopTag() : CommunicationConstants::getContinueTag()
                 );
                 this->sends.pop();
             }
@@ -82,7 +82,9 @@ class StreamingSubset : public MutableSubset {
         if (!(sends.front()->sendStarted()) && sends.size() > 1) {
             // Tag should be -1 iff this is the last seed to be sent. This code purposefully
             //  does not send the last seed until finalize is called
-            const int tag = 0;
+            const int tag = CommunicationConstants::getContinueTag();
+            
+            // TODO: This method should have an async callback to queue the next send. Will require locks
             sends.front()->sendAsync(tag);
         }
     }

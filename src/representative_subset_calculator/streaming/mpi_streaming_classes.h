@@ -47,6 +47,9 @@ class MpiSendRequest : public SendRequest {
 
     private:
     static bool sendAndBlockPrivate(const std::vector<double> &rowToSend, const unsigned int tag) {
+        if (tag == CommunicationConstants::getStopTag()) {
+            std::cout << "sending seed with tag " << tag << std::endl;
+        }
         MPI_Send(rowToSend.data(), rowToSend.size(), MPI_DOUBLE, 0, tag, MPI_COMM_WORLD);
         return true;
     }
@@ -78,10 +81,13 @@ class MpiRankBuffer : public RankBuffer {
         MPI_Test(&request, &flag, &status);
         if (flag == 1) {
             CandidateSeed *nextSeed = this->extractSeedFromBuffer();
-            if (status.MPI_TAG == 0) {
+            if (status.MPI_TAG == CommunicationConstants::getContinueTag()) {
                 readyForNextReceive();
-            } else {
+            } else if (status.MPI_TAG == CommunicationConstants::getStopTag()) {
+                std::cout << "listening buffer for rank " << this->rank << " has finished listening" << std::endl;
                 isStillReceiving = false;
+            } else {
+                std::cout << "unrecognized tag of " << status.MPI_TAG << " for rank " << this->rank << std::endl;
             }
             return nextSeed;
         } else {
@@ -91,6 +97,10 @@ class MpiRankBuffer : public RankBuffer {
 
     bool stillReceiving() {
         return isStillReceiving;
+    }
+
+    unsigned int getRank() const {
+        return this->rank;
     }
 
     private:

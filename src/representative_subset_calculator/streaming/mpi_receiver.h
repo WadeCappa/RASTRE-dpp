@@ -11,8 +11,7 @@ class MpiReceiver : public Receiver {
     ) {
         return std::unique_ptr<Receiver>(
             new NaiveReceiver(
-                getRankBuffers(worldSize, rowSize), 
-                worldSize
+                getRankBuffers(worldSize, rowSize)
             )
         );
     }
@@ -23,7 +22,7 @@ class MpiReceiver : public Receiver {
         const size_t rowSize
     ) {
         std::vector<std::unique_ptr<RankBuffer>> res;
-        for (size_t rank = 0; rank < worldSize; rank++) {
+        for (size_t rank = 1; rank < worldSize; rank++) {
             res.push_back(
                 std::unique_ptr<RankBuffer>(
                     dynamic_cast<RankBuffer*>(

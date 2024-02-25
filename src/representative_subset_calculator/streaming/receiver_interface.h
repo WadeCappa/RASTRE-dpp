@@ -10,22 +10,19 @@ class NaiveReceiver : public Receiver {
     std::vector<std::unique_ptr<RankBuffer>> buffers;
     size_t numberOfProcessorsStillReceiving;
     size_t listeningToRank;
-    const unsigned int worldSize;
 
     public:
     NaiveReceiver(
-        std::vector<std::unique_ptr<RankBuffer>> buffers, 
-        const unsigned int worldSize
+        std::vector<std::unique_ptr<RankBuffer>> buffers
     ) : 
         buffers(move(buffers)),
-        worldSize(worldSize),
         listeningToRank(0),
-        numberOfProcessorsStillReceiving(worldSize)
+        numberOfProcessorsStillReceiving(this->buffers.size())
     {}
 
     std::unique_ptr<CandidateSeed> receiveNextSeed(bool &stillReceiving) {
         while (true) {
-            for (; this->listeningToRank < this->worldSize; this->listeningToRank++) {
+            for (; this->listeningToRank < this->buffers.size(); this->listeningToRank++) {
                 RankBuffer* buffer = this->buffers[this->listeningToRank].get();
                 if (buffer->stillReceiving()) {
                     CandidateSeed* maybeSeed = buffer->askForData();
@@ -33,6 +30,7 @@ class NaiveReceiver : public Receiver {
                         bool stillReceivingAfterLastSeed = buffer->stillReceiving();
                         if (!stillReceivingAfterLastSeed) {
                             this->numberOfProcessorsStillReceiving--;
+                            std::cout << "another buffer of rank " << buffer->getRank() << " has stopped receiving, only " << numberOfProcessorsStillReceiving << " buffers left" << std::endl;
                             stillReceiving = this->numberOfProcessorsStillReceiving != 0;
                         }
                         this->listeningToRank++;
