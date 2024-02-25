@@ -9,12 +9,21 @@
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 
 #include "representative_subset_calculator/buffers/bufferBuilder.h"
-// #include "representative_subset_calculator/streaming/streaming.h"
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
 
 #include <mpi.h>
+
+#include "representative_subset_calculator/streaming/send_request.h"
+#include "representative_subset_calculator/streaming/bucket.h"
+#include "representative_subset_calculator/streaming/candidate_seed.h"
+#include "representative_subset_calculator/streaming/candidate_consumer.h"
+#include "representative_subset_calculator/streaming/rank_buffer.h"
+#include "representative_subset_calculator/streaming/receiver_interface.h"
+#include "representative_subset_calculator/streaming/greedy_streamer.h"
+#include "representative_subset_calculator/streaming/mpi_streaming_classes.h"
+#include "representative_subset_calculator/streaming/streaming_subset.h"
 
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};

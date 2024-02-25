@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include "send_request.h"
 #include "bucket.h"
 #include "candidate_seed.h"
 #include "candidate_consumer.h"

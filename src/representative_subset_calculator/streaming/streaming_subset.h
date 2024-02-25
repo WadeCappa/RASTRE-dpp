@@ -1,14 +1,25 @@
-
-
+#include <queue>
+#include <future>
+#include <optional>
+#include <chrono>
 
 class StreamingSubset : public MutableSubset {
     private:
     std::unique_ptr<MutableSubset> base;
     const LocalData &data;
-    std::vector<MPI_Request> sends;
+    std::queue<std::unique_ptr<MpiSendRequest>> sends;
+
+    const unsigned int desiredSeeds;
 
     public:
-    StreamingSubset(const LocalData& data) : data(data), base(NaiveMutableSubset::makeNew()) {}
+    StreamingSubset(
+        const LocalData& data, 
+        const unsigned int desiredSeeds
+    ) : 
+        data(data), 
+        base(NaiveMutableSubset::makeNew()),
+        desiredSeeds(desiredSeeds)
+    {}
 
     void sendRemaining() {
         // block and send remaining
@@ -38,14 +49,41 @@ class StreamingSubset : public MutableSubset {
         return base->end();
     }
 
+    void finalize() {
+        while (this->sends.size() > 0) {
+            if (this->sends.front()->sendStarted()) {
+                this->sends.front()->waitForCompletion();
+                this->sends.pop();
+            } else {
+                this->sends.front()->sendAndBlock(
+                    this->sends.size() == 1 ? -1 : 0
+                );
+                this->sends.pop();
+            }
+        }
+    }
+
     void addRow(const size_t row, const double marginalGain) {
-        const std::vector<double>& rowToSend(this->data.getRow(row));
-        sends.push_back(MPI_Request());
-        MPI_Request *request = &sends.back();
-        
-        // Use the row index as the tag
-        // do test to verify that the previous send succeeded
-        MPI_Isend(rowToSend.data(), rowToSend.size(), MPI_DOUBLE, 0, data.getRemoteIndexForRow(row), MPI_COMM_WORLD, request);
         this->base->addRow(row, marginalGain);
+
+        std::vector<double> rowToSend(this->data.getRow(row));
+
+        // Last value should be the global row index
+        rowToSend.push_back(data.getRemoteIndexForRow(row));
+
+        this->sends.push(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(rowToSend)));
+
+        if (sends.front()->sendCompleted()) {
+            sends.pop();
+        }
+
+        // Keep at least one seed until finalize is called. Otherwise there is no garuntee of
+        //  how many seeds there are left to find.
+        if (!(sends.front()->sendStarted()) && sends.size() > 1) {
+            // Tag should be -1 iff this is the last seed to be sent. This code purposefully
+            //  does not send the last seed until finalize is called
+            const int tag = 0;
+            sends.front()->sendAsync(tag);
+        }
     }
 };

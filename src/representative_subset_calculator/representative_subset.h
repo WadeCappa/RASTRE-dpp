@@ -17,8 +17,10 @@ class Subset {
 class MutableSubset : public Subset {
     public:
     virtual void addRow(const size_t row, const double marginalGain) = 0;
+    virtual void finalize() = 0;
 
     static std::unique_ptr<Subset> upcast(std::unique_ptr<MutableSubset> mutableSubset) {
+        mutableSubset->finalize();
         return std::unique_ptr<Subset>(move(mutableSubset));
     }
 };
@@ -65,6 +67,8 @@ class NaiveMutableSubset : public MutableSubset {
 
         return output;
     }
+
+    void finalize() {}
 
     static std::unique_ptr<MutableSubset> makeNew() {
         return std::unique_ptr<MutableSubset>(dynamic_cast<MutableSubset*>(new NaiveMutableSubset()));

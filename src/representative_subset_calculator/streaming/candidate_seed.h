@@ -10,10 +10,10 @@ class CandidateSeed {
     public:
     CandidateSeed(
         const unsigned int row, 
-        const std::vector<double> &data,
+        std::vector<double> data,
         const unsigned int rank
     ) : 
-        data(data), 
+        data(move(data)), 
         globalRow(row),
         originRank(rank)
     {}
