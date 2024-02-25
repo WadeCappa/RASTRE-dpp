@@ -3,6 +3,7 @@
 #include "bucket.h"
 #include "candidate_seed.h"
 #include "candidate_consumer.h"
+#include "rank_buffer.h"
 #include "receiver_interface.h"
 #include "greedy_streamer.h"
 
@@ -39,6 +40,33 @@ class FakeReceiver : public Receiver {
         stillReceiving = nextIndex < DATA.size();
 
         return nextSeed;
+    }
+};
+
+class FakeRankBuffer : public RankBuffer {
+    private:
+    bool shouldReturnSeed;
+    const unsigned int rank;
+    size_t nextRowToReturn;
+
+    public:
+    FakeRankBuffer(const unsigned int rank) : shouldReturnSeed(false), nextRowToReturn(0), rank(rank) {}
+
+    CandidateSeed* askForData() {
+        if (this->shouldReturnSeed) {
+            size_t row = this->nextRowToReturn;
+            CandidateSeed *nextSeed = new CandidateSeed(row, DATA[row], this->rank);
+            this->shouldReturnSeed = false;
+            this->nextRowToReturn++;
+            return nextSeed;
+        } else {
+            this->shouldReturnSeed = true;
+            return nullptr;
+        }
+    }
+
+    bool stillReceiving() {
+        return this->nextRowToReturn < DATA.size();
     }
 };
 
@@ -148,4 +176,41 @@ TEST_CASE("Testing streaming with fake receiver") {
     SeiveGreedyStreamer streamer(receiver, consumer);
     std::unique_ptr<Subset> solution(streamer.resolveStream());
     assertSolutionIsValid(move(solution));
+}
+
+TEST_CASE("Testing the fake buffer") {
+    std::unique_ptr<RankBuffer> fakeBuffer(new FakeRankBuffer(0));
+
+    size_t expectedRow = 0;
+    while (fakeBuffer->stillReceiving()) {
+        CandidateSeed* nextElement = fakeBuffer->askForData();
+        if (nextElement != nullptr) {
+            CHECK(nextElement->getRow() == expectedRow);
+            CHECK(nextElement->getData() == DATA[expectedRow]);
+            expectedRow++;
+        }
+    }
+
+    CHECK(expectedRow == DATA.size());
+}
+
+TEST_CASE("Testing the naiveReceiver with fake buffers") {
+    const unsigned int worldSize = 1;
+    std::vector<std::unique_ptr<RankBuffer>> buffers;
+    for (size_t rank = 0; rank < worldSize; rank++) {
+        buffers.push_back(std::unique_ptr<RankBuffer>(new FakeRankBuffer(rank)));
+    }
+
+    NaiveReceiver receiver(move(buffers), worldSize);
+
+    size_t expectedRow = 0;
+    bool moreData = true;
+    while (moreData) {
+        std::unique_ptr<CandidateSeed> nextElement = receiver.receiveNextSeed(moreData);
+        CHECK(nextElement->getRow() == expectedRow);
+        CHECK(nextElement->getData() == DATA[expectedRow]);
+        expectedRow++;
+    }
+
+    CHECK(expectedRow == DATA.size());
 }
