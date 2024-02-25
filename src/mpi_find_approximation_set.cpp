@@ -24,38 +24,14 @@
 #include "representative_subset_calculator/streaming/greedy_streamer.h"
 #include "representative_subset_calculator/streaming/mpi_streaming_classes.h"
 #include "representative_subset_calculator/streaming/streaming_subset.h"
+#include "representative_subset_calculator/streaming/mpi_receiver.h"
 
-int main(int argc, char** argv) {
-    CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};
-    AppData appData;
-    MpiOrchestrator::addMpiCmdOptions(app, appData);
-    CLI11_PARSE(app, argc, argv);
-
-    MPI_Init(NULL, NULL);
-    MPI_Comm_rank(MPI_COMM_WORLD, &appData.worldRank);
-    MPI_Comm_size(MPI_COMM_WORLD, &appData.worldSize);
-
-    unsigned int seed = (unsigned int)time(0);
-    MPI_Bcast(&seed, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-
-    std::vector<unsigned int> rowToRank = MpiOrchestrator::getRowToRank(appData, seed);
-
-    Timers timers;
-    timers.loadingDatasetTime.startTimer();
-    std::ifstream inputFile;
-    inputFile.open(appData.inputFile);
-    DataLoader *dataLoader = MpiOrchestrator::buildMpiDataLoader(appData, inputFile, rowToRank);
-    NaiveData baseData(*dataLoader);
-    LocalData data(baseData, rowToRank, appData.worldRank);
-    inputFile.close();
-    timers.loadingDatasetTime.stopTimer();
-
-    delete dataLoader;
-
-    timers.barrierTime.startTimer();
-    MPI_Barrier(MPI_COMM_WORLD);
-    timers.barrierTime.stopTimer();
-
+void randGreedi(
+    const AppData &appData, 
+    const LocalData &data, 
+    const std::vector<unsigned int> &rowToRank, 
+    Timers &timers
+) {
     timers.totalCalculationTime.startTimer();
     std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
 
@@ -115,6 +91,80 @@ int main(int argc, char** argv) {
         auto dummyResult = Subset::empty();
 
         MpiOrchestrator::buildMpiOutput(appData, *dummyResult.get(), data, timers, rowToRank);
+    }
+}
+
+void streaming(
+    const AppData &appData, 
+    const LocalData &data, 
+    const std::vector<unsigned int> &rowToRank, 
+    Timers &timers
+) {
+    if (appData.worldRank == 0) {
+        timers.totalCalculationTime.startTimer();
+        std::unique_ptr<Receiver> receiver(MpiReceiver::buildReceiver(appData.worldSize, data.totalColumns(), appData.outputSetSize));
+        SeiveCandidateConsumer consumer(appData.worldSize, appData.outputSetSize, appData.distributedEpsilon);
+        SeiveGreedyStreamer streamer(*receiver.get(), consumer);
+        std::unique_ptr<Subset> solution(streamer.resolveStream());
+        timers.totalCalculationTime.startTimer();
+
+        nlohmann::json result = MpiOrchestrator::buildMpiOutput(appData, *solution.get(), data, timers, rowToRank);
+        std::ofstream outputFile;
+        outputFile.open(appData.outputFile);
+        outputFile << result.dump(2);
+        outputFile.close();
+    } else {
+        timers.totalCalculationTime.startTimer();
+        std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, appData.outputSetSize));
+        std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
+
+        timers.localCalculationTime.startTimer();
+        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(data, appData.outputSetSize));
+        timers.localCalculationTime.stopTimer();
+        timers.totalCalculationTime.stopTimer();
+
+        auto dummyResult = Subset::empty();
+        MpiOrchestrator::buildMpiOutput(appData, *dummyResult.get(), data, timers, rowToRank);
+    }
+}
+
+int main(int argc, char** argv) {
+    CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};
+    AppData appData;
+    MpiOrchestrator::addMpiCmdOptions(app, appData);
+    CLI11_PARSE(app, argc, argv);
+
+    MPI_Init(NULL, NULL);
+    MPI_Comm_rank(MPI_COMM_WORLD, &appData.worldRank);
+    MPI_Comm_size(MPI_COMM_WORLD, &appData.worldSize);
+
+    unsigned int seed = (unsigned int)time(0);
+    MPI_Bcast(&seed, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+
+    std::vector<unsigned int> rowToRank = MpiOrchestrator::getRowToRank(appData, seed);
+
+    Timers timers;
+    timers.loadingDatasetTime.startTimer();
+    std::ifstream inputFile;
+    inputFile.open(appData.inputFile);
+    DataLoader *dataLoader = MpiOrchestrator::buildMpiDataLoader(appData, inputFile, rowToRank);
+    NaiveData baseData(*dataLoader);
+    LocalData data(baseData, rowToRank, appData.worldRank);
+    inputFile.close();
+    timers.loadingDatasetTime.stopTimer();
+
+    delete dataLoader;
+
+    timers.barrierTime.startTimer();
+    MPI_Barrier(MPI_COMM_WORLD);
+    timers.barrierTime.stopTimer();
+
+    if (appData.distributedAlgorithm == 0) {
+        randGreedi(appData, data, rowToRank, timers);
+    } else if (appData.distributedAlgorithm == 1) {
+        streaming(appData, data, rowToRank, timers);
+    } else {
+        std::cout << "did not recognized distributedAlgorithm of " << appData.distributedAlgorithm << std::endl;
     }
 
     MPI_Finalize();

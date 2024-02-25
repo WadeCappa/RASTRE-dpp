@@ -18,13 +18,19 @@ class MpiReceiver : public Receiver {
     }
 
     private:
-    static std::vector<std::unqiue_ptr<RankBuffer>> getRankBuffers(
+    static std::vector<std::unique_ptr<RankBuffer>> getRankBuffers(
         const unsigned int worldSize, 
         const size_t rowSize
     ) {
-        std::vector<RankBuffer> res;
+        std::vector<std::unique_ptr<RankBuffer>> res;
         for (size_t rank = 0; rank < worldSize; rank++) {
-            res.push_back(std::unique_ptr<RankBuffer>(MpiRankBuffer(rowSize, rank)));
+            res.push_back(
+                std::unique_ptr<RankBuffer>(
+                    dynamic_cast<RankBuffer*>(
+                        new MpiRankBuffer(rank, rowSize)
+                    )
+                )
+            );
         }
 
         return move(res);
