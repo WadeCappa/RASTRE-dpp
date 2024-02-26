@@ -1,10 +1,10 @@
 #include <mutex>
-#include <queue>
+#include <deque>
 
 template <typename T>
 class SynchronousQueue {
     private:
-    std::queue<T> base;
+    std::deque<T> base;
     std::mutex lock;
 
     public:
@@ -13,7 +13,7 @@ class SynchronousQueue {
     T pop() {
         this->lock.lock();
         T res = move(this->base.front());
-        this->base.pop();
+        this->base.pop_front();
         this->lock.unlock();
 
         return move(res);
@@ -21,7 +21,7 @@ class SynchronousQueue {
 
     void push(T val) {
         this->lock.lock();
-        this->base.push(move(val));
+        this->base.push_back(move(val));
         this->lock.unlock();
     }
 
@@ -31,5 +31,25 @@ class SynchronousQueue {
         this->lock.unlock();
 
         return res;
+    }
+
+    typename std::vector<T> emptyQueueIntoVector() {
+        std::vector<T> res;
+        this->lock.lock();
+        while (this->base.size() > 0) {
+            res.push_back(move(this->base.front()));
+            this->base.pop_front();
+        }
+        this->lock.unlock();
+
+        return move(res);
+    }
+
+    void emptyVectorIntoQueue(std::vector<T> vals) {
+        this->lock.lock();
+        for (size_t i = 0; i < vals.size(); i++) {
+            this->base.push_back(move(vals[i]));
+        }
+        this->lock.unlock();
     }
 };

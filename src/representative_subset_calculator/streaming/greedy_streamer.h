@@ -21,9 +21,11 @@ class SeiveGreedyStreamer : public GreedyStreamer {
         receiver(receiver),
         consumer(consumer)
     {}
-    
+
+
     std::unique_ptr<Subset> resolveStream() {
         std::atomic_bool stillReceiving = true;
+        omp_set_dynamic(0);
         omp_set_nested(1);
         #pragma omp parallel num_threads(2)
         {
@@ -35,16 +37,12 @@ class SeiveGreedyStreamer : public GreedyStreamer {
                 }
             } else {
                 while (stillReceiving.load() == true) {
-                    if (this->queue.size() > 0) {
-                        consumer.accept(move(this->queue.pop()));
-                    }
+                    consumer.accept(this->queue);
                 }
             }
         }
 
-        while (this->queue.size() > 0) {
-            consumer.accept(move(this->queue.pop()));
-        }
+        consumer.accept(this->queue);
 
         std::cout << "getting best consumer, destroying in process" << std::endl;
         return consumer.getBestSolutionDestroyConsumer();

@@ -2,41 +2,56 @@
 
 class CandidateConsumer {
     public:
-    virtual void accept(std::unique_ptr<CandidateSeed> seed) = 0;
+    virtual void accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
     virtual std::unique_ptr<Subset> getBestSolutionDestroyConsumer() = 0;
 };
 
 class SeiveCandidateConsumer : public CandidateConsumer {
     private:
     const unsigned int numberOfSenders;
-    std::vector<std::unique_ptr<CandidateSeed>> seeds;
-    std::unordered_set<unsigned int> seenFirstElement;
-    std::vector<ThresholdBucket> buckets;
     const unsigned int k;
     const double epsilon;
+    const unsigned int threads;
+
+    std::vector<std::unique_ptr<CandidateSeed>> seedStorage;
+    std::unordered_set<unsigned int> seenFirstElement;
+    std::vector<ThresholdBucket> buckets;
+    std::vector<double> firstMarginals;
+    std::unordered_set<unsigned int> firstGlobalRows;
 
     public:
     SeiveCandidateConsumer(
-        unsigned int numberOfSenders, unsigned int k, double epsilon
+        const unsigned int numberOfSenders, 
+        const unsigned int k, 
+        const double epsilon,
+        const unsigned int numberOfConsumerThreads
     ) : 
         numberOfSenders(numberOfSenders),
         k(k),
-        epsilon(epsilon)
+        epsilon(epsilon),
+        threads(numberOfConsumerThreads)
     {}
 
-    void accept(std::unique_ptr<CandidateSeed> seed) {
+    SeiveCandidateConsumer(
+        const unsigned int numberOfSenders, 
+        const unsigned int k, 
+        const double epsilon
+    ) : 
+        numberOfSenders(numberOfSenders),
+        k(k),
+        epsilon(epsilon),
+        threads(omp_get_max_threads() - 1)
+    {}
+
+    void accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         if (!this->bucketsInitialized()) {
-            if (this->seenFirstElement.find(seed->getOriginRank()) == this->seenFirstElement.end()) {
-                std::cout << "found new seed from " << seed->getOriginRank() << std::endl;
-                this->seenFirstElement.insert(seed->getOriginRank());
-            }
-            this->seeds.push_back(move(seed));
-            if (this->seenFirstElement.size() == numberOfSenders) {
-                this->initBuckets();
-            }
-        } else {
-            this->tryInsertSeedIntoBuckets(move(seed));
+            this->tryToGetFirstMarginals(seedQueue);
+        } 
+        
+        if (this->bucketsInitialized()) {
+            this->processQueue(seedQueue);
         }
+
     }
 
     std::unique_ptr<Subset> getBestSolutionDestroyConsumer() {
@@ -58,7 +73,44 @@ class SeiveCandidateConsumer : public CandidateConsumer {
         return buckets.size() != 0;
     }
 
-    void initBuckets() {
+    void tryToGetFirstMarginals(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+        std::vector<std::pair<unsigned int, double>> rowToMarginal(pulledFromQueue.size(), std::make_pair(0,0));
+        
+        #pragma omp parallel for
+        for (size_t i = 0; i < pulledFromQueue.size(); i++) {
+            std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[i]);
+            if (this->firstGlobalRows.find(seed->getRow()) == this->firstGlobalRows.end()) {
+                SimilarityMatrix tempMatrix;
+                tempMatrix.addRow(seed->getData());
+                rowToMarginal[i].second = tempMatrix.getCoverage();
+            }
+
+            rowToMarginal[i].first = seed->getRow();
+        }
+
+        for (const auto & p : rowToMarginal) {
+            if (firstGlobalRows.find(p.first) == firstGlobalRows.end()) {
+                firstGlobalRows.insert(p.first);
+                firstMarginals.push_back(p.second);
+            }
+        }
+
+        for (size_t i = 0; i < pulledFromQueue.size(); i++) {
+            std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[i]);
+            if (this->seenFirstElement.find(seed->getOriginRank()) == this->seenFirstElement.end()) {
+                this->seenFirstElement.insert(seed->getOriginRank());
+            }
+        }
+
+        if (this->seenFirstElement.size() == numberOfSenders) {
+            this->initBuckets(seedQueue);
+        }
+
+        seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
+    }
+
+    void initBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         const double deltaZero = this->getDeltaZero();
         const unsigned int numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
 
@@ -69,13 +121,21 @@ class SeiveCandidateConsumer : public CandidateConsumer {
             double threshold = ((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, bucket);
             this->buckets.push_back(ThresholdBucket(threshold, k));
         }
+    }
 
-        #pragma omp parallel for
+    void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+
+        #pragma omp parallel for num_threads(this->threads)
         for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
-            for (size_t seedIndex = 0; seedIndex < seeds.size(); seedIndex++) {
-                const auto & seed = this->seeds[seedIndex];
+            for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
+                std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
                 this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
             }
+        }
+
+        for (size_t i = 0; i < pulledFromQueue.size(); i++) {
+            this->seedStorage.push_back(move(pulledFromQueue[i]));
         }
     }
 
@@ -87,27 +147,9 @@ class SeiveCandidateConsumer : public CandidateConsumer {
         return numBuckets;
     }
 
-    void tryInsertSeedIntoBuckets(std::unique_ptr<CandidateSeed> seed) {
-        #pragma omp parallel for
-        for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
-            this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
-        }
-
-        seeds.push_back(move(seed));
-    }
-
     double getDeltaZero() {
-        std::vector<double> marginals(this->seeds.size(), 0);
-        #pragma omp parallel for
-        for (size_t seed = 0; seed < this->seeds.size(); seed++) {
-            SimilarityMatrix tempMatrix;
-            tempMatrix.addRow(this->seeds[seed]->getData());
-            double marginal = tempMatrix.getCoverage();
-            marginals[seed] = marginal;
-        }
-
         double highestMarginal = 0;
-        for (const double m : marginals) {
+        for (const double m : this->firstMarginals) {
             highestMarginal = std::max(highestMarginal, m);
         }
 

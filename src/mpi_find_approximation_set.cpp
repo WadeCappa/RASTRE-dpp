@@ -15,6 +15,7 @@
 
 #include <mpi.h>
 
+#include "representative_subset_calculator/streaming/synchronous_queue.h"
 #include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/streaming/send_request.h"
 #include "representative_subset_calculator/streaming/bucket.h"
@@ -22,7 +23,6 @@
 #include "representative_subset_calculator/streaming/candidate_consumer.h"
 #include "representative_subset_calculator/streaming/rank_buffer.h"
 #include "representative_subset_calculator/streaming/receiver_interface.h"
-#include "representative_subset_calculator/streaming/synchronous_queue.h"
 #include "representative_subset_calculator/streaming/greedy_streamer.h"
 #include "representative_subset_calculator/streaming/mpi_streaming_classes.h"
 #include "representative_subset_calculator/streaming/streaming_subset.h"

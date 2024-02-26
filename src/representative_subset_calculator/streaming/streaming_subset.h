@@ -21,10 +21,6 @@ class StreamingSubset : public MutableSubset {
         desiredSeeds(desiredSeeds)
     {}
 
-    void sendRemaining() {
-        // block and send remaining
-    }
-
     double getScore() const {
         return base->getScore();
     }

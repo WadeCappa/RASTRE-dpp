@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include "synchronous_queue.h"
 #include "communication_constants.h"
 #include "send_request.h"
 #include "bucket.h"
@@ -7,7 +8,6 @@
 #include "candidate_consumer.h"
 #include "rank_buffer.h"
 #include "receiver_interface.h"
-#include "synchronous_queue.h"
 #include "greedy_streamer.h"
 
 static const double EVERYTHING_ALLOWED_THRESHOLD = 0.0000001;
@@ -162,9 +162,13 @@ TEST_CASE("Consumer can process seeds") {
     const unsigned int worldSize = 1;
     SeiveCandidateConsumer consumer(worldSize, 1, EPSILON);
 
+    SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     std::unique_ptr<CandidateSeed> seed(buildSeed());
     const unsigned int globalRow = seed->getRow();
-    consumer.accept(move(seed));
+
+    queue.push(move(seed));
+    consumer.accept(queue);
+
     std::unique_ptr<Subset> solution(consumer.getBestSolutionDestroyConsumer());
     
     CHECK(solution->getScore() > 0);
@@ -175,9 +179,11 @@ TEST_CASE("Consumer can process seeds") {
 TEST_CASE("Consumer can find a solution") {
     const unsigned int worldSize = DATA.size();
     SeiveCandidateConsumer consumer(worldSize, worldSize, EPSILON);
+    SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
 
     for (size_t i = 0; i < worldSize; i++) {
-        consumer.accept(buildSeed(i, i));
+        queue.push(buildSeed(i,i));
+        consumer.accept(queue);
     }
 
     std::unique_ptr<Subset> solution(consumer.getBestSolutionDestroyConsumer());
