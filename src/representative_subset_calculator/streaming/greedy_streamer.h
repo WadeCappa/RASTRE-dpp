@@ -1,3 +1,5 @@
+#include <omp.h>
+#include <atomic>
 
 class GreedyStreamer {
     public:
@@ -9,6 +11,8 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     Receiver &receiver;
     CandidateConsumer &consumer;
 
+    SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
+
     public:
     SeiveGreedyStreamer(
         Receiver &receiver, 
@@ -19,10 +23,27 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     {}
     
     std::unique_ptr<Subset> resolveStream() {
-        bool stillReceiving = true;
-        while (stillReceiving) {
-            std::unique_ptr<CandidateSeed> nextSeed(receiver.receiveNextSeed(stillReceiving));
-            consumer.accept(move(nextSeed));
+        std::atomic_bool stillReceiving = true;
+        omp_set_nested(1);
+        #pragma omp parallel num_threads(2)
+        {
+            int threadId = omp_get_thread_num();
+            if (threadId == 0) {
+                while (stillReceiving.load() == true) {
+                    std::unique_ptr<CandidateSeed> nextSeed(receiver.receiveNextSeed(stillReceiving));
+                    this->queue.push(move(nextSeed));
+                }
+            } else {
+                while (stillReceiving.load() == true) {
+                    if (this->queue.size() > 0) {
+                        consumer.accept(move(this->queue.pop()));
+                    }
+                }
+            }
+        }
+
+        while (this->queue.size() > 0) {
+            consumer.accept(move(this->queue.pop()));
         }
 
         std::cout << "getting best consumer, destroying in process" << std::endl;

@@ -7,6 +7,7 @@
 #include "candidate_consumer.h"
 #include "rank_buffer.h"
 #include "receiver_interface.h"
+#include "synchronous_queue.h"
 #include "greedy_streamer.h"
 
 static const double EVERYTHING_ALLOWED_THRESHOLD = 0.0000001;
@@ -34,12 +35,12 @@ class FakeReceiver : public Receiver {
     public:
     FakeReceiver(const unsigned int worldSize) : nextIndex(0), worldSize(worldSize), nextRank(0) {}
 
-    std::unique_ptr<CandidateSeed> receiveNextSeed(bool &stillReceiving) {
+    std::unique_ptr<CandidateSeed> receiveNextSeed(std::atomic_bool &stillReceiving) {
         std::unique_ptr<CandidateSeed> nextSeed(buildSeed(nextIndex, nextRank));
         nextIndex++;
         nextRank = (nextRank + 1) % worldSize;
 
-        stillReceiving = nextIndex < DATA.size();
+        stillReceiving.store(nextIndex < DATA.size());
 
         return nextSeed;
     }
@@ -188,7 +189,7 @@ TEST_CASE("Test fake receiver") {
     FakeReceiver receiver(worldSize);
 
     size_t count = 0;
-    bool stillReceiving = true; 
+    std::atomic_bool stillReceiving = true; 
     while (stillReceiving) {
         count++;
         std::unique_ptr<CandidateSeed> nextSeed(receiver.receiveNextSeed(stillReceiving));
@@ -233,7 +234,7 @@ TEST_CASE("Testing the naiveReceiver with fake buffers") {
     NaiveReceiver receiver(buildFakeBuffers(1));
 
     size_t expectedRow = 0;
-    bool moreData = true;
+    std::atomic_bool moreData = true;
     while (moreData) {
         std::unique_ptr<CandidateSeed> nextElement = receiver.receiveNextSeed(moreData);
         CHECK(nextElement->getRow() == expectedRow);
@@ -249,7 +250,7 @@ TEST_CASE("Testing multiple buffers") {
     NaiveReceiver receiver(buildFakeBuffers(worldSize));
 
     size_t expectedRow = 0;
-    bool moreData = true;
+    std::atomic_bool moreData = true;
     while (moreData) {
         std::unique_ptr<CandidateSeed> nextElement = receiver.receiveNextSeed(moreData);
         CHECK(nextElement->getRow() == expectedRow);
