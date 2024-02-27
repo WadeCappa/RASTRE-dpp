@@ -13,7 +13,7 @@ class NaiveSubsetCalculator : public SubsetCalculator {
     NaiveSubsetCalculator() {}
 
     std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
-        SimilarityMatrix matrix; 
+        MutableSimilarityMatrix matrix; 
         std::set<size_t> seen;
 
         double currentScore = 0;
@@ -24,7 +24,7 @@ class NaiveSubsetCalculator : public SubsetCalculator {
             #pragma omp parallel for 
             for (size_t index = 0; index < data.totalRows(); index++) {
                 const auto & row = data.getRow(index);
-                SimilarityMatrix tempMatrix(matrix);
+                MutableSimilarityMatrix tempMatrix(matrix);
                 tempMatrix.addRow(row);
                 marginals[index] = tempMatrix.getCoverage();
             }

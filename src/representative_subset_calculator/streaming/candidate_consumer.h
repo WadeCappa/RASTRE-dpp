@@ -81,7 +81,7 @@ class SeiveCandidateConsumer : public CandidateConsumer {
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[i]);
             if (this->firstGlobalRows.find(seed->getRow()) == this->firstGlobalRows.end()) {
-                SimilarityMatrix tempMatrix;
+                MutableSimilarityMatrix tempMatrix;
                 tempMatrix.addRow(seed->getData());
                 rowToMarginal[i].second = tempMatrix.getCoverage();
             }

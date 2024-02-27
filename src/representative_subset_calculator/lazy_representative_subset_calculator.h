@@ -23,14 +23,14 @@ class LazySubsetCalculator : public SubsetCalculator {
         std::vector<std::pair<size_t, double>> heap;
         for (size_t index = 0; index < data.totalRows(); index++) {
             const auto & d = data.getRow(index);
-            SimilarityMatrix matrix(d);
+            MutableSimilarityMatrix matrix(d);
             heap.push_back(std::make_pair(index, matrix.getCoverage()));
         }
 
         HeapComparitor comparitor;
         std::make_heap(heap.begin(), heap.end(), comparitor);
 
-        SimilarityMatrix matrix;
+        MutableSimilarityMatrix matrix;
 
         double currentScore = 0;
 
@@ -39,7 +39,7 @@ class LazySubsetCalculator : public SubsetCalculator {
             std::pop_heap(heap.begin(),heap.end(), comparitor); 
             heap.pop_back();
 
-            SimilarityMatrix tempMatrix(matrix);
+            MutableSimilarityMatrix tempMatrix(matrix);
             tempMatrix.addRow(data.getRow(top.first));
             double marginal = tempMatrix.getCoverage();
 
