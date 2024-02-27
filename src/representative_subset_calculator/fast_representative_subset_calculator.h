@@ -4,7 +4,7 @@
 #include <unordered_set>
 #include "kernel_matrix/kernel_matrix.h"
 
-class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
+class FastSubsetCalculator : public SubsetCalculator {
     private:
     const double epsilon;
 
@@ -31,14 +31,13 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
     }
 
   public:
-    FastRepresentativeSubsetCalculator(const double epsilon) : epsilon(epsilon) {
+    FastSubsetCalculator(const double epsilon) : epsilon(epsilon) {
         if (this->epsilon < 0) {
             throw std::invalid_argument("Epsilon is less than 0.");
         }
     }
 
-    std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
-        std::vector<std::pair<size_t, double>> solution;
+    std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
         std::unordered_set<size_t> seen;
 
         NaiveKernelMatrix kernelMatrix(data);
@@ -46,13 +45,12 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
 
         std::vector<std::vector<double>> c(data.totalRows(), std::vector<double>());
 
-        // Modifies the solution set
         auto bestScore = getNextHighestScore(diagonals, seen);
         size_t j = bestScore.first;
         seen.insert(j);
-        solution.push_back(std::make_pair(j, bestScore.second));
+        consumer->addRow(j, bestScore.second);
 
-        while (solution.size() < k) {
+        while (consumer->size() < k) {
             #pragma omp parallel for 
             for (size_t i = 0; i < data.totalRows(); i++) {
                 if (seen.find(i) != seen.end()) {
@@ -64,18 +62,17 @@ class FastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator
                 diagonals[i] -= std::pow(e, 2);
             }
 
-            // Modifies the solution set
             bestScore = getNextHighestScore(diagonals, seen);
             if (bestScore.second <= this->epsilon) {
                 std::cout << "score of " << bestScore.second << " was less than " << this->epsilon << ". " << std::endl;
-                return solution;
+                return MutableSubset::upcast(move(consumer));
             }
 
             j = bestScore.first;
             seen.insert(j);
-            solution.push_back(std::make_pair(j, bestScore.second));
+            consumer->addRow(j, bestScore.second);
         }
     
-        return solution;
+        return MutableSubset::upcast(move(consumer));
     }
 };

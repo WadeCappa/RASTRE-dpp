@@ -13,85 +13,60 @@ static const NaiveData data(
 );
 
 #include "kernel_matrix/tests.h"
-#include "representative_subset.h"
 #include "orchestrator/tests.h"
 #include "buffers/tests.h"
 
 static const size_t k = DATA.size();
 static const double epsilon = 0.01;
 
-TEST_CASE("Testing Naive representative set finder") {
-    NaiveRepresentativeSubsetCalculator calculator;
-    std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
-    
-    CHECK(res.size() == k);
+static std::unique_ptr<Subset> testCalculator(SubsetCalculator *calculator) {
+    std::unique_ptr<Subset> res = calculator->getApproximationSet(data, k);
 
+    CHECK(res->size() == k);
     std::set<size_t> seen;
-    for (const auto & seed : res) {
-        const auto & row = seed.first;
+    for (const auto & seed : *res.get()) {
+        const auto & row = seed;
         CHECK(seen.find(row) == seen.end());
         seen.insert(row);
     }
+
+    delete calculator;
+    return move(res);
+}
+
+TEST_CASE("Testing Naive representative set finder") {
+    testCalculator(new NaiveSubsetCalculator());
 }
 
 TEST_CASE("Testing lazy-naive set finder") {
-    LazyRepresentativeSubsetCalculator calculator;
-    std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
-
-    CHECK(res.size() == k);
-
-    std::set<size_t> seen;
-    for (const auto & seed : res) {
-        const auto & row = seed.first;
-        CHECK(seen.find(row) == seen.end());
-        seen.insert(row);
-    }
+    testCalculator(new LazySubsetCalculator());
 }
 
 TEST_CASE("Testing FAST set finder") {
-    FastRepresentativeSubsetCalculator calculator(epsilon);
-    std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
-
-    CHECK(res.size() == k);
-
-    std::set<size_t> seen;
-    for (const auto & seed : res) {
-        const auto & row = seed.first;
-        CHECK(seen.find(row) == seen.end());
-        seen.insert(row);
-    }
+    testCalculator(new FastSubsetCalculator(epsilon));
 }
 
 TEST_CASE("Testing LAZYFAST set finder") {
-    LazyFastRepresentativeSubsetCalculator calculator(epsilon);
-    std::vector<std::pair<size_t, double>> res = calculator.getApproximationSet(data, k);
-
-    CHECK(res.size() == k);
-
-    std::set<size_t> seen;
-    for (const auto & seed : res) {
-        const auto & row = seed.first;
-        CHECK(seen.find(row) == seen.end());
-        seen.insert(row);
-    }
+    testCalculator(new LazyFastSubsetCalculator(epsilon));
 }
 
-void checkSolutionsAreEquivalent(const std::vector<std::pair<size_t, double>> &a, const std::vector<std::pair<size_t, double>> &b) {
+void checkSolutionsAreEquivalent(const Subset &a, const Subset &b) {
     CHECK(a.size() == b.size());
     for (size_t i = 0; i < a.size() && i < b.size(); i++) {
-        CHECK(a[i].first == b[i].first);
-        CHECK(a[i].second > b[i].second - LARGEST_ACCEPTABLE_ERROR);
-        CHECK(a[i].second < b[i].second + LARGEST_ACCEPTABLE_ERROR);
+        CHECK(a.getRow(i) == b.getRow(i));
     }
+
+    CHECK(a.getScore() > b.getScore() - LARGEST_ACCEPTABLE_ERROR);
+    CHECK(a.getScore() < b.getScore() + LARGEST_ACCEPTABLE_ERROR);
 }
 
 TEST_CASE("All calculators have the same result") {
-    auto naiveRes = NaiveRepresentativeSubsetCalculator().getApproximationSet(data, k);
-    auto lazyRes = LazyRepresentativeSubsetCalculator().getApproximationSet(data, k);
-    auto fastRes = FastRepresentativeSubsetCalculator(epsilon).getApproximationSet(data, k);
-    auto lazyFastRes = LazyFastRepresentativeSubsetCalculator(epsilon).getApproximationSet(data, k);
+    auto naiveRes = testCalculator(new NaiveSubsetCalculator());
+    auto lazyRes = testCalculator(new LazySubsetCalculator());
+    auto fastRes = testCalculator(new FastSubsetCalculator(epsilon));
+    auto lazyFastRes = testCalculator(new LazyFastSubsetCalculator(epsilon));
 
-    checkSolutionsAreEquivalent(naiveRes, lazyRes);
-    checkSolutionsAreEquivalent(lazyRes, fastRes);
-    checkSolutionsAreEquivalent(fastRes, lazyFastRes);
+    checkSolutionsAreEquivalent(*naiveRes.get(), *lazyRes.get());
+    checkSolutionsAreEquivalent(*lazyRes.get(), *fastRes.get());
+    checkSolutionsAreEquivalent(*fastRes.get(), *lazyFastRes.get());
 }

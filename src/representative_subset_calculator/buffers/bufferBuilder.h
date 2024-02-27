@@ -12,36 +12,35 @@ class BufferBuilder : public Buffer {
     private:
     static unsigned int getTotalSendData(
         const Data &data, 
-        const RepresentativeSubset &localSolution
+        const Subset &localSolution
     ) {
         // Need to include an additional column that marks the index of the sent row 
         //  as well as an additional double for the sender's local solution total 
         //  marginal gain.
-        return (data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN) * localSolution.getNumberOfRows() + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
+        return (data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN) * localSolution.size() + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
     }
 
     public:
     static unsigned int buildSendBuffer(
         const LocalData &data, 
-        const RepresentativeSubset &localSolution, 
+        const Subset &localSolution, 
         std::vector<double> &buffer
     ) {
         // Need to include an additional column that marks the index of the sent row
         const unsigned int totalSendData = getTotalSendData(dynamic_cast<const Data&>(data), localSolution);
         const size_t rowSize = data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN;
-        const size_t numberOfRows = localSolution.getNumberOfRows();
+        const size_t numberOfRows = localSolution.size();
         buffer.resize(totalSendData);
 
         // First value is the local total marginal
         buffer[0] = localSolution.getScore();
-        std::vector<size_t> solutionRows = localSolution.getRows();
 
         // All buffer indexes need to be offset by 1 to account for the 
         //  total marginal being inserted at the beggining of the send buffer
         #pragma parallel for
         for (size_t rowIndex = 0; rowIndex < numberOfRows; rowIndex++) {
-            const auto & row = data.getRow(solutionRows[rowIndex]);
-            buffer[rowSize * rowIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER] = data.getRemoteIndexForRow(solutionRows[rowIndex]);
+            const auto & row = data.getRow(localSolution.getRow(rowIndex));
+            buffer[rowSize * rowIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER] = data.getRemoteIndexForRow(localSolution.getRow(rowIndex));
             for (size_t columnIndex = DOUBLES_FOR_ROW_INDEX_PER_COLUMN; columnIndex < rowSize; columnIndex++) {
                 double v = row[columnIndex - DOUBLES_FOR_ROW_INDEX_PER_COLUMN];
                 buffer[rowSize * rowIndex + columnIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER] = v;
@@ -74,8 +73,8 @@ class BufferBuilder : public Buffer {
 
 class BufferLoader : public Buffer {
     public:
-    virtual std::unique_ptr<RepresentativeSubset> getSolution(
-        std::unique_ptr<RepresentativeSubsetCalculator> calculator,
+    virtual std::unique_ptr<Subset> getSolution(
+        std::unique_ptr<SubsetCalculator> calculator,
         const size_t k
     ) = 0;
 };
@@ -89,24 +88,24 @@ class GlobalBufferLoader : public BufferLoader {
     const size_t worldSize;
 
     public:
-    std::unique_ptr<RepresentativeSubset> getSolution(std::unique_ptr<RepresentativeSubsetCalculator> calculator, const size_t k) {
+    std::unique_ptr<Subset> getSolution(std::unique_ptr<SubsetCalculator> calculator, const size_t k) {
         this->timers.bufferDecodingTime.startTimer();
         auto newData = this->rebuildData();
         SelectiveData bestRows(*newData);
         this->timers.bufferDecodingTime.stopTimer();
 
         timers.globalCalculationTime.startTimer();
-        RepresentativeSubset* globalSolution = 
-            dynamic_cast<RepresentativeSubset*>(new NaiveRepresentativeSubset(move(calculator), bestRows, k, timers));
+
+        std::unique_ptr<Subset> untranslatedSolution(calculator->getApproximationSet(move(NaiveMutableSubset::makeNew()), bestRows, k));
+        std::unique_ptr<Subset> globalResult(bestRows.translateSolution(move(untranslatedSolution)));
+
         timers.globalCalculationTime.stopTimer();
 
-        RepresentativeSubset *bestLocal = this->getBestLocalSolution();
-        if (globalSolution->getScore() > bestLocal->getScore()) {
-            delete bestLocal;
-            return std::unique_ptr<RepresentativeSubset>(globalSolution);
+        std::unique_ptr<Subset> bestLocal = this->getBestLocalSolution();
+        if (globalResult->getScore() > bestLocal->getScore()) {
+            return globalResult; 
         } else {
-            delete globalSolution;
-            return std::unique_ptr<RepresentativeSubset>(bestLocal);
+            return bestLocal;
         }
     }
 
@@ -151,7 +150,7 @@ class GlobalBufferLoader : public BufferLoader {
         return std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>>(newData);
     }
 
-    RepresentativeSubset* getBestLocalSolution() {
+    std::unique_ptr<Subset> getBestLocalSolution() {
         std::vector<size_t> rows;
         double coverage;
         double localMaxCoverage = -1;
@@ -179,7 +178,7 @@ class GlobalBufferLoader : public BufferLoader {
             rows.push_back(binaryInput[rankCursor]);
         }
 
-        return dynamic_cast<RepresentativeSubset*>(new DummyRepresentativeSubset(rows, coverage));
+        return Subset::of(rows, coverage);
     }
 
     std::vector<size_t> getRowOffsets() {

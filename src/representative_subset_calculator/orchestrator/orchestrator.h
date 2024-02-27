@@ -37,17 +37,6 @@ class Orchestrator {
         }
     }
 
-    static nlohmann::json solutionToJson(
-        const RepresentativeSubset &solution
-    ) {
-        nlohmann::json output {
-            {"rows", solution.getRows()}, 
-            {"totalCoverage", solution.getScore()}
-        };
-
-        return output;
-    }
-
     static nlohmann::json buildDatasetJson(const Data &data, const AppData &appData) {
         nlohmann::json output {
             {"rows", data.totalRows()},
@@ -60,7 +49,7 @@ class Orchestrator {
 
     static nlohmann::json buildOutput(
         const AppData &appData, 
-        const RepresentativeSubset &solution,
+        const Subset &solution,
         const Data &data,
         const Timers &timers
     ) {
@@ -104,16 +93,16 @@ class Orchestrator {
     }
 
 
-    static RepresentativeSubsetCalculator* getCalculator(const AppData &appData) {
+    static SubsetCalculator* getCalculator(const AppData &appData) {
         switch (appData.algorithm) {
             case 0:
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new NaiveRepresentativeSubsetCalculator());
+                return dynamic_cast<SubsetCalculator*>(new NaiveSubsetCalculator());
             case 1:
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyRepresentativeSubsetCalculator());
+                return dynamic_cast<SubsetCalculator*>(new LazySubsetCalculator());
             case 2:
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new FastRepresentativeSubsetCalculator(appData.epsilon));
+                return dynamic_cast<SubsetCalculator*>(new FastSubsetCalculator(appData.epsilon));
             case 3: 
-                return dynamic_cast<RepresentativeSubsetCalculator*>(new LazyFastRepresentativeSubsetCalculator(appData.epsilon));
+                return dynamic_cast<SubsetCalculator*>(new LazyFastSubsetCalculator(appData.epsilon));
             default:
                 throw new std::invalid_argument("Could not find algorithm");
         }
@@ -135,7 +124,7 @@ class Orchestrator {
 
     static nlohmann::json buildOutputBase(
         const AppData &appData, 
-        const RepresentativeSubset &solution,
+        const Subset &solution,
         const Data &data,
         const Timers &timers
     ) { 
@@ -143,7 +132,7 @@ class Orchestrator {
             {"k", appData.outputSetSize}, 
             {"algorithm", algorithmToString(appData)},
             {"epsilon", appData.epsilon},
-            {"RepresentativeRows", solutionToJson(solution)},
+            {"Rows", solution.toJson()},
             {"dataset", buildDatasetJson(data, appData)},
             {"worldSize", appData.worldSize}
         };

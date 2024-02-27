@@ -1,3 +1,4 @@
+#include "../representative_subset_calculator/representative_subset.h"
 #include "normalizer.h"
 #include "data_saver.h"
 #include "matrix_builder.h"
@@ -170,16 +171,17 @@ TEST_CASE("Testing SelectiveData translation and construction") {
     }
 
     SelectiveData selectiveData(mockReceiveData);
-    std::vector<std::pair<size_t, double>> mockSolution;
-    for (size_t i = 0; i < mockReceiveData.size(); i++) {
-        mockSolution.push_back(std::make_pair(i, 0));
-    }
-
-    auto translated = selectiveData.translateSolution(mockSolution);
+    std::unique_ptr<MutableSubset> mockSolution(NaiveMutableSubset::makeNew());
 
     for (size_t i = 0; i < mockReceiveData.size(); i++) {
-        CHECK(mockReceiveData[i].first == translated[i].first);
+        mockSolution->addRow(i, 0);
     }
 
-    CHECK(mockReceiveData.size() == translated.size());
+    auto translated = selectiveData.translateSolution(MutableSubset::upcast(move(mockSolution)));
+
+    for (size_t i = 0; i < mockReceiveData.size(); i++) {
+        CHECK(mockReceiveData[i].first == translated->getRow(i));
+    }
+
+    CHECK(mockReceiveData.size() == translated->size());
 }

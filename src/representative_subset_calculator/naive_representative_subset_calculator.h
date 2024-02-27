@@ -6,14 +6,13 @@
 #include "similarity_matrix/similarity_matrix.h"
 #include "representative_subset_calculator.h"
 
-class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
+class NaiveSubsetCalculator : public SubsetCalculator {
     private: 
 
     public:
-    NaiveRepresentativeSubsetCalculator() {}
+    NaiveSubsetCalculator() {}
 
-    std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
-        std::vector<std::pair<size_t, double>> res;
+    std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
         SimilarityMatrix matrix; 
         std::set<size_t> seen;
 
@@ -46,17 +45,16 @@ class NaiveRepresentativeSubsetCalculator : public RepresentativeSubsetCalculato
             }
 
             if (bestRow == -1) {
-                std::cout << "FAILED to add element to matrix that increased marginal" << std::endl;
-                return res;
+                throw std::invalid_argument("FAILED to add element to matrix that increased marginal");
             }
 
             double marginalGain = highestMarginal - currentScore;
-            res.push_back(std::make_pair(bestRow, marginalGain));
+            consumer->addRow(bestRow, marginalGain);
             matrix.addRow(data.getRow(bestRow));
             seen.insert(bestRow);
             currentScore = highestMarginal;
         }
 
-        return res;
+        return MutableSubset::upcast(move(consumer));
     }
 };

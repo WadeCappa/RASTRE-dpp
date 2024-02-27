@@ -4,7 +4,7 @@
 #include <unordered_set>
 #include <optional>
 
-class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalculator {
+class LazyFastSubsetCalculator : public SubsetCalculator {
     private:
     const double epsilon;
 
@@ -16,25 +16,24 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
         }
     };
 
-    static std::vector<double> getSlice(const std::vector<double> &row, const std::vector<std::pair<size_t, double>> solution, size_t count) {
+    static std::vector<double> getSlice(const std::vector<double> &row, const MutableSubset* subset, size_t count) {
         std::vector<double> res(count);
         for (size_t i = 0; i < count ; i++) {
-            res[i] = row[solution[i].first];
+            res[i] = row[subset->getRow(i)];
         }
 
         return res;
     }
 
     public:
-    LazyFastRepresentativeSubsetCalculator(const double epsilon) : epsilon(epsilon) {
+    LazyFastSubsetCalculator(const double epsilon) : epsilon(epsilon) {
         if (this->epsilon < 0) {
             throw std::invalid_argument("Epsilon is less than 0.");
         }
     }
 
     // TODO: Break when marginal gain is below epsilon
-    std::vector<std::pair<size_t, double>> getApproximationSet(const Data &data, size_t k) {
-        std::vector<std::pair<size_t, double>> solution;
+    std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
         std::unordered_set<size_t> seen;
         std::vector<std::vector<double>> v(data.totalRows(), std::vector<double>(data.totalRows()));
         std::vector<size_t> u(data.totalRows(), 0);
@@ -52,32 +51,32 @@ class LazyFastRepresentativeSubsetCalculator : public RepresentativeSubsetCalcul
         HeapComparitor comparitor(diagonals);
         std::make_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
 
-        while (solution.size() < k) {
+        while (consumer->size() < k) {
             size_t i = priorityQueue.front();
             std::pop_heap(priorityQueue.begin(),priorityQueue.end(), comparitor); 
             priorityQueue.pop_back();
 
             // update row
-            for (size_t t = u[i]; t < solution.size(); t++) {
-                size_t j_t = solution[t].first; 
-                double dotProduct = KernelMatrix::getDotProduct(this->getSlice(v[i], solution, t), this->getSlice(v[j_t], solution, t));
+            for (size_t t = u[i]; t < consumer->size(); t++) {
+                size_t j_t = consumer->getRow(t); 
+                double dotProduct = KernelMatrix::getDotProduct(this->getSlice(v[i], consumer.get(), t), this->getSlice(v[j_t], consumer.get(), t));
                 v[i][j_t] = (kernelMatrix.get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t]);
                 diagonals[i] -= std::pow(v[i][j_t], 2);
             }
 
-            u[i] = solution.size();
+            u[i] = consumer->size();
             
             double marginalGain = std::log(diagonals[i]);
             double nextScore = std::log(diagonals[priorityQueue.front()]);
 
-            if (marginalGain > nextScore || solution.size() == data.totalRows() - 1) {
-                solution.push_back(std::make_pair(i, marginalGain));
+            if (marginalGain > nextScore || consumer->size() == data.totalRows() - 1) {
+                consumer->addRow(i, marginalGain);
             } else {
                 priorityQueue.push_back(i);
                 std::push_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
             }
         }
 
-        return solution;
+        return MutableSubset::upcast(move(consumer));
     }
 };
