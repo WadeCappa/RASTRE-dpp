@@ -94,17 +94,15 @@ class MutableSimilarityMatrix : public SimilarityMatrix {
     }
 
     void addRow(const std::vector<double> &newRow) {
+        this->transposeMatrix.push_back(std::vector<double>(this->transposeMatrix.size() + 1));
         for (size_t i = 0; i < this->baseRows.size(); i++) {
             this->transposeMatrix[i].push_back(getDotProduct(*this->baseRows[i], newRow));
+            this->transposeMatrix.back()[i] = this->transposeMatrix[i].back();
         }
 
         baseRows.push_back(&newRow);
-        this->transposeMatrix.push_back(std::vector<double>(this->transposeMatrix.size() + 1));
-        for (size_t i = 0; i < this->baseRows.size(); i++) {
-            this->transposeMatrix.back()[i] = getDotProduct(*this->baseRows[i], newRow);
-        }
 
-        this->transposeMatrix.back().back() += 1;
+        this->transposeMatrix.back().back() = getDotProduct(newRow, newRow) + 1;
     }
 
     double getCoverage() const {
