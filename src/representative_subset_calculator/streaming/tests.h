@@ -2,7 +2,6 @@
 
 #include "synchronous_queue.h"
 #include "communication_constants.h"
-#include "send_request.h"
 #include "bucket.h"
 #include "candidate_seed.h"
 #include "candidate_consumer.h"

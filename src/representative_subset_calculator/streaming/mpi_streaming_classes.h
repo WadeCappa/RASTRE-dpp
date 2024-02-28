@@ -3,55 +3,25 @@
 #include <optional>
 #include <chrono>
 
-class MpiSendRequest : public SendRequest {
+class MpiSendRequest {
     private:
     const std::vector<double> rowToSend;
-
-    std::optional<std::future<bool>> sendRequest;
+    MPI_Request request;
 
     public:
     MpiSendRequest(std::vector<double> rowToSend) 
-    : rowToSend(move(rowToSend)), sendRequest(std::nullopt) {}
+    : rowToSend(move(rowToSend)) {}
 
-    bool sendCompleted() const {
-        if (this->sendStarted()) {
-            std::future_status status = sendRequest.value().wait_for(std::chrono::seconds(0));
-            return status == std::future_status::ready;
-        }
-        return false;
-    }
-
-    bool sendStarted() const {
-        return this->sendRequest.has_value();
-    }
-
-    void sendAsync(const unsigned int tag) {
-        if (sendStarted()) {
-            std::cout << "attempted to send while a send was already in progress" << std::endl;
-            return;
-        }
-        this->sendRequest = std::async(std::launch::async, sendAndBlockPrivate, rowToSend, tag); 
-    }
-
-    void sendAndBlock(const unsigned int tag) {
-        sendAndBlockPrivate(this->rowToSend, tag);
-    }
-
-    bool waitForCompletion() {
-        if (!sendStarted()) {
-            std::cout << "attempted to wait for a send to end when no send has started" << std::endl;
-            return false;
-        }
-        return this->sendRequest.value().get();
-    }
-
-    private:
-    static bool sendAndBlockPrivate(const std::vector<double> &rowToSend, const unsigned int tag) {
+    void isend(const unsigned int tag) {
         if (tag == CommunicationConstants::getStopTag()) {
             std::cout << "sending seed with tag " << tag << std::endl;
         }
-        MPI_Send(rowToSend.data(), rowToSend.size(), MPI_DOUBLE, 0, tag, MPI_COMM_WORLD);
-        return true;
+        MPI_Isend(rowToSend.data(), rowToSend.size(), MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &request);
+    }
+
+    void waitForISend() {
+        MPI_Status status;
+        MPI_Wait(&request, &status);
     }
 };
 

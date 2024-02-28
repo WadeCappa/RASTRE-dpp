@@ -17,7 +17,6 @@
 
 #include "representative_subset_calculator/streaming/synchronous_queue.h"
 #include "representative_subset_calculator/streaming/communication_constants.h"
-#include "representative_subset_calculator/streaming/send_request.h"
 #include "representative_subset_calculator/streaming/bucket.h"
 #include "representative_subset_calculator/streaming/candidate_seed.h"
 #include "representative_subset_calculator/streaming/candidate_consumer.h"

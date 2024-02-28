@@ -7,7 +7,7 @@ class StreamingSubset : public MutableSubset {
     private:
     std::unique_ptr<MutableSubset> base;
     const LocalData &data;
-    std::queue<std::unique_ptr<MpiSendRequest>> sends;
+    std::vector<std::unique_ptr<MpiSendRequest>> sends;
 
     const unsigned int desiredSeeds;
 
@@ -46,16 +46,9 @@ class StreamingSubset : public MutableSubset {
     }
 
     void finalize() {
-        while (this->sends.size() > 0) {
-            if (this->sends.front()->sendStarted()) {
-                this->sends.front()->waitForCompletion();
-                this->sends.pop();
-            } else {
-                this->sends.front()->sendAndBlock(
-                    this->sends.size() == 1 ? CommunicationConstants::getStopTag() : CommunicationConstants::getContinueTag()
-                );
-                this->sends.pop();
-            }
+        this->sends.back()->isend(CommunicationConstants::getStopTag());
+        for (auto & send : this->sends) {
+            send->waitForISend();
         }
     }
 
@@ -67,21 +60,16 @@ class StreamingSubset : public MutableSubset {
         // Last value should be the global row index
         rowToSend.push_back(data.getRemoteIndexForRow(row));
 
-        this->sends.push(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(rowToSend)));
-
-        if (sends.front()->sendCompleted()) {
-            sends.pop();
-        }
+        this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(rowToSend)));
 
         // Keep at least one seed until finalize is called. Otherwise there is no garuntee of
         //  how many seeds there are left to find.
-        if (!(sends.front()->sendStarted()) && sends.size() > 1) {
+        if (sends.size() > 1) {
             // Tag should be -1 iff this is the last seed to be sent. This code purposefully
             //  does not send the last seed until finalize is called
             const int tag = CommunicationConstants::getContinueTag();
             
-            // TODO: This method should have an async callback to queue the next send. Will require locks
-            sends.front()->sendAsync(tag);
+            sends[this->sends.size() - 2]->isend(tag);
         }
     }
 };
