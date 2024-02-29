@@ -53,6 +53,7 @@ class NaiveReceiver : public Receiver {
             std::cout << "rank " << i << " had score of " << rankScore << std::endl;
             if (rankScore > bestSolution) {
                 bestRank = i;
+                bestSolution = rankScore;
             }
         }
 
