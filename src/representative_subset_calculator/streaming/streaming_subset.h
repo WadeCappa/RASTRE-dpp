@@ -57,7 +57,10 @@ class StreamingSubset : public MutableSubset {
 
         std::vector<double> rowToSend(this->data.getRow(row));
 
-        // Last value should be the global row index
+        // second to last value should be the marginal gain of this element for the local solution
+        rowToSend.push_back(marginalGain);
+
+        // last value should be the global row index
         rowToSend.push_back(data.getRemoteIndexForRow(row));
 
         this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(rowToSend)));

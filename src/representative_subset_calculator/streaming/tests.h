@@ -43,6 +43,10 @@ class FakeReceiver : public Receiver {
 
         return nextSeed;
     }
+
+    std::unique_ptr<Subset> getBestReceivedSolution() {
+        return NaiveMutableSubset::makeNew();
+    }
 };
 
 class FakeRankBuffer : public RankBuffer {
@@ -55,6 +59,7 @@ class FakeRankBuffer : public RankBuffer {
     size_t nextRowToReturn;
     bool shouldReturnSeed;
     unsigned int seedsSent;
+    std::unique_ptr<MutableSubset> rankSolution;
 
     public:
     FakeRankBuffer(
@@ -67,7 +72,8 @@ class FakeRankBuffer : public RankBuffer {
         worldSize(worldSize), 
         totalGlobalRows(DATA.size()),
         totalSeedsToSend(DATA.size() / worldSize),
-        seedsSent(0)
+        seedsSent(0),
+        rankSolution(std::unique_ptr<MutableSubset>(NaiveMutableSubset::makeNew()))
     {}
 
     CandidateSeed* askForData() {
@@ -78,6 +84,7 @@ class FakeRankBuffer : public RankBuffer {
                 this->shouldReturnSeed = false;
                 this->nextRowToReturn++;
                 this->seedsSent++;
+                this->rankSolution->addRow(row, 1);
                 return nextSeed;
             } else {
                 this->nextRowToReturn++;
@@ -94,6 +101,14 @@ class FakeRankBuffer : public RankBuffer {
 
     unsigned int getRank() const {
         return this->rank;
+    }
+
+    double getLocalSolutionScore() const {
+        return this->rankSolution->getScore();
+    }
+
+    std::unique_ptr<Subset> getLocalSolutionDestroyBuffer() {
+        return move(this->rankSolution);
     }
 };
 

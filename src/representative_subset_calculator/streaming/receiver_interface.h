@@ -3,6 +3,7 @@
 class Receiver {
     public:
     virtual std::unique_ptr<CandidateSeed> receiveNextSeed(std::atomic_bool &stillReceiving) = 0;
+    virtual std::unique_ptr<Subset> getBestReceivedSolution() = 0;
 };
 
 class NaiveReceiver : public Receiver {
@@ -42,5 +43,19 @@ class NaiveReceiver : public Receiver {
 
             this->listeningToRank = 0;
         }
+    }
+
+    std::unique_ptr<Subset> getBestReceivedSolution() {
+        double bestSolution = 0;
+        size_t bestRank = -1;
+        for (size_t i = 0; i < this->buffers.size(); i++) {
+            const double rankScore = this->buffers[i]->getLocalSolutionScore();
+            std::cout << "rank " << i << " had score of " << rankScore << std::endl;
+            if (rankScore > bestSolution) {
+                bestRank = i;
+            }
+        }
+
+        return move(this->buffers[bestRank]->getLocalSolutionDestroyBuffer());
     }
 };

@@ -32,15 +32,19 @@ class MpiRankBuffer : public RankBuffer {
     std::vector<double> buffer;
     MPI_Request request;
     bool isStillReceiving;
+    std::unique_ptr<MutableSubset> rankSolution;
 
     public:
     MpiRankBuffer(
         const unsigned int rank,
         const size_t rowSize
     ) : 
-        buffer(rowSize + 1),
+        // need space for the row's global index and the local rank's
+        //  marginal gain when adding this row to it's local solution.
+        buffer(rowSize + 2),
         rank(rank),
-        isStillReceiving(true)
+        isStillReceiving(true),
+        rankSolution(std::unique_ptr<MutableSubset>(NaiveMutableSubset::makeNew()))
     {
         this->readyForNextReceive();
     }
@@ -73,6 +77,14 @@ class MpiRankBuffer : public RankBuffer {
         return this->rank;
     }
 
+    double getLocalSolutionScore() const {
+        return this->rankSolution->getScore();
+    }
+
+    std::unique_ptr<Subset> getLocalSolutionDestroyBuffer() {
+        return move(MutableSubset::upcast(move(this->rankSolution)));
+    }
+
     private:
     void readyForNextReceive() {
         MPI_Irecv(
@@ -84,7 +96,9 @@ class MpiRankBuffer : public RankBuffer {
 
     CandidateSeed* extractSeedFromBuffer() {
         const unsigned int globalRowIndex = this->buffer.back();
-        std::vector<double> data(this->buffer.begin(), this->buffer.end() - 1);
+        const double localMarginalGain = this->buffer[this->buffer.size() - 2];
+        std::vector<double> data(this->buffer.begin(), this->buffer.end() - 2);
+        this->rankSolution->addRow(globalRowIndex, localMarginalGain);
         return new CandidateSeed(globalRowIndex, move(data), this->rank);
     }
 };

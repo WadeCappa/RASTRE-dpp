@@ -45,6 +45,13 @@ class SeiveGreedyStreamer : public GreedyStreamer {
         consumer.accept(this->queue);
 
         std::cout << "getting best consumer, destroying in process" << std::endl;
-        return consumer.getBestSolutionDestroyConsumer();
+        
+        std::unique_ptr<Subset> bestLocalSolution(receiver.getBestReceivedSolution());
+        std::unique_ptr<Subset> streamingSolution(consumer.getBestSolutionDestroyConsumer());
+
+        std::cout << "streaming solution has score of " << streamingSolution->getScore() << std::endl;
+        std::cout << "best local solution has score of " << bestLocalSolution->getScore() << std::endl;
+
+        return bestLocalSolution->getScore() > streamingSolution->getScore() ? move(bestLocalSolution) : move(streamingSolution);
     }
 };
