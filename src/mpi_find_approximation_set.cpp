@@ -128,7 +128,7 @@ void streaming(
     } else {
         std::cout << "rank " << appData.worldRank << " entered streaming function and know the total columns of " << data.totalColumns() << std::endl;
         timers.totalCalculationTime.startTimer();
-        std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, appData.outputSetSize));
+        std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, appData.outputSetSize, timers));
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         std::cout << "rank " << appData.worldRank << " ready to start streaming local seeds" << std::endl;
 
