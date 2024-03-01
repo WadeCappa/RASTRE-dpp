@@ -9,7 +9,3 @@ class SubsetCalculator {
         return this->getApproximationSet(move(NaiveMutableSubset::makeNew()), data, k);
     }
 };
-
-class RowCalculator {
-
-};

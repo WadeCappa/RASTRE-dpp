@@ -6,6 +6,13 @@
 #define assertm(exp, msg) assert(((void)msg, exp))
 
 class SimilarityMatrix {
+    public:
+    virtual double getCoverage() const = 0; 
+};
+
+// This class will be faster at calculating the score than the MutableSimilarityMatrix iff 
+//  all rows are known when this matrix is being built.
+class ImmutableSimilarityMatrix : public SimilarityMatrix {
     private:
     std::vector<const std::vector<double>*> baseRows;
 
@@ -22,31 +29,18 @@ class SimilarityMatrix {
         return transpose;
     }
 
-    public:
-    SimilarityMatrix() {}
+    // Should ideally not be copied
+    ImmutableSimilarityMatrix(const ImmutableSimilarityMatrix&);
 
-    SimilarityMatrix(const std::vector<std::vector<double>> &data) {
+    public:
+    ImmutableSimilarityMatrix(const std::vector<std::vector<double>> &data) {
         for (const auto & v : data) {
             this->baseRows.push_back(&v);
         }
     }
 
-    SimilarityMatrix(const std::vector<double> &initialVector) {
-        this->addRow(initialVector);
-    }
-
-    SimilarityMatrix(const SimilarityMatrix& t) : baseRows(t.getBase()) {}
-
-    void addRow(const std::vector<double> &newRow) {
-        this->baseRows.push_back(&newRow);
-    }
-
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic> DEBUG_getMatrix() const {
-        return getKernelMatrix();
-    }
-
-    std::vector<const std::vector<double>*> getBase() const {
-        return this->baseRows;
+    ImmutableSimilarityMatrix(const std::vector<double> &initialVector) {
+        this->baseRows.push_back(&initialVector);
     }
 
     double getCoverage() const {
@@ -58,7 +52,72 @@ class SimilarityMatrix {
             res += std::log(diagonal(index,index));
         }
 
-        // std::cout << "determinant: " << std::log(kernelMatrix.determinant()) << ", cholskey determanant: " << res * 2 << std::endl;
+        return res * 2;
+    }
+};
+
+class MutableSimilarityMatrix : public SimilarityMatrix {
+    private:
+    std::vector<const std::vector<double>*> baseRows;
+    std::vector<std::vector<double>> transposeMatrix;
+
+    static double getDotProduct(const std::vector<double> &a, const std::vector<double> &b) {
+        double res = 0;
+        for (size_t i = 0; i < a.size() && i < b.size(); i++) {
+            res += a[i] * b[i];
+        }
+    
+        return res;
+    }
+
+    public:
+    MutableSimilarityMatrix() {}
+
+    MutableSimilarityMatrix(const std::vector<std::vector<double>> &data) {
+        for (const auto & v : data) {
+            this->addRow(v);
+        }
+    }
+
+    MutableSimilarityMatrix(const std::vector<double> &initialVector) {
+        this->addRow(initialVector);
+    }
+
+    MutableSimilarityMatrix(const MutableSimilarityMatrix& t) : baseRows(t.getBase()), transposeMatrix(t.getTranspose()) {}
+    
+    const std::vector<const std::vector<double>*> &getBase() const {
+        return this->baseRows;
+    }
+
+    const std::vector<std::vector<double>> &getTranspose() const {
+        return this->transposeMatrix;
+    }
+
+    void addRow(const std::vector<double> &newRow) {
+        this->transposeMatrix.push_back(std::vector<double>(this->transposeMatrix.size() + 1));
+        for (size_t i = 0; i < this->baseRows.size(); i++) {
+            this->transposeMatrix[i].push_back(getDotProduct(*this->baseRows[i], newRow));
+            this->transposeMatrix.back()[i] = this->transposeMatrix[i].back();
+        }
+
+        baseRows.push_back(&newRow);
+
+        this->transposeMatrix.back().back() = getDotProduct(newRow, newRow) + 1;
+    }
+
+    double getCoverage() const {
+        Eigen::MatrixXd kernelMatrix(this->transposeMatrix.size(), this->transposeMatrix.size());
+        for (int i = 0; i < this->transposeMatrix.size(); i++) {
+            kernelMatrix.row(i) = Eigen::VectorXd::Map(this->transposeMatrix[i].data(), this->transposeMatrix[i].size());
+        }
+
+        Eigen::MatrixXd diagonal(kernelMatrix.llt().matrixL());
+
+        double res = 0;
+        for (size_t index = 0; index < diagonal.rows(); index++) {
+            res += std::log(diagonal(index,index));
+        }
+
         return res * 2;
     }
 };

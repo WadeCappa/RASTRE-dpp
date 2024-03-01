@@ -14,6 +14,8 @@ struct appData{
     bool normalizeInput = false;
     double epsilon = -1;
     unsigned int algorithm;
+    unsigned int distributedAlgorithm;
+    double distributedEpsilon = 0.13;
 
     int worldSize = 1;
     int worldRank = 0;
@@ -71,6 +73,8 @@ class Orchestrator {
     static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
         Orchestrator::addCmdOptions(app, appData);
         app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
+        app.add_option("-d,--distributedAlgorithm", appData.distributedAlgorithm, "0) randGreedi\n1) streaming (placeholder)")->required();
+        app.add_option("--distributedEpsilon", appData.distributedEpsilon, "Only used for streaming. Defaults to 0.13.");
     }
 
     static DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
@@ -112,7 +116,8 @@ class Orchestrator {
     //  the rows that this given rank cares about. This will improve performance while loading the dataset.
     static std::vector<unsigned int> getRowToRank(const AppData &appData, const int seed) {
         std::vector<unsigned int> rowToRank(appData.numberOfDataRows, -1);
-        std::uniform_int_distribution<int> uniform_distribution(0, appData.worldSize - 1);
+        const unsigned int lowestMachine = appData.distributedAlgorithm == 0 ? 0 : 1;
+        std::uniform_int_distribution<int> uniform_distribution(lowestMachine, appData.worldSize - 1);
         std::default_random_engine number_selecter(seed);
 
         for (int i = 0; i < appData.numberOfDataRows; i++) {
