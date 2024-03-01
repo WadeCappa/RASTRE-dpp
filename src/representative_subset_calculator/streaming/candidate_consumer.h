@@ -51,7 +51,6 @@ class SeiveCandidateConsumer : public CandidateConsumer {
         if (this->bucketsInitialized()) {
             this->processQueue(seedQueue);
         }
-
     }
 
     std::unique_ptr<Subset> getBestSolutionDestroyConsumer() {

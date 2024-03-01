@@ -18,6 +18,22 @@ class ThresholdBucket
         matrix(std::unique_ptr<MutableSimilarityMatrix>(new MutableSimilarityMatrix()))
     {}
 
+    ThresholdBucket(
+        const double threshold, 
+        const int k, 
+        std::unique_ptr<MutableSubset> nextSolution,
+        std::unique_ptr<MutableSimilarityMatrix> matrix
+    ) : 
+        marginalGainThreshold(threshold), 
+        k(k), 
+        solution(move(nextSolution)),
+        matrix(move(matrix))
+    {}
+
+    std::unique_ptr<ThresholdBucket> transferContents(const double newThreshold) {
+        return std::unique_ptr<ThresholdBucket>(new ThresholdBucket(newThreshold, this->k, move(this->solution), move(this->matrix)));
+    }
+
     size_t getUtility() {
         return this->solution->getScore();
     }
