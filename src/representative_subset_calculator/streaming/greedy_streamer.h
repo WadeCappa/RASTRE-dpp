@@ -34,14 +34,14 @@ class SeiveGreedyStreamer : public GreedyStreamer {
         {
             int threadId = omp_get_thread_num();
             if (threadId == 0) {
-                timers.receiverTime.startTimer();
+                timers.communicationTime.startTimer();
 
                 while (stillReceiving.load() == true) {
                     std::unique_ptr<CandidateSeed> nextSeed(receiver.receiveNextSeed(stillReceiving));
                     this->queue.push(move(nextSeed));
                 }
 
-                timers.receiverTime.stopTimer();
+                timers.communicationTime.stopTimer();
             } else {
                 timers.consumerTime.startTimer();
 
