@@ -39,6 +39,9 @@ class Timers {
     SingleTimer bufferDecodingTime;
     SingleTimer loadingDatasetTime;
 
+    SingleTimer receiverTime;
+    SingleTimer consumerTime;
+
     nlohmann::json outputToJson() const {
         nlohmann::json output {
             {"barrierTime", barrierTime.getTotalTime()},
@@ -48,6 +51,8 @@ class Timers {
             {"communicationTime", communicationTime.getTotalTime()},
             {"bufferEncodingTime", bufferEncodingTime.getTotalTime()},
             {"bufferDecodingTime", bufferDecodingTime.getTotalTime()},
+            {"receiverTime", receiverTime.getTotalTime()},
+            {"consumerTime", consumerTime.getTotalTime()},
             {"loadingDatasetTime", loadingDatasetTime.getTotalTime()}
         };
     

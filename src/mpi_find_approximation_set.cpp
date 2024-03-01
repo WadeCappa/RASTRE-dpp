@@ -113,7 +113,7 @@ void streaming(
         timers.totalCalculationTime.startTimer();
         std::unique_ptr<Receiver> receiver(MpiReceiver::buildReceiver(appData.worldSize, rowSize, appData.outputSetSize));
         SeiveCandidateConsumer consumer(appData.worldSize - 1, appData.outputSetSize, appData.distributedEpsilon);
-        SeiveGreedyStreamer streamer(*receiver.get(), consumer);
+        SeiveGreedyStreamer streamer(*receiver.get(), consumer, timers);
         std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
         std::unique_ptr<Subset> solution(streamer.resolveStream());
         timers.totalCalculationTime.stopTimer();
