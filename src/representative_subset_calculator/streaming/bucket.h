@@ -5,14 +5,14 @@ class ThresholdBucket
 {
     private:
     std::unique_ptr<MutableSubset> solution;
-    double marginalGainThreshold;
+    double threshold;
     int k;
     std::unique_ptr<MutableSimilarityMatrix> matrix;
 
     public:
     ThresholdBucket(const double threshold, const int k) 
     : 
-        marginalGainThreshold(threshold), 
+        threshold(threshold), 
         k(k), 
         solution(NaiveMutableSubset::makeNew()),
         matrix(std::unique_ptr<MutableSimilarityMatrix>(new MutableSimilarityMatrix()))
@@ -35,7 +35,7 @@ class ThresholdBucket
         tempMatrix->addRow(data);
         double marginal = tempMatrix->getCoverage() - solution->getScore();
 
-        if (marginal >= this->marginalGainThreshold) {
+        if (this->passesThreshold(marginal)) {
             this->solution->addRow(rowIndex, marginal);
             this->matrix = move(tempMatrix);
 
@@ -43,5 +43,10 @@ class ThresholdBucket
         } 
 
         return false;
+    }
+
+    private:
+    bool passesThreshold(double marginalGain) {
+        return marginalGain >= (((this->threshold / 2) - this->solution->getScore()) / (this->k - this->solution->size()));
     }
 };
