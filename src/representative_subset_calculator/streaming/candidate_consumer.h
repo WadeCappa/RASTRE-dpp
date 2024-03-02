@@ -2,7 +2,7 @@
 
 class CandidateConsumer {
     public:
-    virtual void accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
+    virtual void accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) = 0;
     virtual std::unique_ptr<Subset> getBestSolutionDestroyConsumer() = 0;
 };
 
@@ -43,13 +43,17 @@ class SeiveCandidateConsumer : public CandidateConsumer {
         threads(omp_get_max_threads() - 1)
     {}
 
-    void accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+    void accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) {
         if (!this->bucketsInitialized()) {
+            timers.initBucketsTimer.startTimer();
             this->tryToGetFirstMarginals(seedQueue);
+            timers.initBucketsTimer.stopTimer();
         } 
         
         if (this->bucketsInitialized()) {
+            timers.insertSeedsTimer.startTimer();
             this->processQueue(seedQueue);
+            timers.insertSeedsTimer.stopTimer();
         }
 
     }

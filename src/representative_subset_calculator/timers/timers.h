@@ -39,6 +39,8 @@ class Timers {
     SingleTimer bufferDecodingTime;
     SingleTimer loadingDatasetTime;
     SingleTimer consumerTime;
+    SingleTimer initBucketsTimer;
+    SingleTimer insertSeedsTimer;
 
     nlohmann::json outputToJson() const {
         nlohmann::json output {
@@ -50,6 +52,8 @@ class Timers {
             {"bufferEncodingTime", bufferEncodingTime.getTotalTime()},
             {"bufferDecodingTime", bufferDecodingTime.getTotalTime()},
             {"consumerTime", consumerTime.getTotalTime()},
+            {"initBucketsTime", initBucketsTimer.getTotalTime()},
+            {"insertSeedsTime", insertSeedsTimer.getTotalTime()},
             {"loadingDatasetTime", loadingDatasetTime.getTotalTime()}
         };
     
