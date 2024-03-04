@@ -46,11 +46,11 @@ class SeiveGreedyStreamer : public GreedyStreamer {
                 timers.consumerTime.startTimer();
 
                 while (stillReceiving.load() == true) {
-                    consumer.accept(this->queue);
+                    consumer.accept(this->queue, timers);
                 }
 
                 // Queue may still have elements after receiver signals to stop streaming
-                consumer.accept(this->queue);
+                consumer.accept(this->queue, timers);
             
                 timers.consumerTime.stopTimer();
             }

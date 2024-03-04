@@ -175,13 +175,13 @@ TEST_CASE("Candidate seed can exist") {
 TEST_CASE("Consumer can process seeds") {
     const unsigned int worldSize = 1;
     SeiveCandidateConsumer consumer(worldSize, 1, EPSILON);
-
+    Timers timers;
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     std::unique_ptr<CandidateSeed> seed(buildSeed());
     const unsigned int globalRow = seed->getRow();
 
     queue.push(move(seed));
-    consumer.accept(queue);
+    consumer.accept(queue, timers);
 
     std::unique_ptr<Subset> solution(consumer.getBestSolutionDestroyConsumer());
     
@@ -194,10 +194,10 @@ TEST_CASE("Consumer can find a solution") {
     const unsigned int worldSize = DATA.size();
     SeiveCandidateConsumer consumer(worldSize, worldSize, EPSILON);
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
-
+    Timers timers;
     for (size_t i = 0; i < worldSize; i++) {
         queue.push(buildSeed(i,i));
-        consumer.accept(queue);
+        consumer.accept(queue, timers);
     }
 
     std::unique_ptr<Subset> solution(consumer.getBestSolutionDestroyConsumer());
