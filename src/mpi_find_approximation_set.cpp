@@ -113,7 +113,7 @@ void streaming(
         timers.totalCalculationTime.startTimer();
         std::unique_ptr<Receiver> receiver(MpiReceiver::buildReceiver(appData.worldSize, rowSize, appData.outputSetSize));
         SeiveCandidateConsumer consumer(appData.worldSize - 1, appData.outputSetSize, appData.distributedEpsilon);
-        SeiveGreedyStreamer streamer(*receiver.get(), consumer);
+        SeiveGreedyStreamer streamer(*receiver.get(), consumer, timers);
         std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
         std::unique_ptr<Subset> solution(streamer.resolveStream());
         timers.totalCalculationTime.stopTimer();
@@ -128,7 +128,7 @@ void streaming(
     } else {
         std::cout << "rank " << appData.worldRank << " entered streaming function and know the total columns of " << data.totalColumns() << std::endl;
         timers.totalCalculationTime.startTimer();
-        std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, appData.outputSetSize));
+        std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, appData.outputSetSize, timers));
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         std::cout << "rank " << appData.worldRank << " ready to start streaming local seeds" << std::endl;
 

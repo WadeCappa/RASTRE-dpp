@@ -5,20 +5,24 @@
 
 class StreamingSubset : public MutableSubset {
     private:
-    std::unique_ptr<MutableSubset> base;
     const LocalData &data;
+    Timers &timers;
+    
     std::vector<std::unique_ptr<MpiSendRequest>> sends;
+    std::unique_ptr<MutableSubset> base;
 
     const unsigned int desiredSeeds;
 
     public:
     StreamingSubset(
         const LocalData& data, 
-        const unsigned int desiredSeeds
+        const unsigned int desiredSeeds,
+        Timers &timers
     ) : 
         data(data), 
         base(NaiveMutableSubset::makeNew()),
-        desiredSeeds(desiredSeeds)
+        desiredSeeds(desiredSeeds),
+        timers(timers)
     {}
 
     double getScore() const {
@@ -46,10 +50,12 @@ class StreamingSubset : public MutableSubset {
     }
 
     void finalize() {
+        this->timers.communicationTime.startTimer();
         this->sends.back()->isend(CommunicationConstants::getStopTag());
         for (auto & send : this->sends) {
             send->waitForISend();
         }
+        this->timers.communicationTime.stopTimer();
     }
 
     void addRow(const size_t row, const double marginalGain) {

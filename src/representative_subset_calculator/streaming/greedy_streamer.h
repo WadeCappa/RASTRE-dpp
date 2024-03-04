@@ -10,16 +10,19 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     private:
     Receiver &receiver;
     CandidateConsumer &consumer;
+    Timers &timers;
 
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
 
     public:
     SeiveGreedyStreamer(
         Receiver &receiver, 
-        CandidateConsumer &consumer
+        CandidateConsumer &consumer,
+        Timers &timers
     ) : 
         receiver(receiver),
-        consumer(consumer)
+        consumer(consumer),
+        timers(timers)
     {}
 
 
@@ -31,18 +34,27 @@ class SeiveGreedyStreamer : public GreedyStreamer {
         {
             int threadId = omp_get_thread_num();
             if (threadId == 0) {
+                timers.communicationTime.startTimer();
+
                 while (stillReceiving.load() == true) {
                     std::unique_ptr<CandidateSeed> nextSeed(receiver.receiveNextSeed(stillReceiving));
                     this->queue.push(move(nextSeed));
                 }
+
+                timers.communicationTime.stopTimer();
             } else {
+                timers.consumerTime.startTimer();
+
                 while (stillReceiving.load() == true) {
-                    consumer.accept(this->queue);
+                    consumer.accept(this->queue, timers);
                 }
+
+                // Queue may still have elements after receiver signals to stop streaming
+                consumer.accept(this->queue, timers);
+            
+                timers.consumerTime.stopTimer();
             }
         }
-
-        consumer.accept(this->queue);
 
         std::cout << "getting best consumer, destroying in process" << std::endl;
         

@@ -5,17 +5,19 @@ class ThresholdBucket
 {
     private:
     std::unique_ptr<MutableSubset> solution;
-    double marginalGainThreshold;
+    std::vector<const std::vector<double> *> solutionRows;
+    std::vector<double> d;
+    std::vector<std::vector<double>> b;
+
+    double threshold;
     int k;
-    std::unique_ptr<MutableSimilarityMatrix> matrix;
 
     public:
     ThresholdBucket(const double threshold, const int k) 
     : 
-        marginalGainThreshold(threshold), 
+        threshold(threshold), 
         k(k), 
-        solution(NaiveMutableSubset::makeNew()),
-        matrix(std::unique_ptr<MutableSimilarityMatrix>(new MutableSimilarityMatrix()))
+        solution(NaiveMutableSubset::makeNew())
     {}
 
     ThresholdBucket(
@@ -47,17 +49,38 @@ class ThresholdBucket
             return false;
         }
 
-        std::unique_ptr<MutableSimilarityMatrix> tempMatrix(new MutableSimilarityMatrix(*matrix.get()));
-        tempMatrix->addRow(data);
-        double marginal = tempMatrix->getCoverage() - solution->getScore();
+        double d_i = std::sqrt(getDotProduct(data, data));
+        std::vector<double> c_i;
 
-        if (marginal >= this->marginalGainThreshold) {
+        for (size_t j = 0; j < this->solution->size(); j++) {
+            const double e_i = (this->getDotProduct(data, *solutionRows[j]) - this->getDotProduct(this->b[j], c_i)) / d[j];
+            c_i.push_back(e_i);
+            d_i = std::sqrt(std::pow(d_i, 2) - std::pow(e_i, 2));
+        }
+
+        const double marginal = std::log(std::pow(d_i, 2));
+        if (this->passesThreshold(marginal)) {
             this->solution->addRow(rowIndex, marginal);
-            this->matrix = move(tempMatrix);
-
+            this->solutionRows.push_back(&data);
+            this->d.push_back(d_i);
+            this->b.push_back(c_i);
             return true;
         } 
 
         return false;
+    }
+
+    private:
+    bool passesThreshold(double marginalGain) {
+        return marginalGain >= (((this->threshold / 2) - this->solution->getScore()) / (this->k - this->solution->size()));
+    }
+
+    static double getDotProduct(const std::vector<double> &a, const std::vector<double> &b) {
+        double res = 0;
+        for (size_t i = 0; i < a.size() && i < b.size(); i++) {
+            res += a[i] * b[i];
+        }
+    
+        return res;
     }
 };
