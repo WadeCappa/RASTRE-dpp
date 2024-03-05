@@ -27,6 +27,7 @@ class SeiveGreedyStreamer : public GreedyStreamer {
 
 
     std::unique_ptr<Subset> resolveStream() {
+        unsigned int dummyVal = 0;
         std::atomic_bool stillReceiving = true;
         omp_set_dynamic(0);
         omp_set_nested(1);
@@ -43,15 +44,21 @@ class SeiveGreedyStreamer : public GreedyStreamer {
 
                 timers.communicationTime.stopTimer();
             } else {
-                timers.consumerTime.startTimer();
-
                 while (stillReceiving.load() == true) {
+                    timers.waitingTime.startTimer();
+                    while (this->queue.isEmpty())  {
+                        dummyVal++;
+                    }
+                    timers.waitingTime.stopTimer();
+
+                    timers.consumerTime.startTimer();
                     consumer.accept(this->queue, timers);
+                    timers.consumerTime.stopTimer();
                 }
 
                 // Queue may still have elements after receiver signals to stop streaming
+                timers.consumerTime.startTimer();
                 consumer.accept(this->queue, timers);
-            
                 timers.consumerTime.stopTimer();
             }
         }

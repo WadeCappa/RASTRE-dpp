@@ -6,9 +6,10 @@ class SynchronousQueue {
     private:
     std::deque<T> base;
     std::mutex lock;
+    std::atomic_bool emptyFlag;
 
     public:
-    SynchronousQueue() {}
+    SynchronousQueue() : emptyFlag(false) {}
 
     T pop() {
         this->lock.lock();
@@ -22,6 +23,7 @@ class SynchronousQueue {
     void push(T val) {
         this->lock.lock();
         this->base.push_back(move(val));
+        emptyFlag.store(false);
         this->lock.unlock();
     }
 
@@ -40,6 +42,7 @@ class SynchronousQueue {
             res.push_back(move(this->base.front()));
             this->base.pop_front();
         }
+        emptyFlag.store(false);
         this->lock.unlock();
 
         return move(res);
@@ -50,6 +53,11 @@ class SynchronousQueue {
         for (size_t i = 0; i < vals.size(); i++) {
             this->base.push_back(move(vals[i]));
         }
+        emptyFlag.store(this->base.size() > 0);
         this->lock.unlock();
+    }
+
+    bool isEmpty() const {
+        return this->emptyFlag.load();
     }
 };
