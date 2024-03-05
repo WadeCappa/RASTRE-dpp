@@ -38,7 +38,6 @@ class Timers {
     SingleTimer bufferEncodingTime;
     SingleTimer bufferDecodingTime;
     SingleTimer loadingDatasetTime;
-    SingleTimer consumerTime;
     SingleTimer initBucketsTimer;
     SingleTimer insertSeedsTimer;
     SingleTimer waitingTime;
@@ -52,7 +51,6 @@ class Timers {
             {"communicationTime", communicationTime.getTotalTime()},
             {"bufferEncodingTime", bufferEncodingTime.getTotalTime()},
             {"bufferDecodingTime", bufferDecodingTime.getTotalTime()},
-            {"consumerTime", consumerTime.getTotalTime()},
             {"initBucketsTime", initBucketsTimer.getTotalTime()},
             {"insertSeedsTime", insertSeedsTimer.getTotalTime()},
             {"loadingDatasetTime", loadingDatasetTime.getTotalTime()},
