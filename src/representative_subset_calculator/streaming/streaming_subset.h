@@ -23,7 +23,9 @@ class StreamingSubset : public MutableSubset {
         base(NaiveMutableSubset::makeNew()),
         desiredSeeds(desiredSeeds),
         timers(timers)
-    {}
+    {
+        timers.firstSeedTime.startTimer();
+    }
 
     double getScore() const {
         return base->getScore();
@@ -68,6 +70,9 @@ class StreamingSubset : public MutableSubset {
 
         // last value should be the global row index
         rowToSend.push_back(data.getRemoteIndexForRow(row));
+
+        if(this->base->size() == 1)
+            timers.firstSeedTime.stopTimer();
 
         this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(rowToSend)));
 

@@ -41,6 +41,7 @@ class Timers {
     SingleTimer initBucketsTimer;
     SingleTimer insertSeedsTimer;
     SingleTimer waitingTime;
+    SingleTimer firstSeedTime;
 
     nlohmann::json outputToJson() const {
         nlohmann::json output {
@@ -54,7 +55,8 @@ class Timers {
             {"initBucketsTime", initBucketsTimer.getTotalTime()},
             {"insertSeedsTime", insertSeedsTimer.getTotalTime()},
             {"loadingDatasetTime", loadingDatasetTime.getTotalTime()},
-            {"waitingTime", waitingTime.getTotalTime()}
+            {"waitingTime", waitingTime.getTotalTime()},
+            {"firstSeedTime", firstSeedTime.getTotalTime()}
         };
     
         return output;
