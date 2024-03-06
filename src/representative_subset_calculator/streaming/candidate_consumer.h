@@ -172,7 +172,7 @@ class ThreeSeiveCandidateConsumer : public CandidateConsumer {
 
     std::vector<std::unique_ptr<CandidateSeed>> seedStorage;
     std::unordered_set<unsigned int> seenFirstElement;
-    std::vector<ThresholdBucket> buckets;
+    std::unique_ptr<std::vector<ThresholdBucket>> buckets = std::make_unique<std::vector<ThresholdBucket>>();
     std::vector<double> firstMarginals;
     std::unordered_set<unsigned int> firstGlobalRows;
 
@@ -207,12 +207,12 @@ class ThreeSeiveCandidateConsumer : public CandidateConsumer {
 
     std::unique_ptr<Subset> getBestSolutionDestroyConsumer() {
 
-        return this->buckets[this->currentBucketIndex].returnSolutionDestroyBucket();
+        return (*(this->buckets))[this->currentBucketIndex].returnSolutionDestroyBucket();
     }
 
     private:
     bool bucketsInitialized() const {
-        return buckets.size() != 0;
+        return buckets->size() != 0;
     }
 
     unsigned int getNumberOfBuckets(const unsigned int k, const double epsilon) {
@@ -239,7 +239,7 @@ class ThreeSeiveCandidateConsumer : public CandidateConsumer {
         std::cout << "number of buckets " << numBuckets << " with deltaZero of " << deltaZero << std::endl;
         // TODO:: why that extra 2 in (delta_zero / 2k). Check later
         double threshold = ((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, numBuckets - 1);
-        this->buckets.push_back(ThresholdBucket(threshold, k));
+        this->buckets->push_back(ThresholdBucket(threshold, k));
     }
 
     void tryToGetFirstMarginals(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
@@ -284,7 +284,7 @@ class ThreeSeiveCandidateConsumer : public CandidateConsumer {
 
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
             std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
-            if (this->buckets[this->currentBucketIndex].attemptInsert(seed->getRow(), seed->getData())) {
+            if ((*(this->buckets))[this->currentBucketIndex].attemptInsert(seed->getRow(), seed->getData())) {
                 this->t = 0; 
             }
             else {
@@ -296,9 +296,9 @@ class ThreeSeiveCandidateConsumer : public CandidateConsumer {
 
                     const double deltaZero = this->getDeltaZero();
                     const unsigned int numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
-                    double threshold = ((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, numBuckets - 1 - this->currentBucketIndex);
+                    const double threshold = ((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, numBuckets - 1 - this->currentBucketIndex);
                     //transfer current contents to next bucket
-                    this->buckets.push_back(ThresholdBucket(threshold, k)); //TODO:: change this to use the other constructor
+                    this->buckets->push_back(std::move((*buckets)[currentBucketIndex].transferContents(threshold))); //TODO:: change this to use the other constructor
                 }
             }
         }

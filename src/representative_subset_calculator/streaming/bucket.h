@@ -5,9 +5,9 @@ class ThresholdBucket
 {
     private:
     std::unique_ptr<MutableSubset> solution;
-    std::vector<const std::vector<double> *> solutionRows;
-    std::vector<double> d;
-    std::vector<std::vector<double>> b;
+    std::unique_ptr<std::vector<const std::vector<double> *>> solutionRows = std::make_unique<std::vector<const std::vector<double> *>>();
+    std::unique_ptr<std::vector<double>> d = std::make_unique<std::vector<double>>();
+    std::unique_ptr<std::vector<std::vector<double>>> b = std::make_unique<std::vector<std::vector<double>>>();
 
     double threshold;
     int k;
@@ -20,21 +20,26 @@ class ThresholdBucket
         solution(NaiveMutableSubset::makeNew())
     {}
 
-    // ThresholdBucket(
-    //     const double threshold, 
-    //     const int k, 
-    //     std::unique_ptr<MutableSubset> nextSolution,
-    //     std::unique_ptr<MutableSimilarityMatrix> matrix
-    // ) : 
-    //     marginalGainThreshold(threshold), 
-    //     k(k), 
-    //     solution(move(nextSolution)),
-    //     matrix(move(matrix))
-    // {}
-
-    // std::unique_ptr<ThresholdBucket> transferContents(const double newThreshold) {
-    //     return std::unique_ptr<ThresholdBucket>(new ThresholdBucket(newThreshold, this->k, move(this->solution), move(this->matrix)));
-    // }
+    ThresholdBucket(
+        const double threshold, 
+        const int k, 
+        std::unique_ptr<MutableSubset> nextSolution,
+        std::unique_ptr<std::vector<const std::vector<double> *>> solutionRows,
+        std::unique_ptr<std::vector<double>> d,
+        std::unique_ptr<std::vector<std::vector<double>>> b
+    ) : 
+        threshold(threshold), 
+        k(k), 
+        solution(move(nextSolution)),
+        solutionRows(move(solutionRows)),
+        d(move(d)),
+        b(move(b))
+    {}
+//
+    std::unique_ptr<ThresholdBucket> transferContents(const double newThreshold) {
+        return std::unique_ptr<ThresholdBucket>(new ThresholdBucket(newThreshold, this->k, move(this->solution), move(this->solutionRows), move(this->d), move(this->b)));
+        // return ThresholdBucket(newThreshold, this->k, move(this->solution), move(this->solutionRows), move(this->d), move(this->b));
+    }
 
     size_t getUtility() {
         return this->solution->getScore();
@@ -53,7 +58,7 @@ class ThresholdBucket
         std::vector<double> c_i;
 
         for (size_t j = 0; j < this->solution->size(); j++) {
-            const double e_i = (this->getDotProduct(data, *solutionRows[j]) - this->getDotProduct(this->b[j], c_i)) / d[j];
+            const double e_i = (this->getDotProduct(data, *((*solutionRows)[j])) - this->getDotProduct((*b)[j], c_i)) / (*d)[j];
             c_i.push_back(e_i);
             d_i = std::sqrt(std::pow(d_i, 2) - std::pow(e_i, 2));
         }
@@ -61,9 +66,9 @@ class ThresholdBucket
         const double marginal = std::log(std::pow(d_i, 2));
         if (this->passesThreshold(marginal)) {
             this->solution->addRow(rowIndex, marginal);
-            this->solutionRows.push_back(&data);
-            this->d.push_back(d_i);
-            this->b.push_back(c_i);
+            this->solutionRows->push_back(&data);
+            this->d->push_back(d_i);
+            this->b->push_back(c_i);
             return true;
         } 
 
