@@ -112,8 +112,15 @@ void streaming(
         std::cout << "rank 0 entered into the streaming function and knows the total columns of "<< rowSize << std::endl;
         timers.totalCalculationTime.startTimer();
         std::unique_ptr<Receiver> receiver(MpiReceiver::buildReceiver(appData.worldSize, rowSize, appData.outputSetSize));
-        SeiveCandidateConsumer consumer(appData.worldSize - 1, appData.outputSetSize, appData.distributedEpsilon);
-        SeiveGreedyStreamer streamer(*receiver.get(), consumer, timers);
+
+        CandidateConsumer* consumer;
+        if (appData.distributedAlgorithm == 1) {
+            consumer = new SeiveCandidateConsumer(appData.worldSize - 1, appData.outputSetSize, appData.distributedEpsilon);
+        }
+        else if (appData.distributedAlgorithm == 2) {
+            consumer = new ThreeSeiveCandidateConsumer(appData.worldSize - 1, appData.outputSetSize, appData.distributedEpsilon, appData.threeSieveT);
+        }
+        SeiveGreedyStreamer streamer(*receiver.get(), *consumer, timers);
         std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
         std::unique_ptr<Subset> solution(streamer.resolveStream());
         timers.totalCalculationTime.stopTimer();
@@ -176,7 +183,7 @@ int main(int argc, char** argv) {
 
     if (appData.distributedAlgorithm == 0) {
         randGreedi(appData, data, rowToRank, timers);
-    } else if (appData.distributedAlgorithm == 1) {
+    } else if (appData.distributedAlgorithm == 1 || appData.distributedAlgorithm == 2) {
         streaming(appData, data, rowToRank, timers);
     } else {
         std::cout << "did not recognized distributedAlgorithm of " << appData.distributedAlgorithm << std::endl;

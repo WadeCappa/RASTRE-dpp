@@ -16,6 +16,7 @@ struct appData{
     unsigned int algorithm;
     unsigned int distributedAlgorithm;
     double distributedEpsilon = 0.13;
+    unsigned int threeSieveT;
 
     int worldSize = 1;
     int worldRank = 0;
@@ -73,8 +74,9 @@ class Orchestrator {
     static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
         Orchestrator::addCmdOptions(app, appData);
         app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
-        app.add_option("-d,--distributedAlgorithm", appData.distributedAlgorithm, "0) randGreedi\n1) streaming (placeholder)")->required();
+        app.add_option("-d,--distributedAlgorithm", appData.distributedAlgorithm, "0) randGreedi\n1) SieveStreaming\n2) ThreeSieves")->required();
         app.add_option("--distributedEpsilon", appData.distributedEpsilon, "Only used for streaming. Defaults to 0.13.");
+        app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
     }
 
     static DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {

@@ -5,9 +5,9 @@ class ThresholdBucket
 {
     private:
     std::unique_ptr<MutableSubset> solution;
-    std::unique_ptr<std::vector<const std::vector<double> *>> solutionRows = std::make_unique<std::vector<const std::vector<double> *>>();
-    std::unique_ptr<std::vector<double>> d = std::make_unique<std::vector<double>>();
-    std::unique_ptr<std::vector<std::vector<double>>> b = std::make_unique<std::vector<std::vector<double>>>();
+    std::unique_ptr<std::vector<const std::vector<double> *>> solutionRows; 
+    std::unique_ptr<std::vector<double>> d; 
+    std::unique_ptr<std::vector<std::vector<double>>> b; 
 
     double threshold;
     int k;
@@ -17,7 +17,10 @@ class ThresholdBucket
     : 
         threshold(threshold), 
         k(k), 
-        solution(NaiveMutableSubset::makeNew())
+        solution(NaiveMutableSubset::makeNew()), 
+        solutionRows(std::make_unique<std::vector<const std::vector<double> *>>()),
+        d(std::make_unique<std::vector<double>>()),
+        b(std::make_unique<std::vector<std::vector<double>>>())
     {}
 
     ThresholdBucket(
@@ -35,10 +38,9 @@ class ThresholdBucket
         d(move(d)),
         b(move(b))
     {}
-//
+
     std::unique_ptr<ThresholdBucket> transferContents(const double newThreshold) {
         return std::unique_ptr<ThresholdBucket>(new ThresholdBucket(newThreshold, this->k, move(this->solution), move(this->solutionRows), move(this->d), move(this->b)));
-        // return ThresholdBucket(newThreshold, this->k, move(this->solution), move(this->solutionRows), move(this->d), move(this->b));
     }
 
     size_t getUtility() {
@@ -58,7 +60,7 @@ class ThresholdBucket
         std::vector<double> c_i;
 
         for (size_t j = 0; j < this->solution->size(); j++) {
-            const double e_i = (this->getDotProduct(data, *((*solutionRows)[j])) - this->getDotProduct((*b)[j], c_i)) / (*d)[j];
+            const double e_i = (this->getDotProduct(data, *(solutionRows->at(j))) - this->getDotProduct(b->at(j), c_i)) / d->at(j);
             c_i.push_back(e_i);
             d_i = std::sqrt(std::pow(d_i, 2) - std::pow(e_i, 2));
         }
