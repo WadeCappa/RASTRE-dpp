@@ -70,4 +70,16 @@ class MpiOrchestrator : public Orchestrator {
 
         return output;
     }
+
+    static std::unique_ptr<CandidateConsumer> buildConsumer(const AppData &appData, const unsigned int threads, const unsigned int numSenders) {
+        BucketTitrator* titrator;
+        if (appData.distributedAlgorithm == 1) {
+            titrator = new SieveStreamingBucketTitrator(threads, appData.distributedEpsilon, appData.outputSetSize);
+        }
+        else if (appData.distributedAlgorithm == 2) {
+            titrator = new ThreeSieveBucketTitrator(appData.distributedEpsilon, appData.threeSieveT, appData.outputSetSize);
+        }
+
+        return std::unique_ptr<NaiveCandidateConsumer>(new NaiveCandidateConsumer(std::unique_ptr<BucketTitrator>(titrator), numSenders));
+    }
 };

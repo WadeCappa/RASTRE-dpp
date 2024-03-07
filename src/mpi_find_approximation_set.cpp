@@ -6,7 +6,6 @@
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 
 #include "representative_subset_calculator/buffers/bufferBuilder.h"
 
@@ -26,6 +25,7 @@
 #include "representative_subset_calculator/streaming/mpi_streaming_classes.h"
 #include "representative_subset_calculator/streaming/streaming_subset.h"
 #include "representative_subset_calculator/streaming/mpi_receiver.h"
+#include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 
 void randGreedi(
     const AppData &appData, 
@@ -111,16 +111,11 @@ void streaming(
     if (appData.worldRank == 0) {
         std::cout << "rank 0 entered into the streaming function and knows the total columns of "<< rowSize << std::endl;
         timers.totalCalculationTime.startTimer();
-        std::unique_ptr<Receiver> receiver(MpiReceiver::buildReceiver(appData.worldSize, rowSize, appData.outputSetSize));
 
-        CandidateConsumer* consumer;
-        if (appData.distributedAlgorithm == 1) {
-            consumer = new SeiveCandidateConsumer(appData.worldSize - 1, appData.outputSetSize, appData.distributedEpsilon);
-        }
-        else if (appData.distributedAlgorithm == 2) {
-            consumer = new ThreeSeiveCandidateConsumer(appData.worldSize - 1, appData.outputSetSize, appData.distributedEpsilon, appData.threeSieveT);
-        }
-        SeiveGreedyStreamer streamer(*receiver.get(), *consumer, timers);
+        std::unique_ptr<Receiver> receiver(MpiReceiver::buildReceiver(appData.worldSize, rowSize, appData.outputSetSize));
+        std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(appData, omp_get_num_threads() - 1, appData.worldSize - 1));
+        SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers);
+
         std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
         std::unique_ptr<Subset> solution(streamer.resolveStream());
         timers.totalCalculationTime.stopTimer();
