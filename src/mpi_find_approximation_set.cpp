@@ -18,6 +18,7 @@
 #include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/streaming/bucket.h"
 #include "representative_subset_calculator/streaming/candidate_seed.h"
+#include "representative_subset_calculator/streaming/bucket_titrator.h"
 #include "representative_subset_calculator/streaming/candidate_consumer.h"
 #include "representative_subset_calculator/streaming/rank_buffer.h"
 #include "representative_subset_calculator/streaming/receiver_interface.h"

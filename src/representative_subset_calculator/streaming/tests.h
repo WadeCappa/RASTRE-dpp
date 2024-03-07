@@ -4,6 +4,7 @@
 #include "communication_constants.h"
 #include "bucket.h"
 #include "candidate_seed.h"
+#include "bucket_titrator.h"
 #include "candidate_consumer.h"
 #include "rank_buffer.h"
 #include "receiver_interface.h"
