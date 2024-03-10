@@ -6,7 +6,6 @@
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 
 #include "representative_subset_calculator/buffers/bufferBuilder.h"
 
@@ -19,6 +18,7 @@
 #include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/streaming/bucket.h"
 #include "representative_subset_calculator/streaming/candidate_seed.h"
+#include "representative_subset_calculator/streaming/bucket_titrator.h"
 #include "representative_subset_calculator/streaming/candidate_consumer.h"
 #include "representative_subset_calculator/streaming/rank_buffer.h"
 #include "representative_subset_calculator/streaming/receiver_interface.h"
@@ -26,6 +26,7 @@
 #include "representative_subset_calculator/streaming/mpi_streaming_classes.h"
 #include "representative_subset_calculator/streaming/streaming_subset.h"
 #include "representative_subset_calculator/streaming/mpi_receiver.h"
+#include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 
 void randGreedi(
     const AppData &appData, 
@@ -111,9 +112,11 @@ void streaming(
     if (appData.worldRank == 0) {
         std::cout << "rank 0 entered into the streaming function and knows the total columns of "<< rowSize << std::endl;
         timers.totalCalculationTime.startTimer();
+
         std::unique_ptr<Receiver> receiver(MpiReceiver::buildReceiver(appData.worldSize, rowSize, appData.outputSetSize));
-        SeiveCandidateConsumer consumer(appData.worldSize - 1, appData.outputSetSize, appData.distributedEpsilon);
-        SeiveGreedyStreamer streamer(*receiver.get(), consumer, timers);
+        std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(appData, omp_get_num_threads() - 1, appData.worldSize - 1));
+        SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers);
+
         std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
         std::unique_ptr<Subset> solution(streamer.resolveStream());
         timers.totalCalculationTime.stopTimer();
@@ -176,7 +179,7 @@ int main(int argc, char** argv) {
 
     if (appData.distributedAlgorithm == 0) {
         randGreedi(appData, data, rowToRank, timers);
-    } else if (appData.distributedAlgorithm == 1) {
+    } else if (appData.distributedAlgorithm == 1 || appData.distributedAlgorithm == 2) {
         streaming(appData, data, rowToRank, timers);
     } else {
         std::cout << "did not recognized distributedAlgorithm of " << appData.distributedAlgorithm << std::endl;
