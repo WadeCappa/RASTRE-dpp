@@ -17,6 +17,7 @@ struct appData{
     unsigned int distributedAlgorithm;
     double distributedEpsilon = 0.13;
     unsigned int threeSieveT;
+    double alpha = 1;
 
     int worldSize = 1;
     int worldRank = 0;
@@ -77,6 +78,7 @@ class Orchestrator {
         app.add_option("-d,--distributedAlgorithm", appData.distributedAlgorithm, "0) randGreedi\n1) SieveStreaming\n2) ThreeSieves")->required();
         app.add_option("--distributedEpsilon", appData.distributedEpsilon, "Only used for streaming. Defaults to 0.13.");
         app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
+        app.add_option("--alpha", appData.alpha, "Only used for the truncated setting.");
     }
 
     static DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
