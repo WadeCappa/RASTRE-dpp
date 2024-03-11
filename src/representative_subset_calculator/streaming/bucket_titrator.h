@@ -8,8 +8,8 @@ class BucketTitrator {
     virtual void initBuckets(const double deltaZero) = 0;
 
     protected:
-    static unsigned int getNumberOfBuckets(const unsigned int k, const double epsilon) {
-        int numBuckets = (int)(0.5 + [](double val, double base) {
+    static size_t getNumberOfBuckets(const unsigned int k, const double epsilon) {
+        size_t numBuckets = (int)(0.5 + [](double val, double base) {
             return log2(val) / log2(base);
         }((double)k, (1 + epsilon))) + 1;
 
@@ -25,7 +25,8 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
     const unsigned int k;
 
     unsigned int t; // counts till T
-    unsigned int currentBucketIndex;
+    size_t currentBucketIndex;
+    size_t totalBuckets;
     double deltaZero;
     std::unique_ptr<ThresholdBucket> bucket;
     std::vector<std::unique_ptr<CandidateSeed>> seedStorage;
@@ -57,13 +58,12 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
             else {
                 this->t += 1; 
 
-                if (this->t >= this->T) {
+                if (this->t >= this->T && this->currentBucketIndex < this->totalBuckets) {
                     this->t = 0;
                     this->currentBucketIndex++;
 
                     const double deltaZero = this->deltaZero;
-                    const unsigned int numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
-                    const double threshold = ((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, numBuckets - 1 - this->currentBucketIndex);
+                    const double threshold = ((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, this->totalBuckets - 1 - this->currentBucketIndex);
                     //transfer current contents to next bucket
                     this->bucket = bucket->transferContents(threshold); //TODO:: change this to use the other constructor
                 }
@@ -85,11 +85,11 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
 
     void initBuckets(const double deltaZero) {
         this->deltaZero = deltaZero;
-        const unsigned int numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
+        this->totalBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
 
-        std::cout << "number of buckets " << numBuckets << " with deltaZero of " << deltaZero << std::endl;
+        std::cout << "number of buckets " << this->totalBuckets << " with deltaZero of " << deltaZero << std::endl;
         // TODO:: why that extra 2 in (delta_zero / 2k). Check later
-        double threshold = ((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, numBuckets - 1);
+        double threshold = ((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, this->totalBuckets - 1);
         this->bucket = std::make_unique<ThresholdBucket>(threshold, k);
         this->firstBucketBuilt = true;
     }
@@ -152,7 +152,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
     }
 
     void initBuckets(const double deltaZero) {
-        const unsigned int numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
+        const size_t numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
 
         std::cout << "number of buckets " << numBuckets << " with deltaZero of " << deltaZero << std::endl;
 
