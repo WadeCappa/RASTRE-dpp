@@ -185,3 +185,11 @@ TEST_CASE("Testing SelectiveData translation and construction") {
 
     CHECK(mockReceiveData.size() == translated->size());
 }
+
+TEST_CASE("Testing adjacency list loader without values") {
+    std::string listData = "0, 2\n0, 3\n2, 1\n2, 3\n3, 3";
+    std::istringstream stream(listData);
+    AsciiAdjacencyListDataLoader loader(stream, 4);
+    auto data = loadData(loader);
+    DEBUG_printData(data);
+}

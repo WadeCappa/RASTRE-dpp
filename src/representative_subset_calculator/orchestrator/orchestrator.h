@@ -10,6 +10,7 @@ struct appData{
     std::string inputFile;
     std::string outputFile;
     size_t outputSetSize;
+    unsigned int adjacencyListColumnCount = 0;
     bool binaryInput = false;
     bool normalizeInput = false;
     double epsilon = -1;
@@ -67,6 +68,7 @@ class Orchestrator {
         app.add_option("-k,--outputSetSize", appData.outputSetSize, "Sets the desired size of the representative set.")->required();
         app.add_option("-e,--epsilon", appData.epsilon, "Only used for the fast greedy variants. Determines the threshold for when seed selection is terminated.");
         app.add_option("-a,--algorithm", appData.algorithm, "Determines the seed selection algorithm. 0) naive, 1) lazy, 2) fast greedy, 3) lazy fast greedy");
+        app.add_option("--adjacencyListColumnCount", appData.adjacencyListColumnCount, "To load an adjacnency list, set this value to the number of columns per row expected in the underlying matrix.");
         app.add_flag("--loadBinary", appData.binaryInput, "Use this flag if you want to load a binary input file.");
         app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
     }
@@ -80,7 +82,15 @@ class Orchestrator {
     }
 
     static DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
-        DataLoader *dataLoader = appData.binaryInput ? dynamic_cast<DataLoader*>(new BinaryDataLoader(data)) : dynamic_cast<DataLoader*>(new AsciiDataLoader(data));
+        DataLoader *dataLoader;
+        
+        if (appData.binaryInput) {
+            dataLoader = dynamic_cast<DataLoader*>(new BinaryDataLoader(data));
+        } else if (appData.adjacencyListColumnCount > 0) {
+            dataLoader = dynamic_cast<DataLoader*>(new AsciiAdjacencyListDataLoader(data, appData.adjacencyListColumnCount));
+        } else {
+            dataLoader = dynamic_cast<DataLoader*>(new AsciiDataLoader(data));
+        }
 
         if (appData.normalizeInput) {
             dataLoader = dynamic_cast<DataLoader*>(new Normalizer(*dataLoader));
