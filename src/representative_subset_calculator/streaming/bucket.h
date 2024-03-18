@@ -60,6 +60,9 @@ class ThresholdBucket
         std::vector<double> c_i;
 
         for (size_t j = 0; j < this->solution->size(); j++) {
+            if (!this->passesThreshold(std::log(std::pow(d_i, 2)))) {
+                return false;
+            }
             const double e_i = (this->getDotProduct(data, *(solutionRows->at(j))) - this->getDotProduct(b->at(j), c_i)) / d->at(j);
             c_i.push_back(e_i);
             d_i = std::sqrt(std::pow(d_i, 2) - std::pow(e_i, 2));
