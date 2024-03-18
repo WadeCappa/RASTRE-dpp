@@ -1,6 +1,7 @@
 #include "../representative_subset_calculator/representative_subset.h"
 #include "normalizer.h"
 #include "data_saver.h"
+#include "matrix_row.h"
 #include "matrix_builder.h"
 
 #include <utility>
