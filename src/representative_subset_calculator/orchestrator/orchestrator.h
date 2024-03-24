@@ -15,7 +15,7 @@ struct appData{
     bool normalizeInput = false;
     double epsilon = -1;
     unsigned int algorithm;
-    unsigned int distributedAlgorithm;
+    unsigned int distributedAlgorithm = 2;
     double distributedEpsilon = 0.13;
     unsigned int threeSieveT;
     double alpha = 1;
@@ -77,7 +77,7 @@ class Orchestrator {
     static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
         Orchestrator::addCmdOptions(app, appData);
         app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
-        app.add_option("-d,--distributedAlgorithm", appData.distributedAlgorithm, "0) randGreedi\n1) SieveStreaming\n2) ThreeSieves")->required();
+        app.add_option("-d,--distributedAlgorithm", appData.distributedAlgorithm, "0) randGreedi\n1) SieveStreaming\n2) ThreeSieves\nDefaults to ThreeSieves");
         app.add_option("--distributedEpsilon", appData.distributedEpsilon, "Only used for streaming. Defaults to 0.13.");
         app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
         app.add_option("--alpha", appData.alpha, "Only used for the truncated setting.");
