@@ -49,7 +49,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
 
     void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
-
+        int fails = 0;
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
             std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
             if (bucket->attemptInsert(seed->getRow(), seed->getData())) {
@@ -57,13 +57,15 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
             }
             else {
                 this->t += 1; 
-
+                fails += 1;
                 if (this->t >= this->T && this->currentBucketIndex < this->totalBuckets) {
                     this->t = 0;
                     this->currentBucketIndex++;
 
                     const double deltaZero = this->deltaZero;
-                    const double threshold = ((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, this->totalBuckets - 1 - this->currentBucketIndex);
+                    int i = this->totalBuckets - 1 - this->currentBucketIndex + std::ceil( std::log(deltaZero) / std::log(1 + epsilon));
+                    const double threshold = std::pow(1 + epsilon, i);
+                    std::cout << "Bucket Threshold: " << threshold << std::endl;
                     //transfer current contents to next bucket
                     this->bucket = bucket->transferContents(threshold); //TODO:: change this to use the other constructor
                 }
@@ -73,6 +75,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             this->seedStorage.push_back(move(pulledFromQueue[i]));
         }
+        std::cout << "Fails: " << fails << std::endl;
     }
 
     std::unique_ptr<Subset> getBestSolutionDestroyTitrator() {
@@ -88,8 +91,9 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         this->totalBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
 
         std::cout << "number of buckets " << this->totalBuckets << " with deltaZero of " << deltaZero << std::endl;
-        // TODO:: why that extra 2 in (delta_zero / 2k). Check later
-        double threshold = ((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, this->totalBuckets - 1);
+        int i = this->totalBuckets - 1 + std::ceil( std::log(deltaZero) / std::log(1 + epsilon));
+        double threshold = std::pow(1 + epsilon, i);
+        std::cout << "Bucket Threshold: " << threshold << std::endl;
         this->bucket = std::make_unique<ThresholdBucket>(threshold, k);
         this->firstBucketBuilt = true;
     }
@@ -158,7 +162,8 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
 
         for (int bucket = 0; bucket < numBuckets; bucket++)
         {
-            double threshold = ((double)deltaZero / (double)( 2 * k )) * (double)std::pow(1 + epsilon, bucket);
+            int i = bucket + std::ceil( std::log(deltaZero) / std::log(1 + epsilon));
+            double threshold = (double)std::pow(1 + epsilon, i);
             this->buckets.push_back(ThresholdBucket(threshold, k));
         }
     }
