@@ -53,7 +53,6 @@ class ThresholdBucket
 
     bool attemptInsert(size_t rowIndex, const std::vector<double> &data) {
         if (this->solution->size() >= this->k) {
-            std::cout << "Solution full" << std::endl;
             return false;
         }
         
@@ -62,7 +61,6 @@ class ThresholdBucket
 
         for (size_t j = 0; j < this->solution->size(); j++) {
             if (!this->passesThreshold(std::log(std::pow(d_i, 2)))) {
-                std::cout << "Early stop" << std::endl;
                 return false;
             }
             const double e_i = (this->getDotProduct(data, *(solutionRows->at(j))) - this->getDotProduct(b->at(j), c_i)) / d->at(j);
@@ -76,16 +74,14 @@ class ThresholdBucket
             this->solutionRows->push_back(&data);
             this->d->push_back(d_i);
             this->b->push_back(c_i);
-            std::cout << "Late success" << std::endl;
             return true;
         } 
-        std::cout << "Late stop" << std::endl;
+
         return false;
     }
 
     private:
     bool passesThreshold(double marginalGain) {
-        std::cout << "Checking marginal of " << marginalGain << " against the value of: " << (((this->threshold / 2) - this->solution->getScore()) / (this->k - this->solution->size())) << " with Threshold: " << this->threshold << " and score of: " << this->solution->getScore() << std::endl;
         return marginalGain >= (((this->threshold / 2) - this->solution->getScore()) / (this->k - this->solution->size()));
     }
 

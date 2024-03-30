@@ -53,10 +53,16 @@ class StreamingSubset : public MutableSubset {
 
     void finalize() {
         this->timers.communicationTime.startTimer();
-        this->sends.back()->isend(CommunicationConstants::getStopTag());
-        for (auto & send : this->sends) {
+        for (size_t i = 0; i < this->sends.size() - 1; i++) {
+            MpiSendRequest *send = this->sends[i].get();
             send->waitForISend();
         }
+        
+        // Can only queue the last send after all other sends have been sent. Otherwise 
+        //  this will cause a race condition causing senders to sometimes never finish 
+        //  sending seeds.
+        this->sends.back()->isend(CommunicationConstants::getStopTag());
+        this->sends.back()->waitForISend();
         this->timers.communicationTime.stopTimer();
     }
 
@@ -82,7 +88,6 @@ class StreamingSubset : public MutableSubset {
             // Tag should be -1 iff this is the last seed to be sent. This code purposefully
             //  does not send the last seed until finalize is called
             const int tag = CommunicationConstants::getContinueTag();
-            
             sends[this->sends.size() - 2]->isend(tag);
         }
     }
