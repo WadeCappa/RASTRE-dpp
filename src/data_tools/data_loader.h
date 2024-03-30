@@ -14,7 +14,7 @@ static const std::string DELIMETER = ",";
 
 class DataLoader {
     public:
-    virtual bool getNext(std::vector<double> &result) = 0;
+    virtual std::optional<DataRow*> getNext() = 0;
 };
 
 class AsciiAdjacencyListDataLoader : public DataLoader {
@@ -41,27 +41,26 @@ class AsciiAdjacencyListDataLoader : public DataLoader {
         totalColumns(totalColumns) 
     {}
 
-    bool getNext(std::vector<double> &result) {
+    std::optional<DataRow*> getNext() {
         std::string data;
-        result.clear();
-        result.resize(this->totalColumns, 0);
+        std::vector<double> rawData(this->totalColumns, 0);
 
         while (true) {
             if (this->hasData) {
                 if (this->currentRow == this->expectedRow) {
-                    result[to] = value;
+                    rawData[to] = value;
                 } else {
                     this->expectedRow++;
-                    return true;
+                    return new NaiveDataRow(move(rawData));
                 }
             }
 
             if (!std::getline(this->source, data)) {
                 if (this->hasData) {
                     this->hasData = false;
-                    return true;
+                    return new NaiveDataRow(move(rawData));
                 } else {
-                    return false;
+                    return std::nullopt;
                 }
             }
 
@@ -90,11 +89,11 @@ class AsciiAdjacencyListDataLoader : public DataLoader {
             }
             
             if (currentRow == this->expectedRow) {
-                result[to] = value;
+                rawData[to] = value;
             } else {
                 this->expectedRow++;
                 this->hasData = true;
-                return true;
+                return new NaiveDataRow(move(rawData));
             }
         } 
     }
@@ -107,7 +106,7 @@ class AsciiDataLoader : public DataLoader {
     public:
     AsciiDataLoader(std::istream &input) : source(input) {}
 
-    bool getNext(std::vector<double> &result) {
+    std::optional<DataRow*> getNext(DataRow **result) {
         std::string data;
         if (!std::getline(this->source, data)) {
             return false;
@@ -133,12 +132,10 @@ class BinaryDataLoader : public DataLoader {
     public:
     BinaryDataLoader(std::istream &input) : source(input), vectorSize(std::nullopt) {}
 
-    bool getNext(std::vector<double> &result) {
+    std::optional<DataRow*> getNext() {
         if (this->source.peek() == EOF) {
-            return false;
+            return std::nullopt;
         }
-
-        result.clear();
 
         if (!this->vectorSize.has_value()) {
             unsigned int totalData;

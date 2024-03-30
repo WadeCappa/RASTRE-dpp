@@ -7,14 +7,14 @@
 
 class Data {
     public:
-    virtual const std::vector<double>& getRow(size_t i) const = 0;
+    virtual const DataRow& getRow(size_t i) const = 0;
     virtual size_t totalRows() const = 0;
     virtual size_t totalColumns() const = 0;
 };
 
 class NaiveData : public Data {
     private:
-    std::vector<std::vector<double>> data;
+    std::vector<std::unique_ptr<DataRow>> data;
     size_t rows;
     size_t columns;
 
@@ -27,25 +27,31 @@ class NaiveData : public Data {
         std::optional<size_t> columns = std::nullopt;
         this->rows = 0;
 
-        data.push_back(std::vector<double>());
-        std::vector<double> *nextRow = &data.back();
-        while (loader.getNext(*nextRow)) {
+        DataRow **nextRow;
+        while (loader.getNext(nextRow)) {
+            std::unique_ptr<DataRow> row(*nextRow);
             this->rows++;
             if (!columns.has_value()) {
-                columns = nextRow->size();
-                this->columns = nextRow->size();
+                columns = row->size();
+                this->columns = row->size();
             }
 
-            data.push_back(std::vector<double>());
-            nextRow = &data.back();
+            data.push_back(move(row));
         }
-
-        data.pop_back();
     }
 
-    NaiveData(const std::vector<std::vector<double>> &raw, size_t rows, size_t cols) : data(raw), rows(rows), columns(cols) {}
+    // For testing only
+    NaiveData(const std::vector<std::vector<double>> &raw, size_t rows, size_t cols) 
+    : 
+        rows(rows), 
+        columns(cols) 
+    {
+        for (const auto & row : raw) {
+            data.push_back(NaiveDataRow(row));
+        }
+    }
 
-    const std::vector<double>& getRow(size_t i) const {
+    const DataRow& getRow(size_t i) const {
         return this->data[i];
     }
 
@@ -57,7 +63,7 @@ class NaiveData : public Data {
         return this->columns;
     }
 
-    bool DEBUG_compareData(const std::vector<std::vector<double>> &data) const {
+    bool DEBUG_compareData(const std::vector<DataRow> &data) const {
         return this->data == data;
     }
 };
@@ -86,7 +92,7 @@ class LocalData : public Data {
         const unsigned int rank
     ) : base(base), localRowToGlobalRow(getMapping(base, rankMapping, rank)) {}
 
-    const std::vector<double>& getRow(size_t i) const {
+    const DataRow& getRow(size_t i) const {
         return this->base.getRow(i);
     }
 
@@ -105,7 +111,7 @@ class LocalData : public Data {
 
 class SelectiveData : public Data {
     private:
-    const std::vector<std::pair<size_t, std::vector<double>>> &base;
+    const std::vector<std::pair<size_t, std::unique_ptr<DataRow>>> &base;
     const size_t rows;
     const size_t columns;
 
@@ -114,10 +120,10 @@ class SelectiveData : public Data {
     SelectiveData(const Data&);
 
     public:
-    SelectiveData(const std::vector<std::pair<size_t, std::vector<double>>> &base) 
+    SelectiveData(const std::vector<std::pair<size_t, std::unique_ptr<DataRow>>> &base) 
     : base(base), rows(base.size()), columns(base[0].second.size()) {}
 
-    const std::vector<double>& getRow(size_t i) const {
+    const DataRow& getRow(size_t i) const {
         return this->base[i].second;
     }
 
