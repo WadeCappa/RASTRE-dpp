@@ -14,8 +14,8 @@ class BaseData {
 
 class FullyLoadedData : public BaseData {
     private:
-    std::vector<std::unique_ptr<DataRow>> data;
-    size_t columns;
+    const std::vector<std::unique_ptr<DataRow>> data;
+    const size_t columns;
 
     // Disable pass by value. This object is too large for pass by value to make sense implicitly.
     //  Use an explicit constructor to pass by value.
@@ -58,38 +58,67 @@ class FullyLoadedData : public BaseData {
 
 class SegmentedData : public BaseData {
     private:
-    const BaseData &base;
+    const std::vector<std::unique_ptr<DataRow>> data;
     const std::vector<size_t> localRowToGlobalRow;
+    const size_t columns;
 
-    std::vector<size_t> getMapping(const BaseData &base, const std::vector<unsigned int> &rankMapping, const unsigned int rank) {
-        std::vector<size_t> res;
+    // Disable pass by value. This object is too large for pass by value to make sense implicitly.
+    //  Use an explicit constructor to pass by value.
+    SegmentedData(const BaseData&);
 
-        for (size_t remoteIndex = 0; remoteIndex < rankMapping.size(); remoteIndex++) {
-            if (rankMapping[remoteIndex] == rank) {
-                res.push_back(remoteIndex);
+    public:
+    static std::unique_ptr<SegmentedData> load(
+        DataRowFactory &factory, 
+        std::istream &source, 
+        const std::vector<unsigned int> &rankMapping, 
+        const unsigned int rank
+    ) {
+        size_t columns = 0;
+        std::vector<std::unique_ptr<DataRow>> data;
+        std::vector<size_t> localRowToGlobalRow;
+        size_t globalRow = 0;
+
+        while (true) {
+            DataRow* nextRow = factory.maybeGet(source);
+
+            if (nextRow == nullptr) {
+                break;
+            }
+
+            if (columns == 0) {
+                columns = nextRow->size();
+            }
+
+            if (rankMapping[globalRow] == rank) {
+                data.push_back(std::unique_ptr<DataRow>(nextRow));
+                localRowToGlobalRow.push_back(globalRow);
+                globalRow++;
             }
         }
 
-        return res;
+        if (localRowToGlobalRow.size() != data.size()) {
+            std::cout << "sizes did not match, this is likely a serious error" << std::endl;
+        }
+
+        return std::unique_ptr<SegmentedData>(new SegmentedData(move(data), move(localRowToGlobalRow), columns));
     }
 
-    public:
     SegmentedData(
-        const BaseData &base, 
-        const std::vector<unsigned int> &rankMapping, 
-        const unsigned int rank
-    ) : base(base), localRowToGlobalRow(getMapping(base, rankMapping, rank)) {}
+        std::vector<std::unique_ptr<DataRow>> raw,
+        std::vector<size_t> localRowToGlobalRow,
+        size_t columns
+    ) : data(move(raw)), localRowToGlobalRow(move(localRowToGlobalRow)), columns(columns) {}
 
     const DataRow& getRow(size_t i) const {
-        return this->base.getRow(i);
+        return *(this->data[i]);
     }
 
     size_t totalRows() const {
-        return this->base.totalRows();
+        return this->data.size();
     }
 
     size_t totalColumns() const {
-        return this->base.totalColumns();
+        return this->columns;
     }
 
     size_t getRemoteIndexForRow(const size_t localRowIndex) const {
