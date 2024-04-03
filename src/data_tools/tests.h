@@ -1,7 +1,10 @@
+#include "data_row.h"
+#include "data_row_factory.h"
 #include "../representative_subset_calculator/representative_subset.h"
 #include "normalizer.h"
 #include "data_saver.h"
 #include "matrix_builder.h"
+#include "base_data.h"
 
 #include <utility>
 #include <functional>

@@ -10,8 +10,6 @@
 #include <optional>
 #include <fmt/core.h>
 
-static const std::string DELIMETER = ",";
-
 class DataLoader {
     public:
     virtual bool getNext(std::vector<double> &result) = 0;
@@ -118,7 +116,7 @@ class AsciiDataLoader : public DataLoader {
         char *token;
         char *rest = data.data();
 
-        while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
+        while ((token = strtok_r(rest, ",", &rest)))
             result.push_back(std::stod(std::string(token)));
 
         return true;

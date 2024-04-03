@@ -158,4 +158,22 @@ class Orchestrator {
 
         return output;
     }
+
+    static std::unique_ptr<FullyLoadedData> buildData(const AppData& appData, std::istream &data) {
+        DataRowFactory* factory = getDataRowFactory(appData);
+        return FullyLoadedData::load(*factory, data);
+    }
+
+    private:
+    static DataRowFactory* getDataRowFactory(const AppData& appData) {
+        DataRowFactory *factory;
+        
+        if (appData.adjacencyListColumnCount > 0) {
+            factory = dynamic_cast<DataRowFactory*>(new SparseDataRowFactory(appData.adjacencyListColumnCount));
+        } else {
+            factory = dynamic_cast<DataRowFactory*>(new DenseDataRowFactory());
+        }
+
+        return factory;
+    }
 };
