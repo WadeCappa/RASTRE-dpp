@@ -9,6 +9,7 @@ class DataRowFactory {
     virtual DataRow* maybeGet(std::istream &source) = 0;
 };
 
+// TODO: This should be a static constructor in the dense data row? 
 class DenseDataRowFactory : public DataRowFactory {
     public:
     DataRow* maybeGet(std::istream &source) {
@@ -29,6 +30,7 @@ class DenseDataRowFactory : public DataRowFactory {
     }
 };
 
+// TODO: This should be a static constructor in the sparse data row? 
 class SparseDataRowFactory : public DataRowFactory {
     private:
     const static size_t EXPECTED_ELEMENTS_PER_LINE = 3;

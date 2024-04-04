@@ -5,6 +5,7 @@ static const std::string DELIMETER = ",";
 class DataRow {
     public:
     virtual const std::vector<double> getRow() const = 0;
+    virtual double dotProduct(const DataRow& dataRow) const = 0;
     virtual size_t size() const = 0;
 }; 
 
