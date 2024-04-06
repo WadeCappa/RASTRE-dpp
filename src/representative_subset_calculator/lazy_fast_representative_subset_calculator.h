@@ -16,7 +16,11 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         }
     };
 
-    static std::vector<double> getSlice(const std::vector<double> &row, const MutableSubset* subset, size_t count) {
+    static std::vector<double> getSlice(
+        const std::vector<double> &row, 
+        const MutableSubset* subset, 
+        size_t count
+    ) {
         std::vector<double> res(count);
         for (size_t i = 0; i < count ; i++) {
             res[i] = row[subset->getRow(i)];
@@ -33,7 +37,11 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
     }
 
     // TODO: Break when marginal gain is below epsilon
-    std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
+    std::unique_ptr<Subset> getApproximationSet(
+        std::unique_ptr<MutableSubset> consumer, 
+        const BaseData &data, 
+        size_t k
+    ) {
         std::unordered_set<size_t> seen;
         std::vector<std::vector<double>> v(data.totalRows(), std::vector<double>(data.totalRows()));
         std::vector<size_t> u(data.totalRows(), 0);

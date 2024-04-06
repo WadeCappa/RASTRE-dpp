@@ -37,7 +37,11 @@ class FastSubsetCalculator : public SubsetCalculator {
         }
     }
 
-    std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
+    std::unique_ptr<Subset> getApproximationSet(
+        std::unique_ptr<MutableSubset> consumer, 
+        const BaseData &data, 
+        size_t k
+    ) {
         std::unordered_set<size_t> seen;
 
         NaiveKernelMatrix kernelMatrix(data);

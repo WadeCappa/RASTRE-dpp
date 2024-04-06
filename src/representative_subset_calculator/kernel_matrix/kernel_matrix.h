@@ -29,27 +29,29 @@ class KernelMatrix {
 
 class LazyKernelMatrix : public KernelMatrix {
     private:
-    std::vector<Eigen::VectorXd> data;
     std::vector<std::vector<std::optional<double>>> kernelMatrix;
+    const BaseData &data;
 
     // Disable pass by value. This object is too large for pass by value to make sense implicitly.
     //  Use an explicit constructor to pass by value.
     LazyKernelMatrix(const LazyKernelMatrix &);
 
     public:
-    LazyKernelMatrix(const Data &data) : kernelMatrix(data.totalRows(), std::vector<std::optional<double>>(data.totalRows(), std::nullopt)) {
-        for (size_t i = 0; i < data.totalRows(); i++) {
-            const auto & row = data.getRow(i);
-            this->data.push_back(Eigen::VectorXd::Map(row.data(), data.totalColumns()));
-        }
-    }
+    LazyKernelMatrix(const BaseData &data)
+    : 
+        kernelMatrix(
+            data.totalRows(), 
+            std::vector<std::optional<double>>(data.totalRows(), std::nullopt)
+        ),
+        data(data)
+    {}
 
     double get(size_t j, size_t i) {
         if (!this->kernelMatrix[j][i].has_value()) {
-            double dotProduct = this->data[j].dot(this->data[i]);
-            dotProduct += static_cast<int>(j == i);
-            this->kernelMatrix[j][i] = dotProduct;
-            this->kernelMatrix[i][j] = dotProduct;
+            double result = this->data.getRow(j).dotProduct(this->data.getRow(i));
+            result += static_cast<int>(j == i);
+            this->kernelMatrix[j][i] = result;
+            this->kernelMatrix[i][j] = result;
         }
 
         return this->kernelMatrix[j][i].value();
@@ -58,31 +60,34 @@ class LazyKernelMatrix : public KernelMatrix {
 
 class NaiveKernelMatrix : public KernelMatrix {
     private:
-    Eigen::MatrixXd kernelMatrix;
+    std::vector<std::vector<double>> kernelMatrix;
 
     // Disable pass by value. This object is too large for pass by value to make sense implicitly.
     //  Use an explicit constructor to pass by value.
     NaiveKernelMatrix(const NaiveKernelMatrix &);
 
-    Eigen::MatrixXd buildKernelMatrix(const Data &data) {
-        Eigen::MatrixXd rawDataMatrix(data.totalRows(), data.totalColumns());
-        #pragma omp parallel for
-        for (int i = 0; i < data.totalRows(); i++) {
-            rawDataMatrix.row(i) = Eigen::VectorXd::Map(data.getRow(i).data(), data.totalColumns());
+    static std::vector<std::vector<double>> buildKernelMatrix(const BaseData &data) {
+        std::vector<std::vector<double>> result(
+            data.totalRows(), 
+            std::vector<double>(data.totalRows(), 0)
+        );
+
+        for (size_t i = 0; i < data.totalRows(); i++) {
+            for (size_t j = 0; j < data.totalRows(); j++) {
+                double dotProduct = data.getRow(j).dotProduct(data.getRow(i));
+                dotProduct += static_cast<int>(j == i);
+                result[j][i] = dotProduct;
+                result[i][j] = dotProduct;
+            }
         }
 
-        return Eigen::MatrixXd(rawDataMatrix * rawDataMatrix.transpose());
+        return result;
     }
 
     public:
-    NaiveKernelMatrix(const Data &data) : kernelMatrix(buildKernelMatrix(data)) {
-        for (size_t index = 0; index < kernelMatrix.rows(); index++) {
-            // add identity matrix
-            kernelMatrix(index, index) += 1;
-        }
-    }
+    NaiveKernelMatrix(const BaseData &data) : kernelMatrix(buildKernelMatrix(data)) {}
 
     double get(size_t j, size_t i) {
-        return this->kernelMatrix(j, i);
+        return this->kernelMatrix[j][i];
     }
 };

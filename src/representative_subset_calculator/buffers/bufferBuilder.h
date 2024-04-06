@@ -91,7 +91,7 @@ class GlobalBufferLoader : public BufferLoader {
     std::unique_ptr<Subset> getSolution(std::unique_ptr<SubsetCalculator> calculator, const size_t k) {
         this->timers.bufferDecodingTime.startTimer();
         auto newData = this->rebuildData();
-        SelectiveData bestRows(*newData);
+        ReceivedData bestRows(*newData);
         this->timers.bufferDecodingTime.stopTimer();
 
         timers.globalCalculationTime.startTimer();
@@ -123,12 +123,12 @@ class GlobalBufferLoader : public BufferLoader {
     {}
 
     private:
-    std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>> rebuildData() {
+    std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> rebuildData() {
         std::vector<size_t> rowOffsets = getRowOffsets();
         const size_t totalExpectedRows = rowOffsets.back();
         const size_t numberOfBytesWithoutLocalMarginals = binaryInput.size() - worldSize * DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
 
-        std::vector<std::pair<size_t, std::vector<double>>> *newData = new std::vector<std::pair<size_t, std::vector<double>>>(totalExpectedRows);
+        std::vector<std::pair<size_t, std::unique_ptr<DataRow>>> *newData = new std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>(totalExpectedRows);
 
         // Because we're sending local marginals along with the data, the input data is no longer uniform.
         #pragma omp parallel for 
@@ -142,6 +142,8 @@ class GlobalBufferLoader : public BufferLoader {
                 newData->at(currentRow) = std::make_pair(
                     binaryInput[globalRowStart],
                     // Don't capture the first element, which is the index of the row
+                    // TODO: This class does not yet compile because this needs to be done with
+                    //  a factory. Otherwise we will not create the correct data rows
                     std::vector<double>(binaryInput.begin() + globalRowStart + DOUBLES_FOR_ROW_INDEX_PER_COLUMN, binaryInput.begin() + globalRowStart + columnsPerRowInBuffer)
                 );
             }

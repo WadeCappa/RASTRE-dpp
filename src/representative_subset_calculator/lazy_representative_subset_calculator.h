@@ -19,11 +19,14 @@ class LazySubsetCalculator : public SubsetCalculator {
     public:
     LazySubsetCalculator() {}
 
-    std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
+    std::unique_ptr<Subset> getApproximationSet(
+        std::unique_ptr<MutableSubset> consumer, 
+        const BaseData &data, 
+        size_t k
+    ) {
         std::vector<std::pair<size_t, double>> heap;
         for (size_t index = 0; index < data.totalRows(); index++) {
-            const auto & d = data.getRow(index);
-            MutableSimilarityMatrix matrix(d);
+            MutableSimilarityMatrix matrix(data.getRow(index));
             heap.push_back(std::make_pair(index, matrix.getCoverage()));
         }
 

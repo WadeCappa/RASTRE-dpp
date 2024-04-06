@@ -42,7 +42,7 @@ class Orchestrator {
         }
     }
 
-    static nlohmann::json buildDatasetJson(const Data &data, const AppData &appData) {
+    static nlohmann::json buildDatasetJson(const BaseData &data, const AppData &appData) {
         nlohmann::json output {
             {"rows", data.totalRows()},
             {"columns", data.totalColumns()},
@@ -55,7 +55,7 @@ class Orchestrator {
     static nlohmann::json buildOutput(
         const AppData &appData, 
         const Subset &solution,
-        const Data &data,
+        const BaseData &data,
         const Timers &timers
     ) {
         nlohmann::json output = buildOutputBase(appData, solution, data, timers);
@@ -144,7 +144,7 @@ class Orchestrator {
     static nlohmann::json buildOutputBase(
         const AppData &appData, 
         const Subset &solution,
-        const Data &data,
+        const BaseData &data,
         const Timers &timers
     ) { 
         nlohmann::json output {
