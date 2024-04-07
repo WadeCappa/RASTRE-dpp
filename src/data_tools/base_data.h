@@ -41,6 +41,17 @@ class FullyLoadedData : public BaseData {
         return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(data), columns));
     }
 
+    static std::unique_ptr<FullyLoadedData> load(std::vector<std::vector<double>> raw) {
+        std::vector<std::unique_ptr<DataRow>> data;
+        for (const auto & v : raw) {
+            data.push_back(std::unique_ptr<DataRow>(new DenseDataRow(v)));
+        }
+
+        size_t cols = data[0]->size();
+
+        return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(data), cols));
+    }
+
     FullyLoadedData(std::vector<std::unique_ptr<DataRow>> raw, size_t cols) : data(move(raw)), columns(cols) {}
 
     const DataRow& getRow(size_t i) const {

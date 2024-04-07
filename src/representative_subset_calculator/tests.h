@@ -6,12 +6,6 @@
 #include "lazy_fast_representative_subset_calculator.h"
 #include "similarity_matrix/tests.h"
 
-static const NaiveData data(
-    DATA,
-    DATA.size(),
-    DATA[0].size()
-);
-
 #include "kernel_matrix/tests.h"
 #include "orchestrator/tests.h"
 #include "buffers/tests.h"

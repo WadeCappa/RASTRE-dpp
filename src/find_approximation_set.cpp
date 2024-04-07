@@ -2,8 +2,6 @@
 #include "data_tools/data_row_visitor.h"
 #include "data_tools/data_row.h"
 #include "data_tools/data_row_factory.h"
-#include "data_tools/normalizer.h"
-#include "data_tools/matrix_builder.h"
 #include "data_tools/base_data.h"
 #include "representative_subset_calculator/timers/timers.h"
 #include "representative_subset_calculator/naive_representative_subset_calculator.h"

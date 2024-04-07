@@ -83,34 +83,6 @@ class Orchestrator {
         app.add_option("--alpha", appData.alpha, "Only used for the truncated setting.");
     }
 
-    static DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
-        DataLoader *dataLoader;
-        
-        if (appData.binaryInput) {
-            dataLoader = dynamic_cast<DataLoader*>(new BinaryDataLoader(data));
-        } else if (appData.adjacencyListColumnCount > 0) {
-            dataLoader = dynamic_cast<DataLoader*>(new AsciiAdjacencyListDataLoader(data, appData.adjacencyListColumnCount));
-        } else {
-            dataLoader = dynamic_cast<DataLoader*>(new AsciiDataLoader(data));
-        }
-
-        if (appData.normalizeInput) {
-            dataLoader = dynamic_cast<DataLoader*>(new Normalizer(*dataLoader));
-        }
-
-        return dataLoader;
-    }
-            
-    static DataLoader* buildMpiDataLoader(
-        const AppData &appData, 
-        std::istream &data, 
-        const std::vector<unsigned int> &rankMapping
-    ) {
-        DataLoader *dataLoader = Orchestrator::buildDataLoader(appData, data);
-        return dynamic_cast<DataLoader*>(new BlockedDataLoader(*dataLoader, rankMapping, appData.worldRank));
-    }
-
-
     static SubsetCalculator* getCalculator(const AppData &appData) {
         switch (appData.algorithm) {
             case 0:

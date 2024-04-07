@@ -11,7 +11,7 @@ class Buffer {
 class BufferBuilder : public Buffer {
     private:
     static unsigned int getTotalSendData(
-        const Data &data, 
+        const BaseData &data, 
         const Subset &localSolution
     ) {
         // Need to include an additional column that marks the index of the sent row 
@@ -22,12 +22,12 @@ class BufferBuilder : public Buffer {
 
     public:
     static unsigned int buildSendBuffer(
-        const LocalData &data, 
+        const SegmentedData &data, 
         const Subset &localSolution, 
         std::vector<double> &buffer
     ) {
         // Need to include an additional column that marks the index of the sent row
-        const unsigned int totalSendData = getTotalSendData(dynamic_cast<const Data&>(data), localSolution);
+        const unsigned int totalSendData = getTotalSendData(dynamic_cast<const BaseData&>(data), localSolution);
         const size_t rowSize = data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN;
         const size_t numberOfRows = localSolution.size();
         buffer.resize(totalSendData);
@@ -38,13 +38,17 @@ class BufferBuilder : public Buffer {
         // All buffer indexes need to be offset by 1 to account for the 
         //  total marginal being inserted at the beggining of the send buffer
         #pragma parallel for
-        for (size_t rowIndex = 0; rowIndex < numberOfRows; rowIndex++) {
-            const auto & row = data.getRow(localSolution.getRow(rowIndex));
-            buffer[rowSize * rowIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER] = data.getRemoteIndexForRow(localSolution.getRow(rowIndex));
-            for (size_t columnIndex = DOUBLES_FOR_ROW_INDEX_PER_COLUMN; columnIndex < rowSize; columnIndex++) {
-                double v = row[columnIndex - DOUBLES_FOR_ROW_INDEX_PER_COLUMN];
-                buffer[rowSize * rowIndex + columnIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER] = v;
-            }
+        for (size_t localRowIndex = 0; localRowIndex < numberOfRows; localRowIndex++) {
+            size_t globalIndex = data.getRemoteIndexForRow(localSolution.getRow(localRowIndex));
+            BufferBuilderVisitor visitor(
+                localRowIndex, 
+                globalIndex, 
+                rowSize, 
+                DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER, 
+                DOUBLES_FOR_ROW_INDEX_PER_COLUMN, 
+                buffer
+            );
+            data.getRow(localSolution.getRow(localRowIndex)).visit(visitor);
         }
 
         return totalSendData;
