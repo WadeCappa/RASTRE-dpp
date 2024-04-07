@@ -66,7 +66,8 @@ class NaiveKernelMatrix : public KernelMatrix {
     //  Use an explicit constructor to pass by value.
     NaiveKernelMatrix(const NaiveKernelMatrix &);
 
-    static std::vector<std::vector<double>> buildKernelMatrix(const BaseData &data) {
+    public:
+    static std::unique_ptr<NaiveKernelMatrix> from(const BaseData &data) {
         std::vector<std::vector<double>> result(
             data.totalRows(), 
             std::vector<double>(data.totalRows(), 0)
@@ -81,11 +82,10 @@ class NaiveKernelMatrix : public KernelMatrix {
             }
         }
 
-        return result;
+        return std::unique_ptr<NaiveKernelMatrix>(new NaiveKernelMatrix(move(result)));
     }
 
-    public:
-    NaiveKernelMatrix(const BaseData &data) : kernelMatrix(buildKernelMatrix(data)) {}
+    NaiveKernelMatrix(std::vector<std::vector<double>> data) : kernelMatrix(move(data)) {}
 
     double get(size_t j, size_t i) {
         return this->kernelMatrix[j][i];

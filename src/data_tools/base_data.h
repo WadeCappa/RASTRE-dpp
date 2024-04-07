@@ -173,7 +173,6 @@ class ReceivedData : public BaseData {
     ) const {
         std::vector<size_t> translatedRows;
         for (const auto & relativeRow : *localSolution.get()) {
-            std::cout << "relative row " << relativeRow << std::endl;
             translatedRows.push_back(this->base->at(relativeRow).first);
         }
 
