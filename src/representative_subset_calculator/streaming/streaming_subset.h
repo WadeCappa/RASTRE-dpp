@@ -5,7 +5,27 @@
 
 class StreamingSubset : public MutableSubset {
     private:
-    const LocalData &data;
+    class ToBinaryVisitor : public DataRowVisitor {
+        std::vector<double> binary;
+
+        public:
+        void visitDenseDataRow(const std::vector<double>& data) {
+            binary = data;
+        }
+
+        void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
+            binary = std::vector<double>(totalColumns, 0);
+            for (const auto & p : data) {
+                binary[p.first] = p.second;
+            }
+        }
+
+        std::vector<double> getAndDestroy() {
+            return move(binary);
+        }
+    };
+
+    const SegmentedData &data;
     Timers &timers;
     
     std::vector<std::unique_ptr<MpiSendRequest>> sends;
@@ -15,7 +35,7 @@ class StreamingSubset : public MutableSubset {
 
     public:
     StreamingSubset(
-        const LocalData& data, 
+        const SegmentedData& data, 
         const unsigned int desiredSeeds,
         Timers &timers
     ) : 
@@ -69,7 +89,9 @@ class StreamingSubset : public MutableSubset {
     void addRow(const size_t row, const double marginalGain) {
         this->base->addRow(row, marginalGain);
 
-        std::vector<double> rowToSend(this->data.getRow(row));
+        ToBinaryVisitor visitor;
+        this->data.getRow(row).visit(visitor);
+        std::vector<double> rowToSend(move(visitor.getAndDestroy()));
 
         // second to last value should be the marginal gain of this element for the local solution
         rowToSend.push_back(marginalGain);

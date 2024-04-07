@@ -7,6 +7,7 @@
 class DataRowFactory {
     public:
     virtual DataRow* maybeGet(std::istream &source) = 0;
+    virtual std::unique_ptr<DataRow> get(std::vector<double> binary) const = 0;
 };
 
 // TODO: This should be a static constructor in the dense data row? 
@@ -27,6 +28,10 @@ class DenseDataRowFactory : public DataRowFactory {
             result.push_back(std::stod(std::string(token)));
 
         return new DenseDataRow(move(result));
+    }
+
+    std::unique_ptr<DataRow> get(std::vector<double> binary) const {
+        return std::unique_ptr<DataRow>(new DenseDataRow(move(binary)));
     }
 };
 
@@ -105,5 +110,17 @@ class SparseDataRowFactory : public DataRowFactory {
                 return new SparseDataRow(move(result), this->totalColumns);
             }
         } 
+    }
+
+    std::unique_ptr<DataRow> get(std::vector<double> binary) const {
+        std::map<size_t, double> res;
+
+        for (size_t to = 0; to < binary.size(); to++) {
+            if (binary[to] != 0) {
+                res.insert({to, binary[to]});
+            }
+        }
+
+        return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));
     }
 };

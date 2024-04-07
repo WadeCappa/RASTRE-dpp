@@ -28,6 +28,7 @@ class MpiSendRequest {
 class MpiRankBuffer : public RankBuffer {
     private:
     const unsigned int rank;
+    const DataRowFactory &factory;
 
     std::vector<double> buffer;
     MPI_Request request;
@@ -37,14 +38,16 @@ class MpiRankBuffer : public RankBuffer {
     public:
     MpiRankBuffer(
         const unsigned int rank,
-        const size_t rowSize
+        const size_t rowSize,
+        const DataRowFactory &factory
     ) : 
         // need space for the row's global index and the local rank's
         //  marginal gain when adding this row to it's local solution.
         buffer(rowSize + 2),
         rank(rank),
         isStillReceiving(true),
-        rankSolution(std::unique_ptr<MutableSubset>(NaiveMutableSubset::makeNew()))
+        rankSolution(std::unique_ptr<MutableSubset>(NaiveMutableSubset::makeNew())),
+        factory(factory)
     {
         this->readyForNextReceive();
     }
@@ -99,6 +102,6 @@ class MpiRankBuffer : public RankBuffer {
         const double localMarginalGain = this->buffer[this->buffer.size() - 2];
         std::vector<double> data(this->buffer.begin(), this->buffer.end() - 2);
         this->rankSolution->addRow(globalRowIndex, localMarginalGain);
-        return new CandidateSeed(globalRowIndex, move(data), this->rank);
+        return new CandidateSeed(globalRowIndex, this->factory.get(move(data)), this->rank);
     }
 };

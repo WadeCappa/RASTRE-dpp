@@ -34,7 +34,7 @@
 
 void randGreedi(
     const AppData &appData, 
-    const LocalData &data, 
+    const SegmentedData &data, 
     const std::vector<unsigned int> &rowToRank, 
     Timers &timers
 ) {
@@ -102,7 +102,7 @@ void randGreedi(
 
 void streaming(
     const AppData &appData, 
-    const LocalData &data, 
+    const SegmentedData &data, 
     const std::vector<unsigned int> &rowToRank, 
     Timers &timers
 ) {
@@ -117,7 +117,15 @@ void streaming(
         std::cout << "rank 0 entered into the streaming function and knows the total columns of "<< rowSize << std::endl;
         timers.totalCalculationTime.startTimer();
 
-        std::unique_ptr<Receiver> receiver(MpiReceiver::buildReceiver(appData.worldSize, rowSize, std::floor(appData.outputSetSize * appData.alpha)));
+        std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
+        std::unique_ptr<Receiver> receiver(
+            MpiReceiver::buildReceiver(
+                appData.worldSize, 
+                rowSize, 
+                std::floor(appData.outputSetSize * appData.alpha),
+                *factory
+            )
+        );
         std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(appData, omp_get_num_threads() - 1, appData.worldSize - 1));
         SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers);
 
@@ -169,22 +177,18 @@ int main(int argc, char** argv) {
     timers.loadingDatasetTime.startTimer();
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
-    DataLoader *dataLoader = MpiOrchestrator::buildMpiDataLoader(appData, inputFile, rowToRank);
-    NaiveData baseData(*dataLoader);
-    LocalData data(baseData, rowToRank, appData.worldRank);
+    std::unique_ptr<SegmentedData> data(Orchestrator::buildMpiData(appData, inputFile, rowToRank));
     inputFile.close();
     timers.loadingDatasetTime.stopTimer();
-
-    delete dataLoader;
 
     timers.barrierTime.startTimer();
     MPI_Barrier(MPI_COMM_WORLD);
     timers.barrierTime.stopTimer();
 
     if (appData.distributedAlgorithm == 0) {
-        randGreedi(appData, data, rowToRank, timers);
+        randGreedi(appData, *data, rowToRank, timers);
     } else if (appData.distributedAlgorithm == 1 || appData.distributedAlgorithm == 2) {
-        streaming(appData, data, rowToRank, timers);
+        streaming(appData, *data, rowToRank, timers);
     } else {
         std::cout << "did not recognized distributedAlgorithm of " << appData.distributedAlgorithm << std::endl;
     }

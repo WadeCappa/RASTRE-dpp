@@ -131,13 +131,21 @@ class Orchestrator {
         return output;
     }
 
+    static std::unique_ptr<SegmentedData> buildMpiData(
+        const AppData& appData, 
+        std::istream &data, 
+        const std::vector<unsigned int> &rowToRank
+    ) {
+        std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
+        return SegmentedData::load(*factory, data, rowToRank, appData.worldRank);
+    }
+
     static std::unique_ptr<FullyLoadedData> buildData(const AppData& appData, std::istream &data) {
-        DataRowFactory* factory = getDataRowFactory(appData);
+        std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
         return FullyLoadedData::load(*factory, data);
     }
 
-    private:
-    static DataRowFactory* getDataRowFactory(const AppData& appData) {
+    static std::unique_ptr<DataRowFactory> getDataRowFactory(const AppData& appData) {
         DataRowFactory *factory;
         
         if (appData.adjacencyListColumnCount > 0) {
@@ -146,6 +154,6 @@ class Orchestrator {
             factory = dynamic_cast<DataRowFactory*>(new DenseDataRowFactory());
         }
 
-        return factory;
+        return std::unique_ptr<DataRowFactory>(factory);
     }
 };
