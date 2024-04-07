@@ -1,5 +1,6 @@
 #include <map>
 #include <vector>
+#include <iostream>
 
 static const std::string DELIMETER = ",";
 
@@ -43,7 +44,7 @@ class SparseDataRow : public DataRow {
     const std::map<size_t, double> rowToValue;
     const size_t totalColumns;
 
-    SparseDataRow(std::map<size_t, double> map, size_t totalCoumns) : 
+    SparseDataRow(std::map<size_t, double> map, size_t totalColumns) : 
         rowToValue(move(map)), 
         totalColumns(totalColumns) 
     {}

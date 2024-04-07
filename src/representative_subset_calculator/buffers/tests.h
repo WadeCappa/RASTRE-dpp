@@ -3,20 +3,20 @@
 #include "buffer_builder_visitor.h"
 #include "bufferBuilder.h"
 
-static const std::unique_ptr<Subset> MOCK_SOLUTION(
-    Subset::of(std::vector<size_t>{0, DATA.size()-1}, 15)
-);
-static const std::vector<unsigned int> ROW_TO_RANK(DATA.size(), 0);
-static const unsigned int RANK = 0;
+// static const std::unique_ptr<Subset> MOCK_SOLUTION(
+//     Subset::of(std::vector<size_t>{0, DATA.size()-1}, 15)
+// );
+// static const std::vector<unsigned int> ROW_TO_RANK(DATA.size(), 0);
+// static const unsigned int RANK = 0;
 
-static std::vector<size_t> getRows(const Subset &solution) {
-    std::vector<size_t> rows;
-    for (size_t i = 0; i < solution.size(); i++) {
-        rows.push_back(solution.getRow(i));
-    }
+// static std::vector<size_t> getRows(const Subset &solution) {
+//     std::vector<size_t> rows;
+//     for (size_t i = 0; i < solution.size(); i++) {
+//         rows.push_back(solution.getRow(i));
+//     }
 
-    return rows;
-}
+//     return rows;
+// }
 
 // TEST_CASE("Testing the get total send data method") {
 //     std::vector<double> sendBuffer;

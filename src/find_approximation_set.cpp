@@ -1,5 +1,6 @@
 #include "representative_subset_calculator/representative_subset.h"
 #include "data_tools/data_row_visitor.h"
+#include "data_tools/dot_product_visitor.h"
 #include "data_tools/data_row.h"
 #include "data_tools/data_row_factory.h"
 #include "data_tools/base_data.h"

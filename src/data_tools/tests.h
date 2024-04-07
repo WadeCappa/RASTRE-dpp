@@ -1,4 +1,5 @@
 #include "data_row_visitor.h"
+#include "dot_product_visitor.h"
 #include "data_row.h"
 #include "data_row_factory.h"
 #include "../representative_subset_calculator/representative_subset.h"
@@ -7,6 +8,23 @@
 #include <utility>
 #include <functional>
 #include <doctest/doctest.h>
+
+class DataRowVerifier : public DataRowVisitor {
+    private:
+    const size_t expectedRow;
+
+    public:
+    DataRowVerifier(size_t expectedRow) : expectedRow(expectedRow) {}
+
+    void visitDenseDataRow(const std::vector<double>& data) {
+        CHECK(data == DENSE_DATA[this->expectedRow]);
+    }
+
+    void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
+        CHECK(data == SPARSE_DATA_AS_MAP[expectedRow]);
+        CHECK(totalColumns == SPARSE_DATA_TOTAL_COLUMNS);
+    }
+};
 
 static std::pair<std::vector<double>, double> VECTOR_WITH_LENGTH = std::make_pair(
     std::vector<double>{3.0, 3.0, 3.0, 3.0},
@@ -33,15 +51,48 @@ static std::string matrixToString(const std::vector<std::vector<double>> &data) 
     return output;
 }
 
-// static std::vector<std::vector<double>> loadData(DataLoader &loader) {
-//     std::vector<std::vector<double>> data;
-//     std::vector<double> element;
-//     while (loader.getNext(element)) {
-//         data.push_back(element);
-//     }
+static std::vector<std::unique_ptr<DataRow>> loadData(DataRowFactory &factory, std::istream &data) {
+    std::vector<std::unique_ptr<DataRow>> res;
+    DataRow* nextRow = factory.maybeGet(data);
+    while (nextRow != nullptr) {
+        res.push_back(std::unique_ptr<DataRow>(nextRow));
+        nextRow = factory.maybeGet(data);
+    }
 
-//     return data;
-// }
+    return move(res);
+}
+
+static void verifyData(const DataRow& row, const size_t expectedRow) {
+    DataRowVerifier visitor(expectedRow);
+    row.visit(visitor);
+}
+
+static void verifyData(std::vector<std::unique_ptr<DataRow>> loadedData) {
+    for (size_t row = 0; row < loadedData.size(); row++) {
+        verifyData(*loadedData[row].get(), row);
+    }
+}
+
+static void verifyData(const BaseData& data) {
+    for (size_t i = 0; i < data.totalRows(); i++) {
+        verifyData(data.getRow(i), i);
+    }
+}
+
+static void verifyData(
+    const SegmentedData& data,
+    const std::vector<unsigned int> rankMapping,
+    const unsigned int rank
+) {
+    size_t seen = 0;
+    for (size_t i = 0; i < rankMapping.size(); i++) {
+        if (rankMapping[i] == rank) {
+            verifyData(data.getRow(seen), i);
+            CHECK(data.getRemoteIndexForRow(seen) == i);
+            seen++;
+        }
+    }
+}
 
 static void DEBUG_printData(const std::vector<std::vector<double>> &data) {
     for (const auto & d : data) {
@@ -52,135 +103,94 @@ static void DEBUG_printData(const std::vector<std::vector<double>> &data) {
     }
 }
 
-// TEST_CASE("Testing loading data") {
-//     std::string dataAsString = matrixToString(DATA);
-//     std::istringstream inputStream(dataAsString);
-//     AsciiDataLoader loader(inputStream);
+TEST_CASE("Testing loading dense data") {
+    std::string dataAsString = matrixToString(DENSE_DATA);
+    std::istringstream inputStream(dataAsString);
+    DenseDataRowFactory denseFactory;
 
-//     auto data = loadData(loader);
+    auto data = loadData(denseFactory, inputStream);
 
-//     CHECK(data == DATA);
-// }
+    CHECK(data.size() == DENSE_DATA.size());
+    verifyData(move(data));
+}
 
-// TEST_CASE("Testing length calculation") {
-//     double length = Normalizer::vectorLength(VECTOR_WITH_LENGTH.first);
-//     CHECK(length == VECTOR_WITH_LENGTH.second);
-// }
+TEST_CASE("Testing loading sparse data") {
+    std::string dataAsString = matrixToString(SPARSE_DATA);
+    std::istringstream inputStream(dataAsString);
+    SparseDataRowFactory sparseFactory(SPARSE_DATA_TOTAL_COLUMNS);
 
-// TEST_CASE("Testing vector normalization") {
-//     for (const auto & e : DATA) {
-//         std::vector<double> copy = e;
-//         Normalizer::normalize(copy);
+    auto data = loadData(sparseFactory, inputStream);
 
-//         validateNormalizedVector(copy);
-//     }
-// }
+    CHECK(data.size() == SPARSE_DATA_AS_MAP.size());
+    verifyData(move(data));
+}
 
-// TEST_CASE("Testing the normalized data loader") {
-//     std::istringstream inputStream(matrixToString(DATA));
-//     AsciiDataLoader dataLoader(inputStream);
-//     Normalizer normalizer(dataLoader);
-//     std::vector<double> element;
-//     while (normalizer.getNext(element)) {
-//         validateNormalizedVector(element);
-//     }
-// }
+TEST_CASE("Testing dense base data") {
+    std::string dataAsString = matrixToString(DENSE_DATA);
+    std::istringstream inputStream(dataAsString);
+    DenseDataRowFactory factory;
+    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(factory, inputStream));
+    verifyData(*data.get());
+}
 
-// TEST_CASE("Testing saving data") {
-//     std::string dataAsString = matrixToString(DATA);
-//     std::ostringstream stringStream;
+TEST_CASE("Testing sparse base data") {
+    std::string dataAsString = matrixToString(SPARSE_DATA);
+    std::istringstream inputStream(dataAsString);
+    SparseDataRowFactory factory(SPARSE_DATA_TOTAL_COLUMNS);
+    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(factory, inputStream));
+    verifyData(*data.get());
+}
 
-//     std::istringstream inputStream(dataAsString);
-//     AsciiDataLoader dataLoader(inputStream);
-//     AsciiDataSaver saver(dataLoader);
-//     stringStream << saver;
-//     CHECK(stringStream.str() == dataAsString);
-// }
-
-// TEST_CASE("Testing loading and saving binary data") {
-//     std::string dataAsString = matrixToString(DATA);
-//     std::istringstream asciiStream(dataAsString);
-
-//     AsciiDataLoader asciiDataLoader(asciiStream);
-//     BinaryDataSaver saver(asciiDataLoader);
-
-//     std::ostringstream outputStream;
-//     outputStream << saver;
-
-//     std::istringstream binaryStream(outputStream.str());
-//     BinaryDataLoader binaryDataLoader(binaryStream);
-
-//     std::vector<std::vector<double>> data = loadData(binaryDataLoader);
-
-//     CHECK(data == DATA);
-// }
-
-// TEST_CASE("Testing matrix builder") {
-//     std::string dataAsString = matrixToString(DATA);
-//     std::istringstream inputStream(dataAsString);
-//     AsciiDataLoader loader(inputStream);
-
-//     NaiveData matrix(loader);
-
-//     CHECK(matrix.DEBUG_compareData(DATA));
-//     CHECK(matrix.totalRows() == DATA.size());
-//     CHECK(matrix.totalColumns() == DATA[0].size());
-// }
-
-// TEST_CASE("Testing blocked data loader") {
-//     std::istringstream inputStream(matrixToString(DATA));
-//     AsciiDataLoader dataLoader(inputStream);
+TEST_CASE("Testing segmented dense data") {
+    std::string dataAsString = matrixToString(SPARSE_DATA);
+    std::istringstream inputStream(dataAsString);
+    SparseDataRowFactory factory(SPARSE_DATA_TOTAL_COLUMNS);
     
-//     std::vector<std::vector<double>> ownedRows;
-//     ownedRows.push_back(DATA[0]);
-//     ownedRows.push_back(DATA[3]);
-
-//     const int RANK = 1;
+    std::vector<unsigned int> rankMapping({0, 1, 2, 3, 2, 1});
+    const int rank = 2;
     
-//     std::vector<unsigned int> ownership(DATA.size(), 0);
-//     ownership[0] = RANK;
-//     ownership[3] = RANK;
+    std::unique_ptr<SegmentedData> data(SegmentedData::load(factory, inputStream, rankMapping, rank));
+    CHECK(data->totalRows() == 2);
+    verifyData(*data.get(), rankMapping, rank);
+}
 
-//     BlockedDataLoader blockedDataLoader(dataLoader, ownership, RANK);
-//     std::vector<double> element;
-//     std::vector<std::vector<double>> rows;
-//     while (blockedDataLoader.getNext(element)) {
-//         rows.push_back(element);
-//     }
+TEST_CASE("Testing ReceivedData translation and construction") {
+    std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> mockReceiveData(
+        new std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>()
+    );
 
-//     CHECK(rows.size() == 2);
-//     CHECK(rows == ownedRows);
-// }
+    std::vector<size_t> mockSolutionIndicies;
+    mockSolutionIndicies.push_back(1);
+    mockSolutionIndicies.push_back(DENSE_DATA.size() - 1);
+    for (const auto & i : mockSolutionIndicies) {
+        mockReceiveData->push_back(
+            std::make_pair(
+                i, 
+                std::unique_ptr<DataRow>(new DenseDataRow(DENSE_DATA[i]))
+            )
+        );
+    }
 
-// TEST_CASE("Testing SelectiveData translation and construction") {
-//     std::vector<std::pair<size_t, std::vector<double>>> mockReceiveData;
-//     std::vector<size_t> mockSolutionIndicies;
-//     mockSolutionIndicies.push_back(1);
-//     mockSolutionIndicies.push_back(DATA.size() - 1);
-//     for (const auto & i : mockSolutionIndicies) {
-//         mockReceiveData.push_back(std::make_pair(i, DATA[i]));
-//     }
+    ReceivedData data(move(mockReceiveData));
 
-//     SelectiveData selectiveData(mockReceiveData);
-//     std::unique_ptr<MutableSubset> mockSolution(NaiveMutableSubset::makeNew());
+    CHECK(data.totalRows() == mockSolutionIndicies.size());
+    CHECK(data.totalColumns() == DENSE_DATA[0].size());
 
-//     for (size_t i = 0; i < mockReceiveData.size(); i++) {
-//         mockSolution->addRow(i, 0);
-//     }
+    for (size_t i = 0; i < data.totalRows(); i++) {
+        verifyData(data.getRow(i), mockSolutionIndicies[i]);
+    }
 
-//     auto translated = selectiveData.translateSolution(MutableSubset::upcast(move(mockSolution)));
+    std::unique_ptr<MutableSubset> mockSolution(NaiveMutableSubset::makeNew());
 
-//     for (size_t i = 0; i < mockReceiveData.size(); i++) {
-//         CHECK(mockReceiveData[i].first == translated->getRow(i));
-//     }
+    for (size_t i = 0; i < data.totalRows(); i++) {
+        mockSolution->addRow(i, 0);
+    }
 
-//     CHECK(mockReceiveData.size() == translated->size());
-// }
+    auto translated = data.translateSolution(MutableSubset::upcast(move(mockSolution)));
+    CHECK(mockSolutionIndicies.size() == translated->size());
 
-// TEST_CASE("Testing adjacency list loader without values") {
-//     std::string listData = "0, 2\n0, 3\n2, 1\n2, 3\n3, 3";
-//     std::istringstream stream(listData);
-//     AsciiAdjacencyListDataLoader loader(stream, 4);
-//     auto data = loadData(loader);
-//     DEBUG_printData(data);
-// }
+    int i = 0;
+    for (const auto v : *translated.get()) {
+        CHECK(mockSolutionIndicies[i++] == v);
+    }
+}

@@ -103,8 +103,8 @@ class SegmentedData : public BaseData {
             if (rankMapping[globalRow] == rank) {
                 data.push_back(std::unique_ptr<DataRow>(nextRow));
                 localRowToGlobalRow.push_back(globalRow);
-                globalRow++;
             }
+            globalRow++;
         }
 
         if (localRowToGlobalRow.size() != data.size()) {
@@ -139,7 +139,7 @@ class SegmentedData : public BaseData {
 
 class ReceivedData : public BaseData {
     private:
-    const std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> &base;
+    std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> base;
     const size_t rows;
     const size_t columns;
 
@@ -148,8 +148,13 @@ class ReceivedData : public BaseData {
     ReceivedData(const BaseData&);
 
     public:
-    ReceivedData(std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> base) 
-    : base(move(base)), rows(base->size()), columns(base->at(0).second->size()) {}
+    ReceivedData(
+        std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> input
+    ) : 
+        base(move(input)),
+        rows(this->base->size()), 
+        columns(this->base->at(0).second->size())
+    {}
 
     const DataRow& getRow(size_t i) const {
         return *(this->base->at(i).second);
@@ -168,6 +173,7 @@ class ReceivedData : public BaseData {
     ) const {
         std::vector<size_t> translatedRows;
         for (const auto & relativeRow : *localSolution.get()) {
+            std::cout << "relative row " << relativeRow << std::endl;
             translatedRows.push_back(this->base->at(relativeRow).first);
         }
 
