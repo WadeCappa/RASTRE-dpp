@@ -12,12 +12,16 @@ class DataRow {
 
 class DenseDataRow : public DataRow {
     private:
-    const std::vector<double> data;
+    std::vector<double> data;
 
     public:
     DenseDataRow() {}
     
     DenseDataRow(std::vector<double> data) : data(move(data)) {}
+
+    void push_back(double val) {
+        this->data.push_back(val);
+    }
 
     size_t size() const {
         return this->data.size();

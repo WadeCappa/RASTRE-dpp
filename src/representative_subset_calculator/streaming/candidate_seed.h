@@ -3,14 +3,14 @@
 
 class CandidateSeed {
     private:
-    std::vector<double> data;
+    std::unique_ptr<DataRow> data;
     unsigned int globalRow;
     unsigned int originRank;
 
     public:
     CandidateSeed(
         const unsigned int row, 
-        std::vector<double> data,
+        std::unique_ptr<DataRow> data,
         const unsigned int rank
     ) : 
         data(move(data)), 
@@ -18,8 +18,8 @@ class CandidateSeed {
         originRank(rank)
     {}
 
-    const std::vector<double> &getData() {
-        return this->data;
+    const DataRow &getData() {
+        return *(this->data.get());
     }
 
     unsigned int getRow() {

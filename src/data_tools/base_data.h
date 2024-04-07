@@ -128,7 +128,7 @@ class SegmentedData : public BaseData {
 
 class ReceivedData : public BaseData {
     private:
-    const std::vector<std::pair<size_t, std::unique_ptr<DataRow>>> &base;
+    const std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> &base;
     const size_t rows;
     const size_t columns;
 
@@ -137,11 +137,11 @@ class ReceivedData : public BaseData {
     ReceivedData(const BaseData&);
 
     public:
-    ReceivedData(std::vector<std::pair<size_t, std::unique_ptr<DataRow>>> base) 
-    : base(move(base)), rows(base.size()), columns(base[0].second->size()) {}
+    ReceivedData(std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> base) 
+    : base(move(base)), rows(base->size()), columns(base->at(0).second->size()) {}
 
     const DataRow& getRow(size_t i) const {
-        return *(this->base[i].second);
+        return *(this->base->at(i).second);
     }
 
     size_t totalRows() const {
@@ -157,7 +157,7 @@ class ReceivedData : public BaseData {
     ) const {
         std::vector<size_t> translatedRows;
         for (const auto & relativeRow : *localSolution.get()) {
-            translatedRows.push_back(this->base[relativeRow].first);
+            translatedRows.push_back(this->base->at(relativeRow).first);
         }
 
         return Subset::of(translatedRows, localSolution->getScore());

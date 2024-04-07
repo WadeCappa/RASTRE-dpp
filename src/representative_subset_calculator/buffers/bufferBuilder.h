@@ -90,8 +90,7 @@ class GlobalBufferLoader : public BufferLoader {
     public:
     std::unique_ptr<Subset> getSolution(std::unique_ptr<SubsetCalculator> calculator, const size_t k) {
         this->timers.bufferDecodingTime.startTimer();
-        auto newData = this->rebuildData();
-        ReceivedData bestRows(*newData);
+        ReceivedData bestRows(move(this->rebuildData()));
         this->timers.bufferDecodingTime.stopTimer();
 
         timers.globalCalculationTime.startTimer();
@@ -139,17 +138,21 @@ class GlobalBufferLoader : public BufferLoader {
             for (size_t currentRow = rowOffset; currentRow < rowOffsetForNextRank; currentRow++) {
                 const size_t relativeRow = currentRow - rowOffset;
                 const size_t globalRowStart = (columnsPerRowInBuffer * relativeRow) + displacements[rank] + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
+                DataRow *defaultDenseDataRow = new DenseDataRow(
+                    std::vector<double>(
+                        // Don't capture the first element, which is the index of the row
+                        binaryInput.begin() + globalRowStart + DOUBLES_FOR_ROW_INDEX_PER_COLUMN, 
+                        binaryInput.begin() + globalRowStart + columnsPerRowInBuffer
+                    )
+                );
                 newData->at(currentRow) = std::make_pair(
                     binaryInput[globalRowStart],
-                    // Don't capture the first element, which is the index of the row
-                    // TODO: This class does not yet compile because this needs to be done with
-                    //  a factory. Otherwise we will not create the correct data rows
-                    std::vector<double>(binaryInput.begin() + globalRowStart + DOUBLES_FOR_ROW_INDEX_PER_COLUMN, binaryInput.begin() + globalRowStart + columnsPerRowInBuffer)
+                    std::unique_ptr<DataRow>(defaultDenseDataRow)
                 );
             }
         }
     
-        return std::unique_ptr<std::vector<std::pair<size_t, std::vector<double>>>>(newData);
+        return std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>>(newData);
     }
 
     std::unique_ptr<Subset> getBestLocalSolution() {
