@@ -40,8 +40,8 @@ class DenseDataRow : public DataRow {
 
 class SparseDataRow : public DataRow {
     public:
-    const size_t totalColumns;
     const std::map<size_t, double> rowToValue;
+    const size_t totalColumns;
 
     SparseDataRow(std::map<size_t, double> map, size_t totalCoumns) : 
         rowToValue(move(map)), 
@@ -59,6 +59,6 @@ class SparseDataRow : public DataRow {
     }
 
     void visit(DataRowVisitor &visitor) const {
-        visitor.visitSparseDataRow(this->rowToValue);
+        visitor.visitSparseDataRow(this->rowToValue, this->totalColumns);
     }
 };

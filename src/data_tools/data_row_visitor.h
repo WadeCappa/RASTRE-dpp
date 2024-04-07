@@ -4,7 +4,7 @@
 class DataRowVisitor {
     public:
     virtual void visitDenseDataRow(const std::vector<double>& data) = 0;
-    virtual void visitSparseDataRow(const std::map<size_t, double>& data) = 0;
+    virtual void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) = 0;
 };
 
 class DenseDotProductDataRowVisitor : public DataRowVisitor {
@@ -24,7 +24,7 @@ class DenseDotProductDataRowVisitor : public DataRowVisitor {
         this->res = result;
     }
 
-    void visitSparseDataRow(const std::map<size_t, double>& data) {
+    void visitSparseDataRow(const std::map<size_t, double>& data, size_t _totalColumns) {
         double result = 0;
         for (const auto & p : data) {
             result += this->base[p.first] * p.second;
@@ -55,7 +55,7 @@ class SparseDotProductDataRowVisitor : public DataRowVisitor {
         this->res = result;
     }
 
-    void visitSparseDataRow(const std::map<size_t, double>& data) {
+    void visitSparseDataRow(const std::map<size_t, double>& data, size_t _totalColumns) {
         double result = 0;
         for (const auto & p : this->base) {
             if (data.find(p.first) != data.end()) {

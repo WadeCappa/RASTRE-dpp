@@ -42,7 +42,12 @@ class BufferBuilderVisitor : public DataRowVisitor {
         }
     }
 
-    void visitSparseDataRow(const std::map<size_t, double>& data) {
+    void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
+        std::vector<double> denseData(totalColumns, 0);
+        for (const auto & p : data) {
+            denseData[p.first] = p.second;
+        }
 
+        this->visitDenseDataRow(denseData);
     }
 };
