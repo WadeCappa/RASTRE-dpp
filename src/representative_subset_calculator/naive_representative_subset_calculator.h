@@ -48,7 +48,8 @@ class NaiveSubsetCalculator : public SubsetCalculator {
             }
 
             if (bestRow == -1) {
-                throw std::invalid_argument("FAILED to add element to matrix that increased marginal");
+                std::cout << "FAILED to add element to matrix that increased marginal" << std::endl;
+                return MutableSubset::upcast(move(consumer));
             }
 
             double marginalGain = highestMarginal - currentScore;
