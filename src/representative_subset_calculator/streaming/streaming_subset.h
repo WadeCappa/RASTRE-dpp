@@ -14,7 +14,6 @@ class StreamingSubset : public MutableSubset {
         }
 
         void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
-            binary = std::vector<double>(totalColumns, 0);
             for (const auto & p : data) {
                 binary[p.first] = p.second;
             }

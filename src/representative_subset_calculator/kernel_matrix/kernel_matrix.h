@@ -10,6 +10,8 @@ class KernelMatrix {
 
     std::vector<double> getDiagonals(size_t rows) {
         std::vector<double> res(rows);
+        
+        #pragma omp parallel for
         for (size_t index = 0; index < rows; index++) {
             res[index] = this->get(index, index);
         }
@@ -73,6 +75,7 @@ class NaiveKernelMatrix : public KernelMatrix {
             std::vector<double>(data.totalRows(), 0)
         );
 
+        #pragma omp parallel for
         for (size_t i = 0; i < data.totalRows(); i++) {
             for (size_t j = 0; j < data.totalRows(); j++) {
                 double dotProduct = data.getRow(j).dotProduct(data.getRow(i));
