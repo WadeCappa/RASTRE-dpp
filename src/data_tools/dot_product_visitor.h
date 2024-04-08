@@ -1,64 +1,67 @@
+#include <optional>
 
 class DenseDotProductDataRowVisitor : public DataRowVisitor {
     private:
-    double res;
+    std::optional<double> result;
     const std::vector<double>& base;
 
     public:
-    DenseDotProductDataRowVisitor(const std::vector<double>& base) : base(base), res(0) {}
+    DenseDotProductDataRowVisitor(const std::vector<double>& input) 
+    : base(input), result(std::nullopt) {}
 
     void visitDenseDataRow(const std::vector<double>& data) {
-        double result = 0;
+        double dotProduct = 0;
         for (size_t i = 0; i < this->base.size() && i < data.size(); i++) {
-            res += this->base[i] * data[i];
+            dotProduct += this->base[i] * data[i];
         }
 
-        this->res = result;
+        this->result = dotProduct;
     }
 
     void visitSparseDataRow(const std::map<size_t, double>& data, size_t _totalColumns) {
-        double result = 0;
+        double dotProduct = 0;
         for (const auto & p : data) {
-            result += this->base[p.first] * p.second;
+            dotProduct += this->base[p.first] * p.second;
         }
 
-        this->res = result;
+        this->result = dotProduct;
     }
 
-    double get() const {
-        return this->res;
+    std::optional<double> get() const {
+        return this->result;
     }
 };
 
 class SparseDotProductDataRowVisitor : public DataRowVisitor {
     private:
-    double res;
+    std::optional<double> result;
     const std::map<size_t, double>& base;
 
     public:
-    SparseDotProductDataRowVisitor(const std::map<size_t, double>& base) : base(base), res(0) {}
+    SparseDotProductDataRowVisitor(const std::map<size_t, double>& input) 
+    : base(input), result(std::nullopt) {}
 
     void visitDenseDataRow(const std::vector<double>& data) {
-        double result = 0;
+        double dotProduct = 0;
         for (const auto & p : this->base) {
-            result += data[p.first] * p.second;
+            dotProduct += data[p.first] * p.second;
         }
 
-        this->res = result;
+        this->result = dotProduct;
     }
 
     void visitSparseDataRow(const std::map<size_t, double>& data, size_t _totalColumns) {
-        double result = 0;
+        double dotProduct = 0;
         for (const auto & p : this->base) {
             if (data.find(p.first) != data.end()) {
-                result += data.at(p.first) * p.second;
+                dotProduct += data.at(p.first) * p.second;
             }
         }
 
-        this->res = result;
+        this->result = dotProduct;
     }
 
-    double get() const {
-        return this->res;
+    std::optional<double> get() const {
+        return this->result;
     }
 };

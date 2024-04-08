@@ -18,7 +18,7 @@ class DenseDataRow : public DataRow {
     public:
     DenseDataRow() {}
     
-    DenseDataRow(std::vector<double> data) : data(move(data)) {}
+    DenseDataRow(std::vector<double> input) : data(move(input)) {}
 
     void push_back(double val) {
         this->data.push_back(val);
@@ -31,7 +31,7 @@ class DenseDataRow : public DataRow {
     double dotProduct(const DataRow& dataRow) const {
         DenseDotProductDataRowVisitor visitor(this->data);
         dataRow.visit(visitor);
-        return visitor.get();
+        return visitor.get().value();
     }
 
     void visit(DataRowVisitor &visitor) const {
@@ -56,7 +56,7 @@ class SparseDataRow : public DataRow {
     double dotProduct(const DataRow& dataRow) const {
         SparseDotProductDataRowVisitor visitor(this->rowToValue);
         dataRow.visit(visitor);
-        return visitor.get();
+        return visitor.get().value();
     }
 
     void visit(DataRowVisitor &visitor) const {

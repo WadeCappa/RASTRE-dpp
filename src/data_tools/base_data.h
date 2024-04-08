@@ -43,7 +43,7 @@ class FullyLoadedData : public BaseData {
 
     static std::unique_ptr<FullyLoadedData> load(std::vector<std::vector<double>> raw) {
         std::vector<std::unique_ptr<DataRow>> data;
-        for (const auto & v : raw) {
+        for (std::vector<double> v : raw) {
             data.push_back(std::unique_ptr<DataRow>(new DenseDataRow(v)));
         }
 

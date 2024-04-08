@@ -57,4 +57,5 @@ static const std::vector<std::map<size_t, double>> SPARSE_DATA_AS_MAP = toMap();
 static const double LARGEST_ACCEPTABLE_ERROR = 0.00000001;
 
 #include "data_tools/tests.h"
+
 #include "representative_subset_calculator/tests.h"
