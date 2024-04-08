@@ -1,6 +1,7 @@
 #include <map>
 #include <vector>
 #include <iostream>
+#include <memory>
 
 static const std::string DELIMETER = ",";
 
@@ -19,6 +20,10 @@ class DenseDataRow : public DataRow {
     DenseDataRow() {}
     
     DenseDataRow(std::vector<double> input) : data(move(input)) {}
+
+    static std::unique_ptr<DataRow> of(std::vector<double> data) {
+        return std::unique_ptr<DataRow>(new DenseDataRow(move(data)));
+    }
 
     void push_back(double val) {
         this->data.push_back(val);
