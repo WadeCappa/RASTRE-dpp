@@ -81,8 +81,9 @@ void randGreedi(
 
     if (appData.worldRank == 0) {
         std::unique_ptr<SubsetCalculator> globalCalculator(MpiOrchestrator::getCalculator(appData));
+        std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
         GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers);
-        std::unique_ptr<Subset> globalSolution(bufferLoader.getSolution(move(globalCalculator), appData.outputSetSize));
+        std::unique_ptr<Subset> globalSolution(bufferLoader.getSolution(move(globalCalculator), appData.outputSetSize, *factory.get()));
 
         timers.totalCalculationTime.stopTimer();
 
@@ -119,12 +120,7 @@ void streaming(
 
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
         std::unique_ptr<Receiver> receiver(
-            MpiReceiver::buildReceiver(
-                appData.worldSize, 
-                rowSize, 
-                std::floor(appData.outputSetSize * appData.alpha),
-                *factory
-            )
+            MpiReceiver::buildReceiver(appData.worldSize, rowSize, *factory)
         );
         std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(appData, omp_get_num_threads() - 1, appData.worldSize - 1));
         SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers);

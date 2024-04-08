@@ -79,7 +79,8 @@ class BufferLoader : public Buffer {
     public:
     virtual std::unique_ptr<Subset> getSolution(
         std::unique_ptr<SubsetCalculator> calculator,
-        const size_t k
+        const size_t k,
+        const DataRowFactory &factory
     ) = 0;
 };
 
@@ -92,9 +93,13 @@ class GlobalBufferLoader : public BufferLoader {
     const size_t worldSize;
 
     public:
-    std::unique_ptr<Subset> getSolution(std::unique_ptr<SubsetCalculator> calculator, const size_t k) {
+    std::unique_ptr<Subset> getSolution(
+        std::unique_ptr<SubsetCalculator> calculator, 
+        const size_t k,
+        const DataRowFactory &factory
+    ) {
         this->timers.bufferDecodingTime.startTimer();
-        ReceivedData bestRows(move(this->rebuildData()));
+        ReceivedData bestRows(move(this->rebuildData(factory)));
         this->timers.bufferDecodingTime.stopTimer();
 
         timers.globalCalculationTime.startTimer();
@@ -126,7 +131,9 @@ class GlobalBufferLoader : public BufferLoader {
     {}
 
     private:
-    std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> rebuildData() {
+    std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> rebuildData(
+        const DataRowFactory &factory
+    ) {
         std::vector<size_t> rowOffsets = getRowOffsets();
         const size_t totalExpectedRows = rowOffsets.back();
         const size_t numberOfBytesWithoutLocalMarginals = binaryInput.size() - worldSize * DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
@@ -142,16 +149,16 @@ class GlobalBufferLoader : public BufferLoader {
             for (size_t currentRow = rowOffset; currentRow < rowOffsetForNextRank; currentRow++) {
                 const size_t relativeRow = currentRow - rowOffset;
                 const size_t globalRowStart = (columnsPerRowInBuffer * relativeRow) + displacements[rank] + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
-                DataRow *defaultDenseDataRow = new DenseDataRow(
-                    std::vector<double>(
-                        // Don't capture the first element, which is the index of the row
-                        binaryInput.begin() + globalRowStart + DOUBLES_FOR_ROW_INDEX_PER_COLUMN, 
-                        binaryInput.begin() + globalRowStart + columnsPerRowInBuffer
-                    )
+                std::vector<double> binary(
+                    // Don't capture the first element, which is the index of the row
+                    binaryInput.begin() + globalRowStart + DOUBLES_FOR_ROW_INDEX_PER_COLUMN, 
+                    binaryInput.begin() + globalRowStart + columnsPerRowInBuffer
                 );
+                std::unique_ptr<DataRow> dataRow(factory.get(move(binary)));
+
                 newData->at(currentRow) = std::make_pair(
                     binaryInput[globalRowStart],
-                    std::unique_ptr<DataRow>(defaultDenseDataRow)
+                    move(dataRow)
                 );
             }
         }

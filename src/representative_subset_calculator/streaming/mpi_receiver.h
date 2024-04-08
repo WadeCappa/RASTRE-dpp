@@ -7,7 +7,6 @@ class MpiReceiver : public Receiver {
     static std::unique_ptr<Receiver> buildReceiver(
         const unsigned int worldSize, 
         const size_t rowSize, 
-        const int k,
         const DataRowFactory &factory
     ) {
         return std::unique_ptr<Receiver>(

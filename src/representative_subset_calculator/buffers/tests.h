@@ -77,10 +77,13 @@ TEST_CASE("Getting solution from a buffer") {
 
     Timers timers;
     GlobalBufferLoader bufferLoader(sendBuffer, data->totalColumns(), displacements, timers);
-    std::unique_ptr<Subset> receivedSolution(bufferLoader.getSolution(
-        std::unique_ptr<SubsetCalculator>(new NaiveSubsetCalculator()), 
-        MOCK_SOLUTION->size()
-    ));
+    std::unique_ptr<Subset> receivedSolution(
+        bufferLoader.getSolution(
+            std::unique_ptr<SubsetCalculator>(new NaiveSubsetCalculator()), 
+            MOCK_SOLUTION->size(),
+            DenseDataRowFactory()
+        )
+    );
 
     CHECK(receivedSolution->size() == MOCK_SOLUTION->size());
     std::vector<size_t> mockSolutionRows = getRows(*MOCK_SOLUTION.get());

@@ -44,7 +44,7 @@ class FullyLoadedData : public BaseData {
     static std::unique_ptr<FullyLoadedData> load(std::vector<std::vector<double>> raw) {
         std::vector<std::unique_ptr<DataRow>> data;
         for (std::vector<double> v : raw) {
-            data.push_back(std::unique_ptr<DataRow>(new DenseDataRow(v)));
+            data.push_back(std::unique_ptr<DataRow>(new DenseDataRow(move(v))));
         }
 
         size_t cols = data[0]->size();
