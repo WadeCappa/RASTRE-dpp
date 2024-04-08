@@ -102,7 +102,7 @@ class StreamingSubset : public MutableSubset {
         if(this->base->size() == 1)
             timers.firstSeedTime.stopTimer();
 
-        this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(rowToSend)));
+        this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(move(rowToSend))));
 
         // Keep at least one seed until finalize is called. Otherwise there is no garuntee of
         //  how many seeds there are left to find.
