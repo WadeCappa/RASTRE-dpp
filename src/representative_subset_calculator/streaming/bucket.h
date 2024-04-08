@@ -7,7 +7,7 @@ class ThresholdBucket
     std::unique_ptr<MutableSubset> solution;
     std::unique_ptr<std::vector<const DataRow *>> solutionRows; 
     std::unique_ptr<std::vector<double>> d; 
-    std::unique_ptr<std::vector<DenseDataRow>> b; 
+    std::unique_ptr<std::vector<std::unique_ptr<DenseDataRow>>> b; 
 
     double threshold;
     int k;
@@ -20,7 +20,7 @@ class ThresholdBucket
         solution(NaiveMutableSubset::makeNew()), 
         solutionRows(std::make_unique<std::vector<const DataRow *>>()),
         d(std::make_unique<std::vector<double>>()),
-        b(std::make_unique<std::vector<DenseDataRow>>())
+        b(std::make_unique<std::vector<std::unique_ptr<DenseDataRow>>>())
     {}
 
     ThresholdBucket(
@@ -29,7 +29,7 @@ class ThresholdBucket
         std::unique_ptr<MutableSubset> nextSolution,
         std::unique_ptr<std::vector<const DataRow *>> solutionRows,
         std::unique_ptr<std::vector<double>> d,
-        std::unique_ptr<std::vector<DenseDataRow>> b
+        std::unique_ptr<std::vector<std::unique_ptr<DenseDataRow>>> b
     ) : 
         threshold(threshold), 
         k(k), 
@@ -66,14 +66,14 @@ class ThresholdBucket
         }
         
         double d_i = std::sqrt(data.dotProduct(data));
-        DenseDataRow c_i;
+        std::unique_ptr<DenseDataRow> c_i(new DenseDataRow());
 
         for (size_t j = 0; j < this->solution->size(); j++) {
             if (!this->passesThreshold(std::log(std::pow(d_i, 2)))) {
                 return false;
             }
-            const double e_i = (data.dotProduct(*(solutionRows->at(j))) - b->at(j).dotProduct(c_i)) / d->at(j);
-            c_i.push_back(e_i);
+            const double e_i = (data.dotProduct(*(solutionRows->at(j))) - c_i->dotProduct(*b->at(j))) / d->at(j);
+            c_i->push_back(e_i);
             d_i = std::sqrt(std::pow(d_i, 2) - std::pow(e_i, 2));
         }
 
@@ -82,7 +82,7 @@ class ThresholdBucket
             this->solution->addRow(rowIndex, marginal);
             this->solutionRows->push_back(&data);
             this->d->push_back(d_i);
-            this->b->push_back(std::move(c_i));
+            this->b->push_back(move(c_i));
             return true;
         } 
 

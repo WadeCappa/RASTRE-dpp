@@ -16,6 +16,8 @@ class DenseDataRow : public DataRow {
     private:
     std::vector<double> data;
 
+    DenseDataRow(const DenseDataRow &);
+
     public:
     DenseDataRow() {}
     
@@ -45,10 +47,13 @@ class DenseDataRow : public DataRow {
 };
 
 class SparseDataRow : public DataRow {
-    public:
+    private:
     const std::map<size_t, double> rowToValue;
     const size_t totalColumns;
 
+    SparseDataRow(const SparseDataRow &);
+
+    public:
     SparseDataRow(std::map<size_t, double> map, size_t totalColumns) : 
         rowToValue(move(map)), 
         totalColumns(totalColumns) 
