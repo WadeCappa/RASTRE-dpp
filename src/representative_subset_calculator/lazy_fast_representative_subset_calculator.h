@@ -66,7 +66,8 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         std::make_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
         queueTimer.stopTimer();
         std::cout << "made heap in " << queueTimer.getTotalTime() <<" seconds " << std::endl;
-
+        Timers::SingleTimer seedOneTimer;
+        seedOneTimer.startTimer();
         while (consumer->size() < k) {
             size_t i = priorityQueue.front();
             std::pop_heap(priorityQueue.begin(),priorityQueue.end(), comparitor); 
@@ -82,11 +83,19 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
 
             u[i] = consumer->size();
             
+            // To ensure "Numerical stability" ¯\_(ツ)_/¯
+            if (diagonals[i] < this->epsilon) 
+                break;
+            
             double marginalGain = std::log(diagonals[i]);
             double nextScore = std::log(diagonals[priorityQueue.front()]);
 
-            if (marginalGain > nextScore || consumer->size() == data.totalRows() - 1) {
+            if (marginalGain >= nextScore || consumer->size() == data.totalRows() - 1) {
                 consumer->addRow(i, marginalGain);
+                if( consumer->size() == 1 ) {
+                    seedOneTimer.stopTimer();
+                    std::cout << "found first seed in " << seedOneTimer.getTotalTime() <<" seconds " << std::endl;
+                }
             } else {
                 priorityQueue.push_back(i);
                 std::push_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
