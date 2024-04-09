@@ -47,10 +47,16 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         std::vector<size_t> u(data.totalRows(), 0);
 
         // Initialize kernel matrix 
+        Timers::SingleTimer matrixTimer;
+        matrixTimer.startTimer();
         LazyKernelMatrix kernelMatrix(data);
         std::vector<double> diagonals = kernelMatrix.getDiagonals(data.totalRows());
+        matrixTimer.stopTimer();
+        std::cout << "found diagonals in " << matrixTimer.getTotalTime() << " ms" << std::endl;
 
         // Initialize priority queue
+        Timers::SingleTimer queueTimer;
+        queueTimer.startTimer();
         std::vector<size_t> priorityQueue;
         for (size_t index = 0; index < data.totalRows(); index++) {
             priorityQueue.push_back(index);
@@ -58,6 +64,8 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
 
         HeapComparitor comparitor(diagonals);
         std::make_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
+        queueTimer.stopTimer();
+        std::cout << "made heap in " << queueTimer.getTotalTime() <<" ms" << std::endl;
 
         while (consumer->size() < k) {
             size_t i = priorityQueue.front();
