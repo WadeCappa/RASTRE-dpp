@@ -112,17 +112,25 @@ void streaming(
     unsigned int rowSize = data.totalColumns();
     std::vector<unsigned int> rowSizes(appData.worldSize);
     MPI_Gather(&rowSize, 1, MPI_INT, rowSizes.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
-    rowSize = rowSizes.back();
 
     if (appData.worldRank == 0) {
         std::cout << "rank 0 entered into the streaming function and knows the total columns of "<< rowSize << std::endl;
         timers.totalCalculationTime.startTimer();
 
+        // if you are using an adjacency list as input, double this. Sparse data could theoretically
+        //  be double the size of dense data in worst case. Senders will not send more data than they
+        //  have, but you need to be prepared for worst case in the receiver (allocation is cheaper
+        //  than sends anyway).
+        rowSize = appData.adjacencyListColumnCount > 0 ? rowSizes.back() : rowSizes.back() * 2;
+
+
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
         std::unique_ptr<Receiver> receiver(
             MpiReceiver::buildReceiver(appData.worldSize, rowSize, *factory)
         );
-        std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(appData, omp_get_num_threads() - 1, appData.worldSize - 1));
+        std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(
+            appData, omp_get_num_threads() - 1, appData.worldSize - 1)
+        );
         SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers);
 
         std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
@@ -130,7 +138,9 @@ void streaming(
         timers.totalCalculationTime.stopTimer();
         std::cout << "rank 0 finished receiving" << std::endl;
 
-        nlohmann::json result = MpiOrchestrator::buildMpiOutput(appData, *solution.get(), data, timers, rowToRank);
+        nlohmann::json result = MpiOrchestrator::buildMpiOutput(
+            appData, *solution.get(), data, timers, rowToRank
+        );
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);
