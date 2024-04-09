@@ -115,11 +115,17 @@ class SparseDataRowFactory : public DataRowFactory {
     std::unique_ptr<DataRow> getFromSentBinary(std::vector<double> binary) const {
         std::map<size_t, double> res;
 
-        for (size_t i = 0; i < binary.size(); i++) {
+        for (
+            size_t i = 0;
+            i < binary.size();
+            
+            // Notice that this is +2 for every iteration, not plus 1
+            i += 2
+        ) {
             if (binary[i] == CommunicationConstants::getNoMoreEdgesTag()) {
                 return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));
             }
-            res.insert({i, binary[i]});
+            res.insert({binary[i], binary[i + 1]});
         }
 
         throw std::invalid_argument("failed to finish building buffer");

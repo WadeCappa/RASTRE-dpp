@@ -39,13 +39,11 @@ class BufferBuilder : public Buffer {
         //  total marginal being inserted at the beggining of the send buffer
         #pragma parallel for
         for (size_t localRowIndex = 0; localRowIndex < numberOfRows; localRowIndex++) {
+            size_t start = rowSize * localRowIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
             size_t globalIndex = data.getRemoteIndexForRow(localSolution.getRow(localRowIndex));
+            buffer[start] = globalIndex;
             BufferBuilderVisitor visitor(
-                localRowIndex, 
-                globalIndex, 
-                rowSize, 
-                DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER, 
-                DOUBLES_FOR_ROW_INDEX_PER_COLUMN, 
+                start + 1,
                 buffer
             );
             data.getRow(localSolution.getRow(localRowIndex)).visit(visitor);

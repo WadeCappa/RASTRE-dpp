@@ -14,13 +14,11 @@ class StreamingSubset : public MutableSubset {
         }
 
         void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
-            size_t index = 0;
             for (const auto & p : data) {
-                binary[index++] = p.first;
-                binary[index++] = p.second;
+                binary.push_back(p.first);
+                binary.push_back(p.second);
             }
-
-            binary[index] = CommunicationConstants::getNoMoreEdgesTag();
+            binary.push_back(CommunicationConstants::getNoMoreEdgesTag());
         }
 
         std::vector<double> getAndDestroy() {

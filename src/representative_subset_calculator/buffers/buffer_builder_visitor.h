@@ -2,53 +2,33 @@
 
 class BufferBuilderVisitor : public DataRowVisitor {
     private:
-    const size_t localRowIndex;
-    const size_t globalRowIndex;
-    const size_t rowSize;
-    const size_t doublesForLocalMarginalPerBuffer;
-    const size_t doublesForRowIndexPerColumn;
+    const size_t start;
 
     std::vector<double> &buffer;
 
     public:
     BufferBuilderVisitor(
-        size_t localRowIndex, 
-        size_t globalRowIndex,
-        size_t rowSize,
-        size_t doublesForLocalMarginalPerBuffer,
-        size_t doublesForRowIndexPerColumn,
+        const size_t start,
         std::vector<double> &buffer
     ) : 
-        localRowIndex(localRowIndex), 
-        globalRowIndex(globalRowIndex),
-        rowSize(rowSize),
-        doublesForLocalMarginalPerBuffer(doublesForLocalMarginalPerBuffer),
-        doublesForRowIndexPerColumn(doublesForRowIndexPerColumn),
+        start(start),
         buffer(buffer) 
     {}
 
     void visitDenseDataRow(const std::vector<double>& data) {
-        this->buffer[
-            this->rowSize * this->localRowIndex + this->doublesForLocalMarginalPerBuffer
-        ] = globalRowIndex;
-
-        for (
-            size_t columnIndex = this->doublesForRowIndexPerColumn;
-            columnIndex < this->rowSize;
-            columnIndex++
-        ) {
-            double v = data[columnIndex - this->doublesForRowIndexPerColumn];
-            this->buffer[this->rowSize * this->localRowIndex + columnIndex + this->doublesForLocalMarginalPerBuffer] = v;
+        size_t b = start;
+        for (size_t i = 0; i < data.size(); i++) {
+            this->buffer[b++] = data[i];
         }
     }
 
     void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
-        size_t index = 0;
+        size_t b = start;
         for (const auto & p : data) {
-            buffer[index++] = p.first;
-            buffer[index++] = p.second;
+            buffer[b++] = p.first;
+            buffer[b++] = p.second;
         }
 
-        buffer[index] = CommunicationConstants::getNoMoreEdgesTag();
+        buffer[b] = CommunicationConstants::getNoMoreEdgesTag();
     }
 };
