@@ -1,5 +1,6 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
+#include "representative_subset_calculator/streaming/communication_constants.h"
 
 static const std::vector<std::vector<double>> DENSE_DATA = {
     {4,17,20,5231,4,21},

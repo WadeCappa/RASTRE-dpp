@@ -1,7 +1,6 @@
 #include <doctest/doctest.h>
 
 #include "synchronous_queue.h"
-#include "communication_constants.h"
 #include "bucket.h"
 #include "candidate_seed.h"
 #include "bucket_titrator.h"

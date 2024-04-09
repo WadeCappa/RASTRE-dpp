@@ -52,9 +52,18 @@ class SparseDotProductDataRowVisitor : public DataRowVisitor {
 
     void visitSparseDataRow(const std::map<size_t, double>& data, size_t _totalColumns) {
         double dotProduct = 0;
-        for (const auto & p : this->base) {
-            if (data.find(p.first) != data.end()) {
-                dotProduct += data.at(p.first) * p.second;
+
+        auto baseIterator = this->base.begin();
+        auto dataIterator = data.begin();
+        while (baseIterator != this->base.end() && dataIterator != data.end()) {
+            if (dataIterator->first == baseIterator->first) {
+                dotProduct += dataIterator->second * baseIterator->second;
+                dataIterator++;
+                baseIterator++;
+            } else if (dataIterator->first > baseIterator->second) {
+                baseIterator++;
+            } else  {
+                dataIterator++;
             }
         }
 

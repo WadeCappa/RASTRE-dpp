@@ -77,7 +77,7 @@ class NaiveKernelMatrix : public KernelMatrix {
 
         #pragma omp parallel for
         for (size_t i = 0; i < data.totalRows(); i++) {
-            for (size_t j = 0; j < data.totalRows(); j++) {
+            for (size_t j = i; j < data.totalRows(); j++) {
                 double dotProduct = data.getRow(j).dotProduct(data.getRow(i));
                 dotProduct += static_cast<int>(j == i);
                 result[j][i] = dotProduct;

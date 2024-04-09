@@ -7,7 +7,7 @@
 class DataRowFactory {
     public:
     virtual DataRow* maybeGet(std::istream &source) = 0;
-    virtual std::unique_ptr<DataRow> get(std::vector<double> binary) const = 0;
+    virtual std::unique_ptr<DataRow> getFromSentBinary(std::vector<double> binary) const = 0;
 };
 
 // TODO: This should be a static constructor in the dense data row? 
@@ -30,7 +30,7 @@ class DenseDataRowFactory : public DataRowFactory {
         return new DenseDataRow(move(result));
     }
 
-    std::unique_ptr<DataRow> get(std::vector<double> binary) const {
+    std::unique_ptr<DataRow> getFromSentBinary(std::vector<double> binary) const {
         return std::unique_ptr<DataRow>(new DenseDataRow(move(binary)));
     }
 };
@@ -112,15 +112,16 @@ class SparseDataRowFactory : public DataRowFactory {
         } 
     }
 
-    std::unique_ptr<DataRow> get(std::vector<double> binary) const {
+    std::unique_ptr<DataRow> getFromSentBinary(std::vector<double> binary) const {
         std::map<size_t, double> res;
 
-        for (size_t to = 0; to < binary.size(); to++) {
-            if (binary[to] != 0) {
-                res.insert({to, binary[to]});
+        for (size_t i = 0; i < binary.size(); i++) {
+            if (binary[i] == CommunicationConstants::getNoMoreEdgesTag()) {
+                return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));
             }
+            res.insert({i, binary[i]});
         }
 
-        return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));
+        throw std::invalid_argument("failed to finish building buffer");
     }
 };

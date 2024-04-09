@@ -102,6 +102,6 @@ class MpiRankBuffer : public RankBuffer {
         const double localMarginalGain = this->buffer[this->buffer.size() - 2];
         std::vector<double> data(this->buffer.begin(), this->buffer.end() - 2);
         this->rankSolution->addRow(globalRowIndex, localMarginalGain);
-        return new CandidateSeed(globalRowIndex, this->factory.get(move(data)), this->rank);
+        return new CandidateSeed(globalRowIndex, this->factory.getFromSentBinary(move(data)), this->rank);
     }
 };

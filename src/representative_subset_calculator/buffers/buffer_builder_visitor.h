@@ -43,11 +43,12 @@ class BufferBuilderVisitor : public DataRowVisitor {
     }
 
     void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
-        std::vector<double> denseData(totalColumns, 0);
+        size_t index = 0;
         for (const auto & p : data) {
-            denseData[p.first] = p.second;
+            buffer[index++] = p.first;
+            buffer[index++] = p.second;
         }
 
-        this->visitDenseDataRow(denseData);
+        buffer[index] = CommunicationConstants::getNoMoreEdgesTag();
     }
 };

@@ -11,4 +11,8 @@ class CommunicationConstants {
     static unsigned int getContinueTag() {
         return 0;
     }
+
+    static double getNoMoreEdgesTag() {
+        return -1;
+    }
 };

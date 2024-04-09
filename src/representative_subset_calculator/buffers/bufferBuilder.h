@@ -154,7 +154,7 @@ class GlobalBufferLoader : public BufferLoader {
                     binaryInput.begin() + globalRowStart + DOUBLES_FOR_ROW_INDEX_PER_COLUMN, 
                     binaryInput.begin() + globalRowStart + columnsPerRowInBuffer
                 );
-                std::unique_ptr<DataRow> dataRow(factory.get(move(binary)));
+                std::unique_ptr<DataRow> dataRow(factory.getFromSentBinary(move(binary)));
 
                 newData->at(currentRow) = std::make_pair(
                     binaryInput[globalRowStart],
