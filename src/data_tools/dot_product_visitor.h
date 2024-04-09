@@ -1,4 +1,5 @@
 #include <optional>
+#include <iostream>
 
 class DenseDotProductDataRowVisitor : public DataRowVisitor {
     private:

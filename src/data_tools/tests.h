@@ -1,4 +1,5 @@
 #include "data_row_visitor.h"
+#include "to_binary_visitor.h"
 #include "dot_product_visitor.h"
 #include "data_row.h"
 #include "data_row_factory.h"
@@ -25,11 +26,6 @@ class DataRowVerifier : public DataRowVisitor {
         CHECK(totalColumns == SPARSE_DATA_TOTAL_COLUMNS);
     }
 };
-
-static std::pair<std::vector<double>, double> VECTOR_WITH_LENGTH = std::make_pair(
-    std::vector<double>{3.0, 3.0, 3.0, 3.0},
-    6.0
-);
 
 static std::string rowToString(const std::vector<double> &row) {
     std::ostringstream outputStream;
@@ -192,5 +188,65 @@ TEST_CASE("Testing ReceivedData translation and construction") {
     int i = 0;
     for (const auto v : *translated.get()) {
         CHECK(mockSolutionIndicies[i++] == v);
+    }
+}
+
+TEST_CASE("Testing dense binary to data row conversion") {
+    for (size_t i = 0; i < DENSE_DATA.size(); i++) {
+        // Test binary to data row
+        DenseDataRowFactory factory;
+        std::unique_ptr<DataRow> row(factory.getFromBinary(DENSE_DATA[i]));
+        DataRowVerifier visitor(i);
+        row->visit(visitor);
+    
+        // Test data row to binary
+        ToBinaryVisitor toBinary;
+        row->visit(toBinary);
+        std::vector<double> newBinary(toBinary.getAndDestroy());
+        
+        // Verify old and new binaries are equivalent
+        CHECK(newBinary == DENSE_DATA[i]);
+    }
+}
+
+TEST_CASE("Testing sparse binary to data row conversion") {
+    for (size_t i = 0; i < SPARSE_DATA_AS_MAP.size(); i++) {
+        std::unique_ptr<DataRow> row(new SparseDataRow(SPARSE_DATA_AS_MAP[i], SPARSE_DATA_TOTAL_COLUMNS));
+    
+        // Test data row to binary
+        ToBinaryVisitor toBinary;
+        row->visit(toBinary);
+        std::vector<double> newBinary(toBinary.getAndDestroy());
+    
+        // Try loading from binary
+        SparseDataRowFactory factory(SPARSE_DATA_TOTAL_COLUMNS);
+        std::unique_ptr<DataRow> fromBinaryRow(factory.getFromBinary(move(newBinary)));
+        DataRowVerifier visitor(i);
+        fromBinaryRow->visit(visitor);
+    }
+}
+
+TEST_CASE("Testing dot products") {
+    for (size_t s = 0; s < SPARSE_DATA_AS_MAP.size(); s++) {
+        for (size_t d = 0; d < DENSE_DATA.size(); d++) {
+            std::unique_ptr<DataRow> denseRow(new DenseDataRow(DENSE_DATA[d]));
+            std::unique_ptr<DataRow> sparseRow(new SparseDataRow(SPARSE_DATA_AS_MAP[s], SPARSE_DATA_TOTAL_COLUMNS));
+
+            // dense to dense
+            double denseToDense = denseRow->dotProduct(*denseRow);
+            CHECK(denseToDense > 0);
+            
+            // dense to sparse
+            double denseToSparse = denseRow->dotProduct(*sparseRow);
+            CHECK(denseToSparse > 0);
+
+            // sparse to dense
+            double sparseToDense = sparseRow->dotProduct(*denseRow);
+            CHECK(sparseToDense > 0);
+
+            // sparse to sparse
+            double sparseToSparse = sparseRow->dotProduct(*sparseRow);
+            CHECK(sparseToSparse > 0);
+        }
     }
 }

@@ -7,7 +7,8 @@
 class DataRowFactory {
     public:
     virtual DataRow* maybeGet(std::istream &source) = 0;
-    virtual std::unique_ptr<DataRow> getFromSentBinary(std::vector<double> binary) const = 0;
+    virtual std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const = 0;
+    virtual std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const = 0;
 };
 
 // TODO: This should be a static constructor in the dense data row? 
@@ -30,8 +31,12 @@ class DenseDataRowFactory : public DataRowFactory {
         return new DenseDataRow(move(result));
     }
 
-    std::unique_ptr<DataRow> getFromSentBinary(std::vector<double> binary) const {
+    std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const {
         return std::unique_ptr<DataRow>(new DenseDataRow(move(binary)));
+    }
+
+    std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const {
+        return this->getFromNaiveBinary(move(binary));
     }
 };
 
@@ -112,22 +117,30 @@ class SparseDataRowFactory : public DataRowFactory {
         } 
     }
 
-    std::unique_ptr<DataRow> getFromSentBinary(std::vector<double> binary) const {
+    std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const {
         std::map<size_t, double> res;
-
-        for (
-            size_t i = 0;
-            i < binary.size();
-            
-            // Notice that this is +2 for every iteration, not plus 1
-            i += 2
-        ) {
-            if (binary[i] == CommunicationConstants::getNoMoreEdgesTag()) {
-                return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));
+        for (size_t i = 0; i < binary.size(); i++) {
+            if (binary[i] != 0) {
+                res.insert({static_cast<size_t>(i), binary[i]});
             }
-            res.insert({binary[i], binary[i + 1]});
         }
 
-        throw std::invalid_argument("failed to finish building buffer");
+        return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));    
+    }
+
+    std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const {
+        std::map<size_t, double> res;
+
+        if (binary.size() % 2 != 0) {
+            throw std::invalid_argument("ERROR: Received an input that is not divisible by two. This will likely cause a seg fault");
+        }
+
+        // Notice that this is +2 for every iteration, not plus 1
+        for (size_t i = 0; i < binary.size(); i += 2) {
+            res.insert({static_cast<size_t>(binary[i]), binary[i + 1]});
+        }
+
+        return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));
+
     }
 };

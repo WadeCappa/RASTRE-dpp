@@ -12,7 +12,7 @@ class CommunicationConstants {
         return 0;
     }
 
-    static double getNoMoreEdgesTag() {
+    static double endOfSendTag() {
         return -1;
     }
 };

@@ -23,12 +23,8 @@ class BufferBuilderVisitor : public DataRowVisitor {
     }
 
     void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
-        size_t b = start;
         for (const auto & p : data) {
-            buffer[b++] = p.first;
-            buffer[b++] = p.second;
+            buffer[p.first] = p.second;
         }
-
-        buffer[b] = CommunicationConstants::getNoMoreEdgesTag();
     }
 };

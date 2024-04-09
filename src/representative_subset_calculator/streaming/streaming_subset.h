@@ -5,27 +5,6 @@
 
 class StreamingSubset : public MutableSubset {
     private:
-    class ToBinaryVisitor : public DataRowVisitor {
-        std::vector<double> binary;
-
-        public:
-        void visitDenseDataRow(const std::vector<double>& data) {
-            binary = data;
-        }
-
-        void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
-            for (const auto & p : data) {
-                binary.push_back(p.first);
-                binary.push_back(p.second);
-            }
-            binary.push_back(CommunicationConstants::getNoMoreEdgesTag());
-        }
-
-        std::vector<double> getAndDestroy() {
-            return move(binary);
-        }
-    };
-
     const SegmentedData &data;
     Timers &timers;
     
@@ -92,7 +71,7 @@ class StreamingSubset : public MutableSubset {
 
         ToBinaryVisitor visitor;
         this->data.getRow(row).visit(visitor);
-        std::vector<double> rowToSend(move(visitor.getAndDestroy()));
+        std::vector<double> rowToSend(visitor.getAndDestroy());
 
         // second to last value should be the marginal gain of this element for the local solution
         rowToSend.push_back(marginalGain);
@@ -100,8 +79,13 @@ class StreamingSubset : public MutableSubset {
         // last value should be the global row index
         rowToSend.push_back(data.getRemoteIndexForRow(row));
 
-        if(this->base->size() == 1)
+        // Mark the end of the send buffer
+        rowToSend.push_back(CommunicationConstants::endOfSendTag());
+
+        if(this->base->size() == 1) {
             timers.firstSeedTime.stopTimer();
+            std::cout << "found first seed" << std::endl;
+        }
 
         this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(move(rowToSend))));
 

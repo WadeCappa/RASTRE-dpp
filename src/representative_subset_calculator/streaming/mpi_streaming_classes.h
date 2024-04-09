@@ -43,7 +43,8 @@ class MpiRankBuffer : public RankBuffer {
     ) : 
         // need space for the row's global index and the local rank's
         //  marginal gain when adding this row to it's local solution.
-        buffer(rowSize + 2),
+        //  Also, need space for the final stop tag.
+        buffer(rowSize + 3, 0),
         rank(rank),
         isStillReceiving(true),
         rankSolution(std::unique_ptr<MutableSubset>(NaiveMutableSubset::makeNew())),
@@ -98,10 +99,17 @@ class MpiRankBuffer : public RankBuffer {
     }
 
     CandidateSeed* extractSeedFromBuffer() {
-        const unsigned int globalRowIndex = this->buffer.back();
-        const double localMarginalGain = this->buffer[this->buffer.size() - 2];
-        std::vector<double> data(this->buffer.begin(), this->buffer.end() - 2);
+        size_t endOfData = this->buffer.size() - 1;
+        while (this->buffer[endOfData] != CommunicationConstants::endOfSendTag()) {
+            endOfData--;
+        }
+
+        endOfData--;
+
+        const unsigned int globalRowIndex = this->buffer[endOfData--];
+        const double localMarginalGain = this->buffer[endOfData];
+        std::vector<double> data(this->buffer.begin(), this->buffer.begin() + endOfData);
         this->rankSolution->addRow(globalRowIndex, localMarginalGain);
-        return new CandidateSeed(globalRowIndex, this->factory.getFromSentBinary(move(data)), this->rank);
+        return new CandidateSeed(globalRowIndex, this->factory.getFromBinary(move(data)), this->rank);
     }
 };

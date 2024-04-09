@@ -30,7 +30,7 @@ class BufferBuilder : public Buffer {
         const unsigned int totalSendData = getTotalSendData(dynamic_cast<const BaseData&>(data), localSolution);
         const size_t rowSize = data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN;
         const size_t numberOfRows = localSolution.size();
-        buffer.resize(totalSendData);
+        buffer.resize(totalSendData, 0);
 
         // First value is the local total marginal
         buffer[0] = localSolution.getScore();
@@ -152,7 +152,7 @@ class GlobalBufferLoader : public BufferLoader {
                     binaryInput.begin() + globalRowStart + DOUBLES_FOR_ROW_INDEX_PER_COLUMN, 
                     binaryInput.begin() + globalRowStart + columnsPerRowInBuffer
                 );
-                std::unique_ptr<DataRow> dataRow(factory.getFromSentBinary(move(binary)));
+                std::unique_ptr<DataRow> dataRow(factory.getFromNaiveBinary(move(binary)));
 
                 newData->at(currentRow) = std::make_pair(
                     binaryInput[globalRowStart],
