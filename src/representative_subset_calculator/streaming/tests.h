@@ -119,7 +119,7 @@ class FakeRankBuffer : public RankBuffer {
     }
 };
 
-void assertSolutionIsValid(std::unique_ptr<Subset> solution) {
+void assertSolutionIsValid(std::unique_ptr<Subset> solution, const size_t dataSize) {
     CHECK(solution->getScore() > 0);
     CHECK(solution->size() > 0);
 
@@ -128,6 +128,8 @@ void assertSolutionIsValid(std::unique_ptr<Subset> solution) {
         const auto & row = seed;
         CHECK(seen.find(row) == seen.end());
         seen.insert(row);
+        CHECK(row >= 0);
+        CHECK(row < dataSize);
     }
 }
 
@@ -211,7 +213,7 @@ TEST_CASE("Consumer can find a solution") {
     }
 
     std::unique_ptr<Subset> solution(consumer.getBestSolutionDestroyConsumer());
-    assertSolutionIsValid(move(solution));
+    assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }
 
 TEST_CASE("Test fake receiver") {
@@ -240,7 +242,7 @@ TEST_CASE("Testing streaming with fake receiver") {
     Timers timers;
     SeiveGreedyStreamer streamer(receiver, consumer, timers);
     std::unique_ptr<Subset> solution(streamer.resolveStream());
-    assertSolutionIsValid(move(solution));
+    assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }
 
 TEST_CASE("Testing the fake buffer") {
@@ -296,7 +298,7 @@ TEST_CASE("Testing end to end without MPI") {
     Timers timers;
     SeiveGreedyStreamer streamer(receiver, consumer, timers);
     std::unique_ptr<Subset> solution(streamer.resolveStream());
-    assertSolutionIsValid(move(solution));
+    assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }
 
 
@@ -308,5 +310,5 @@ TEST_CASE("Testing end to end ThreeSieveStreaming without MPI") {
     Timers timers;
     SeiveGreedyStreamer streamer(receiver, consumer, timers);
     std::unique_ptr<Subset> solution(streamer.resolveStream());
-    assertSolutionIsValid(move(solution));
+    assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }

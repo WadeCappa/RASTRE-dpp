@@ -24,6 +24,8 @@ static std::unique_ptr<Subset> testCalculator(SubsetCalculator *calculator) {
         const auto & row = seed;
         CHECK(seen.find(row) == seen.end());
         seen.insert(row);
+        CHECK(row >= 0);
+        CHECK(row < DENSE_DATA.size());
     }
 
     delete calculator;

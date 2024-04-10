@@ -13,9 +13,6 @@ class MpiSendRequest {
     : rowToSend(move(rowToSend)) {}
 
     void isend(const unsigned int tag) {
-        if (tag == CommunicationConstants::getStopTag()) {
-            std::cout << "sending seed with tag " << tag << std::endl;
-        }
         MPI_Isend(rowToSend.data(), rowToSend.size(), MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &request);
     }
 
@@ -91,6 +88,7 @@ class MpiRankBuffer : public RankBuffer {
 
     private:
     void readyForNextReceive() {
+        std::fill(buffer.begin(), buffer.end(), 0);
         MPI_Irecv(
             buffer.data(), buffer.size(), 
             MPI_DOUBLE, rank, MPI_ANY_TAG, 
@@ -99,16 +97,14 @@ class MpiRankBuffer : public RankBuffer {
     }
 
     CandidateSeed* extractSeedFromBuffer() {
-        size_t endOfData = this->buffer.size() - 1;
-        while (this->buffer[endOfData] != CommunicationConstants::endOfSendTag()) {
+        auto endOfData = this->buffer.end() - 1;
+        while (*endOfData != CommunicationConstants::endOfSendTag()) {
             endOfData--;
         }
 
-        endOfData--;
-
-        const unsigned int globalRowIndex = this->buffer[endOfData--];
-        const double localMarginalGain = this->buffer[endOfData];
-        std::vector<double> data(this->buffer.begin(), this->buffer.begin() + endOfData);
+        const size_t globalRowIndex = static_cast<size_t>(*(endOfData - 1));
+        const double localMarginalGain = *(endOfData - 2);
+        std::vector<double> data(this->buffer.begin(), endOfData - 2);
         this->rankSolution->addRow(globalRowIndex, localMarginalGain);
         return new CandidateSeed(globalRowIndex, this->factory.getFromBinary(move(data)), this->rank);
     }

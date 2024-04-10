@@ -71,7 +71,7 @@ class StreamingSubset : public MutableSubset {
 
         ToBinaryVisitor visitor;
         this->data.getRow(row).visit(visitor);
-        std::vector<double> rowToSend(visitor.getAndDestroy());
+        std::vector<double> rowToSend(move(visitor.getAndDestroy()));
 
         // second to last value should be the marginal gain of this element for the local solution
         rowToSend.push_back(marginalGain);

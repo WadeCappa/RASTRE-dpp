@@ -67,6 +67,8 @@ class FastSubsetCalculator : public SubsetCalculator {
             }
 
             bestScore = getNextHighestScore(diagonals, seen);
+
+            // To ensure "Numerical stability" ¯\_(ツ)_/¯
             if (bestScore.second <= this->epsilon) {
                 std::cout << "score of " << bestScore.second << " was less than " << this->epsilon << ". " << std::endl;
                 return MutableSubset::upcast(move(consumer));

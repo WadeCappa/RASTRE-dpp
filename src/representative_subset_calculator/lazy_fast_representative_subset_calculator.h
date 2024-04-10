@@ -48,16 +48,10 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         std::vector<size_t> u(data.totalRows(), 0);
 
         // Initialize kernel matrix 
-        Timers::SingleTimer matrixTimer;
-        matrixTimer.startTimer();
         LazyKernelMatrix kernelMatrix(data);
         std::vector<double> diagonals = kernelMatrix.getDiagonals(data.totalRows());
-        matrixTimer.stopTimer();
-        std::cout << "found diagonals in " << matrixTimer.getTotalTime() << " seconds " << std::endl;
 
         // Initialize priority queue
-        Timers::SingleTimer queueTimer;
-        queueTimer.startTimer();
         std::vector<size_t> priorityQueue;
         for (size_t index = 0; index < data.totalRows(); index++) {
             priorityQueue.push_back(index);
@@ -65,10 +59,6 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
 
         HeapComparitor comparitor(diagonals);
         std::make_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
-        queueTimer.stopTimer();
-        std::cout << "made heap in " << queueTimer.getTotalTime() <<" seconds " << std::endl;
-        Timers::SingleTimer seedOneTimer;
-        seedOneTimer.startTimer();
         while (consumer->size() < k) {
             size_t i = priorityQueue.front();
             std::pop_heap(priorityQueue.begin(),priorityQueue.end(), comparitor); 
@@ -93,10 +83,6 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
 
             if (marginalGain >= nextScore || consumer->size() == data.totalRows() - 1) {
                 consumer->addRow(i, marginalGain);
-                if( consumer->size() == 1 ) {
-                    seedOneTimer.stopTimer();
-                    std::cout << "found first seed in " << seedOneTimer.getTotalTime() <<" seconds " << std::endl;
-                }
             } else {
                 priorityQueue.push_back(i);
                 std::push_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
