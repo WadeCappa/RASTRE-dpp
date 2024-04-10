@@ -88,7 +88,6 @@ class MpiRankBuffer : public RankBuffer {
 
     private:
     void readyForNextReceive() {
-        std::fill(buffer.begin(), buffer.end(), 0);
         MPI_Irecv(
             buffer.data(), buffer.size(), 
             MPI_DOUBLE, rank, MPI_ANY_TAG, 
@@ -101,6 +100,9 @@ class MpiRankBuffer : public RankBuffer {
         while (*endOfData != CommunicationConstants::endOfSendTag()) {
             endOfData--;
         }
+
+        // Remove the stop tag. This will allow the next send to be received.
+        *endOfData = 0;
 
         const size_t globalRowIndex = static_cast<size_t>(*(endOfData - 1));
         const double localMarginalGain = *(endOfData - 2);
