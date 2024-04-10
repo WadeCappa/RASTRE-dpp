@@ -33,6 +33,7 @@ class FullyLoadedData : public BaseData {
             }
             if (columns == 0) {
                 columns = nextRow->size();
+
             }
 
             data.push_back(std::unique_ptr<DataRow>(nextRow));

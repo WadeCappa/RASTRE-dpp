@@ -1,23 +1,13 @@
 #include <Eigen/Dense>
 
 #include <vector>
-#include <optional>
-#include <optional>
+#include <unordered_map>
 
 class KernelMatrix {
     public:
     virtual double get(size_t j, size_t i) = 0;
+    virtual std::vector<double> getDiagonals(size_t rows) = 0;
 
-    std::vector<double> getDiagonals(size_t rows) {
-        std::vector<double> res(rows);
-        
-        #pragma omp parallel for
-        for (size_t index = 0; index < rows; index++) {
-            res[index] = this->get(index, index);
-        }
-
-        return res;
-    }
 
     static double getDotProduct(const std::vector<double> &a, const std::vector<double> &b) {
         double res = 0;
@@ -31,7 +21,7 @@ class KernelMatrix {
 
 class LazyKernelMatrix : public KernelMatrix {
     private:
-    std::vector<std::vector<std::optional<double>>> kernelMatrix;
+    std::vector<std::unordered_map<size_t, double>> kernelMatrix;
     const BaseData &data;
 
     // Disable pass by value. This object is too large for pass by value to make sense implicitly.
@@ -41,22 +31,36 @@ class LazyKernelMatrix : public KernelMatrix {
     public:
     LazyKernelMatrix(const BaseData &data)
     : 
-        kernelMatrix(
-            data.totalRows(), 
-            std::vector<std::optional<double>>(data.totalRows(), std::nullopt)
-        ),
+        kernelMatrix(data.totalRows(), std::unordered_map<size_t, double>()),
         data(data)
     {}
 
     double get(size_t j, size_t i) {
-        if (!this->kernelMatrix[j][i].has_value()) {
+        if (this->kernelMatrix[j].find(i) == this->kernelMatrix[j].end()) {
             double result = this->data.getRow(j).dotProduct(this->data.getRow(i));
             result += static_cast<int>(j == i);
-            this->kernelMatrix[j][i] = result;
-            this->kernelMatrix[i][j] = result;
+            this->kernelMatrix[j].insert({i, result});
+            this->kernelMatrix[i].insert({j, result});
         }
 
-        return this->kernelMatrix[j][i].value();
+        return this->kernelMatrix[j][i];
+    }
+
+    std::vector<double> getDiagonals(size_t rows) {
+        std::vector<double> res(rows);
+        
+        #pragma omp parallel for
+        for (size_t row = 0; row < rows; row++) {
+            double result = this->data.getRow(row).dotProduct(this->data.getRow(row));
+            result++; // add identity matrix
+            res[row] = result;
+            
+            // Can be accessed in parallel since the vector's maps are only accessed exactly once and 
+            //  the vector itself is never resized.
+            this->kernelMatrix[row].insert({row, result});
+        }
+
+        return move(res);
     }
 };
 
@@ -92,5 +96,15 @@ class NaiveKernelMatrix : public KernelMatrix {
 
     double get(size_t j, size_t i) {
         return this->kernelMatrix[j][i];
+    }
+
+    std::vector<double> getDiagonals(size_t rows) {
+        std::vector<double> res(rows);
+        
+        for (size_t index = 0; index < rows; index++) {
+            res[index] = this->get(index, index);
+        }
+
+        return move(res);
     }
 };
