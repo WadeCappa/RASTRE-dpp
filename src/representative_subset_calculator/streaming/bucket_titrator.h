@@ -49,7 +49,6 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
 
     void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
-        int fails = 0;
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
             std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
             if (bucket->attemptInsert(seed->getRow(), seed->getData())) {
@@ -57,7 +56,6 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
             }
             else {
                 this->t += 1; 
-                fails += 1;
                 if (this->t >= this->T && this->currentBucketIndex < this->totalBuckets) {
                     this->t = 0;
                     this->currentBucketIndex++;
@@ -75,7 +73,6 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             this->seedStorage.push_back(move(pulledFromQueue[i]));
         }
-        std::cout << "Fails: " << fails << std::endl;
     }
 
     std::unique_ptr<Subset> getBestSolutionDestroyTitrator() {
