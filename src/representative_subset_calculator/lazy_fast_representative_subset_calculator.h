@@ -2,6 +2,7 @@
 #include <vector>
 #include <math.h>
 #include <unordered_set>
+#include <unordered_map>
 #include <optional>
 
 class LazyFastSubsetCalculator : public SubsetCalculator {
@@ -17,13 +18,13 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
     };
 
     static std::vector<double> getSlice(
-        const std::vector<double> &row, 
+        const std::unordered_map<size_t, double> &row, 
         const MutableSubset* subset, 
         size_t count
     ) {
         std::vector<double> res(count);
         for (size_t i = 0; i < count ; i++) {
-            res[i] = row[subset->getRow(i)];
+            res[i] = row.at(subset->getRow(i));
         }
 
         return res;
@@ -43,7 +44,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         size_t k
     ) {
         std::unordered_set<size_t> seen;
-        std::vector<std::vector<double>> v(data.totalRows(), std::vector<double>(data.totalRows()));
+        std::vector<std::unordered_map<size_t, double>> v(data.totalRows());
         std::vector<size_t> u(data.totalRows(), 0);
 
         // Initialize kernel matrix 
@@ -77,7 +78,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
             for (size_t t = u[i]; t < consumer->size(); t++) {
                 size_t j_t = consumer->getRow(t); 
                 double dotProduct = KernelMatrix::getDotProduct(this->getSlice(v[i], consumer.get(), t), this->getSlice(v[j_t], consumer.get(), t));
-                v[i][j_t] = (kernelMatrix.get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t]);
+                v[i].insert({j_t, (kernelMatrix.get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t])});
                 diagonals[i] -= std::pow(v[i][j_t], 2);
             }
 
