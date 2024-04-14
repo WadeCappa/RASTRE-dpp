@@ -71,7 +71,7 @@ TEST_CASE("Testing the get total send dense data method") {
 
     std::vector<double> sendBuffer;
     unsigned int totalSendData = BufferBuilder::buildSendBuffer(*denseData, *MOCK_SOLUTION.get(), sendBuffer);
-    CHECK(totalSendData == (denseData->totalColumns() + 1) * MOCK_SOLUTION->size() + 1);
+    CHECK(totalSendData == (denseData->totalColumns() + 2) * MOCK_SOLUTION->size() + 1);
     CHECK(sendBuffer.size() == totalSendData);
 }
 
@@ -92,9 +92,11 @@ TEST_CASE("Test building send buffers for") {
 
     CHECK(sendBuffer.size() == totalSendData);
     CHECK(sendBuffer.size() > 0);
+
     std::vector<size_t> mockSolutionRows = getRows(*MOCK_SOLUTION.get());
     for (size_t i = 0; i < MOCK_SOLUTION->size(); i++) {
-        size_t sentRow = static_cast<size_t>(sendBuffer[i * (data->totalColumns() + 1) + 1]);
+        std::cout << "looking at " << ((i + 1) * (data->totalColumns() + 1)) + 1 << std::endl;
+        size_t sentRow = static_cast<size_t>(sendBuffer[((i + 1) * (data->totalColumns() + 2)) - 1 ]);
         CHECK(sentRow == mockSolutionRows[i]);
     }
 }

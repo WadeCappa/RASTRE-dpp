@@ -10,16 +10,6 @@ class Buffer {
 
 class BufferBuilder : public Buffer {
     private:
-    static unsigned int getTotalSendData(
-        const BaseData &data, 
-        const Subset &localSolution
-    ) {
-        // Need to include an additional column that marks the index of the sent row 
-        //  as well as an additional double for the sender's local solution total 
-        //  marginal gain.
-        return (data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN) * localSolution.size() + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
-    }
-
     public:
     static unsigned int buildSendBuffer(
         const SegmentedData &data, 
@@ -27,29 +17,33 @@ class BufferBuilder : public Buffer {
         std::vector<double> &buffer
     ) {
         // Need to include an additional column that marks the index of the sent row
-        const unsigned int totalSendData = getTotalSendData(dynamic_cast<const BaseData&>(data), localSolution);
-        const size_t rowSize = data.totalColumns() + DOUBLES_FOR_ROW_INDEX_PER_COLUMN;
-        const size_t numberOfRows = localSolution.size();
-        buffer.resize(totalSendData, 0);
+        std::vector<std::vector<double>> buffers(localSolution.size());
 
-        // First value is the local total marginal
-        buffer[0] = localSolution.getScore();
-
-        // All buffer indexes need to be offset by 1 to account for the 
-        //  total marginal being inserted at the beggining of the send buffer
-        #pragma parallel for
-        for (size_t localRowIndex = 0; localRowIndex < numberOfRows; localRowIndex++) {
-            size_t start = rowSize * localRowIndex + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
-            size_t globalIndex = data.getRemoteIndexForRow(localSolution.getRow(localRowIndex));
-            buffer[start] = globalIndex;
-            BufferBuilderVisitor visitor(
-                start + 1,
-                buffer
-            );
-            data.getRow(localSolution.getRow(localRowIndex)).visit(visitor);
+        #pragma omp parallel for
+        for (size_t localRowIndex = 0; localRowIndex < localSolution.size(); localRowIndex++) {
+            ToBinaryVisitor v;
+            data.getRow(localSolution.getRow(localRowIndex)).visit(v);
+            buffers[localRowIndex] = v.getAndDestroy();
+            buffers[localRowIndex].push_back(data.getRemoteIndexForRow(localSolution.getRow(localRowIndex)));
+            buffers[localRowIndex].push_back(CommunicationConstants::endOfSendTag());
         }
 
-        return totalSendData;
+        size_t totalSend = 1;
+        for (const auto & b : buffers) {
+            totalSend += b.size();
+        }
+
+        buffer.resize(totalSend, 0);
+        buffer[0] = localSolution.getScore();
+
+        size_t i = 1;
+        for (const auto & b : buffers) {
+            for (const auto d : b) {
+                buffer[i++] = d;
+            }
+        }
+
+        return totalSend;
     }
 
     static void buildReceiveBuffer(
@@ -132,35 +126,44 @@ class GlobalBufferLoader : public BufferLoader {
     std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> rebuildData(
         const DataRowFactory &factory
     ) {
-        std::vector<size_t> rowOffsets = getRowOffsets();
-        const size_t totalExpectedRows = rowOffsets.back();
-        const size_t numberOfBytesWithoutLocalMarginals = binaryInput.size() - worldSize * DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
-
-        std::vector<std::pair<size_t, std::unique_ptr<DataRow>>> *newData = new std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>(totalExpectedRows);
-
+        std::vector<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> tempData(worldSize);
+    
         // Because we're sending local marginals along with the data, the input data is no longer uniform.
         #pragma omp parallel for 
         for (size_t rank = 0; rank < worldSize; rank++) {
-            const size_t rowOffset = rowOffsets[rank];
-            const size_t rowOffsetForNextRank = rank == worldSize - 1 ? totalExpectedRows : rowOffsets[rank + 1];
-            #pragma omp parallel for
-            for (size_t currentRow = rowOffset; currentRow < rowOffsetForNextRank; currentRow++) {
-                const size_t relativeRow = currentRow - rowOffset;
-                const size_t globalRowStart = (columnsPerRowInBuffer * relativeRow) + displacements[rank] + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
-                std::vector<double> binary(
-                    // Don't capture the first element, which is the index of the row
-                    binaryInput.begin() + globalRowStart + DOUBLES_FOR_ROW_INDEX_PER_COLUMN, 
-                    binaryInput.begin() + globalRowStart + columnsPerRowInBuffer
-                );
-                std::unique_ptr<DataRow> dataRow(factory.getFromNaiveBinary(move(binary)));
+            std::vector<std::pair<size_t, std::unique_ptr<DataRow>>> rankData;
+            const size_t rankStart = displacements[rank] + 1;
+            const auto rankStop = (rank + 1) == worldSize ? binaryInput.end() : binaryInput.begin() + displacements[rank + 1];
 
-                newData->at(currentRow) = std::make_pair(
-                    binaryInput[globalRowStart],
-                    move(dataRow)
-                );
+            auto index = binaryInput.begin() + rankStart;
+            auto elementStop = binaryInput.begin() + rankStart;
+            while (index != rankStop && elementStop != rankStop) {
+                if (*elementStop == CommunicationConstants::endOfSendTag()) {
+                    std::unique_ptr<DataRow> dataRow(factory.getFromNaiveBinary(
+                        move(std::vector<double>(index, elementStop - 1)))
+                    );
+
+                    const size_t globalTag = *(elementStop - 1);
+
+                    elementStop++;
+                    index = elementStop;
+
+                    rankData.push_back(std::make_pair(globalTag, move(dataRow)));
+                } else {
+                    elementStop++;
+                }
             }
+
+            tempData[rank] = move(rankData);
         }
     
+
+        std::vector<std::pair<size_t, std::unique_ptr<DataRow>>> *newData = new std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>();
+        for (auto & r : tempData) {
+            for (auto & d : r) {
+                newData->push_back(move(d));
+            }
+        }
         return std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>>(newData);
     }
 
@@ -193,36 +196,5 @@ class GlobalBufferLoader : public BufferLoader {
         }
 
         return Subset::of(rows, coverage);
-    }
-
-    std::vector<size_t> getRowOffsets() {
-        std::vector<size_t> expectedRowsPerRank(worldSize);
-
-        for (size_t rank = 0; rank < worldSize; rank++) {
-            const size_t startOfCurrentRank = displacements[rank];
-            const size_t startOfNextRank = rank == worldSize - 1 ? binaryInput.size() : displacements[rank + 1];
-            const size_t numberOfBytes = startOfNextRank - startOfCurrentRank - DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER;
-            const size_t expectedRows = getExpectedRows(numberOfBytes, columnsPerRowInBuffer);
-            expectedRowsPerRank[rank] = expectedRows;
-        }
-
-        std::vector<size_t> rowOffsets;
-        size_t totalExpectedRows = 0;
-        for (const auto & numRows : expectedRowsPerRank) {
-            rowOffsets.push_back(totalExpectedRows);
-            totalExpectedRows += numRows;
-        }
-
-        rowOffsets.push_back(totalExpectedRows);
-        return rowOffsets;
-    }
-
-    static size_t getExpectedRows(const size_t numberOfBytes, const size_t columnSize) {
-        const size_t expectedRows = std::floor(numberOfBytes / columnSize);
-        if (numberOfBytes % columnSize != 0) {
-            std::cout << "ERROR: did not get an expected number of values from all gather. Bytes " << numberOfBytes << " and columns " << columnSize << std::endl;
-        }
-
-        return expectedRows;
     }
 };
