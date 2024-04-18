@@ -1,4 +1,6 @@
-# Install Instructions
+# RAnd-greedi STREming
+
+## Install Instructions
 Set up virtual enviroment
 ```
 python3 -m venv venv`
