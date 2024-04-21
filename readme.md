@@ -1,4 +1,4 @@
-# RAnd-greedi STREming
+# RAnd-greedi STREming for approximating Determinantal Point Process
 
 ## Install Instructions
 Set up virtual enviroment

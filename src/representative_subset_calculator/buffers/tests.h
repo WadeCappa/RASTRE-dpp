@@ -1,7 +1,6 @@
 #include <vector>
 #include <cstdlib>
-#include "buffer_builder_visitor.h"
-#include "bufferBuilder.h"
+#include "buffer_builder.h"
 
 static const std::unique_ptr<Subset> MOCK_SOLUTION(
     Subset::of(std::vector<size_t>{0, DENSE_DATA.size()-1}, 15)
