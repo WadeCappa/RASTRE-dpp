@@ -37,11 +37,15 @@ class FastSubsetCalculator : public SubsetCalculator {
         }
     }
 
-    std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
+    std::unique_ptr<Subset> getApproximationSet(
+        std::unique_ptr<MutableSubset> consumer, 
+        const BaseData &data, 
+        size_t k
+    ) {
         std::unordered_set<size_t> seen;
 
-        NaiveKernelMatrix kernelMatrix(data);
-        std::vector<double> diagonals = kernelMatrix.getDiagonals(data.totalRows()); 
+        std::unique_ptr<NaiveKernelMatrix> kernelMatrix(NaiveKernelMatrix::from(data));
+        std::vector<double> diagonals = kernelMatrix->getDiagonals(data.totalRows()); 
 
         std::vector<std::vector<double>> c(data.totalRows(), std::vector<double>());
 
@@ -57,12 +61,14 @@ class FastSubsetCalculator : public SubsetCalculator {
                     continue;
                 }
                 
-                double e = (kernelMatrix.get(j, i) - KernelMatrix::getDotProduct(c[j], c[i])) / std::sqrt(diagonals[j]);
+                double e = (kernelMatrix->get(j, i) - KernelMatrix::getDotProduct(c[j], c[i])) / std::sqrt(diagonals[j]);
                 c[i].push_back(e);
                 diagonals[i] -= std::pow(e, 2);
             }
 
             bestScore = getNextHighestScore(diagonals, seen);
+
+            // To ensure "Numerical stability" ¯\_(ツ)_/¯
             if (bestScore.second <= this->epsilon) {
                 std::cout << "score of " << bestScore.second << " was less than " << this->epsilon << ". " << std::endl;
                 return MutableSubset::upcast(move(consumer));

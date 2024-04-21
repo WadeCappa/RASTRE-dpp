@@ -42,7 +42,7 @@ class Orchestrator {
         }
     }
 
-    static nlohmann::json buildDatasetJson(const Data &data, const AppData &appData) {
+    static nlohmann::json buildDatasetJson(const BaseData &data, const AppData &appData) {
         nlohmann::json output {
             {"rows", data.totalRows()},
             {"columns", data.totalColumns()},
@@ -55,7 +55,7 @@ class Orchestrator {
     static nlohmann::json buildOutput(
         const AppData &appData, 
         const Subset &solution,
-        const Data &data,
+        const BaseData &data,
         const Timers &timers
     ) {
         nlohmann::json output = buildOutputBase(appData, solution, data, timers);
@@ -82,34 +82,6 @@ class Orchestrator {
         app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
         app.add_option("--alpha", appData.alpha, "Only used for the truncated setting.");
     }
-
-    static DataLoader* buildDataLoader(const AppData &appData, std::istream &data) {
-        DataLoader *dataLoader;
-        
-        if (appData.binaryInput) {
-            dataLoader = dynamic_cast<DataLoader*>(new BinaryDataLoader(data));
-        } else if (appData.adjacencyListColumnCount > 0) {
-            dataLoader = dynamic_cast<DataLoader*>(new AsciiAdjacencyListDataLoader(data, appData.adjacencyListColumnCount));
-        } else {
-            dataLoader = dynamic_cast<DataLoader*>(new AsciiDataLoader(data));
-        }
-
-        if (appData.normalizeInput) {
-            dataLoader = dynamic_cast<DataLoader*>(new Normalizer(*dataLoader));
-        }
-
-        return dataLoader;
-    }
-            
-    static DataLoader* buildMpiDataLoader(
-        const AppData &appData, 
-        std::istream &data, 
-        const std::vector<unsigned int> &rankMapping
-    ) {
-        DataLoader *dataLoader = Orchestrator::buildDataLoader(appData, data);
-        return dynamic_cast<DataLoader*>(new BlockedDataLoader(*dataLoader, rankMapping, appData.worldRank));
-    }
-
 
     static SubsetCalculator* getCalculator(const AppData &appData) {
         switch (appData.algorithm) {
@@ -144,7 +116,7 @@ class Orchestrator {
     static nlohmann::json buildOutputBase(
         const AppData &appData, 
         const Subset &solution,
-        const Data &data,
+        const BaseData &data,
         const Timers &timers
     ) { 
         nlohmann::json output {
@@ -157,5 +129,31 @@ class Orchestrator {
         };
 
         return output;
+    }
+
+    static std::unique_ptr<SegmentedData> buildMpiData(
+        const AppData& appData, 
+        std::istream &data, 
+        const std::vector<unsigned int> &rowToRank
+    ) {
+        std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
+        return SegmentedData::load(*factory, data, rowToRank, appData.worldRank);
+    }
+
+    static std::unique_ptr<FullyLoadedData> buildData(const AppData& appData, std::istream &data) {
+        std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
+        return FullyLoadedData::load(*factory, data);
+    }
+
+    static std::unique_ptr<DataRowFactory> getDataRowFactory(const AppData& appData) {
+        DataRowFactory *factory;
+        
+        if (appData.adjacencyListColumnCount > 0) {
+            factory = dynamic_cast<DataRowFactory*>(new SparseDataRowFactory(appData.adjacencyListColumnCount));
+        } else {
+            factory = dynamic_cast<DataRowFactory*>(new DenseDataRowFactory());
+        }
+
+        return std::unique_ptr<DataRowFactory>(factory);
     }
 };

@@ -5,7 +5,7 @@
 
 class StreamingSubset : public MutableSubset {
     private:
-    const LocalData &data;
+    const SegmentedData &data;
     Timers &timers;
     
     std::vector<std::unique_ptr<MpiSendRequest>> sends;
@@ -15,7 +15,7 @@ class StreamingSubset : public MutableSubset {
 
     public:
     StreamingSubset(
-        const LocalData& data, 
+        const SegmentedData& data, 
         const unsigned int desiredSeeds,
         Timers &timers
     ) : 
@@ -69,7 +69,9 @@ class StreamingSubset : public MutableSubset {
     void addRow(const size_t row, const double marginalGain) {
         this->base->addRow(row, marginalGain);
 
-        std::vector<double> rowToSend(this->data.getRow(row));
+        ToBinaryVisitor visitor;
+        this->data.getRow(row).visit(visitor);
+        std::vector<double> rowToSend(move(visitor.getAndDestroy()));
 
         // second to last value should be the marginal gain of this element for the local solution
         rowToSend.push_back(marginalGain);
@@ -77,10 +79,15 @@ class StreamingSubset : public MutableSubset {
         // last value should be the global row index
         rowToSend.push_back(data.getRemoteIndexForRow(row));
 
-        if(this->base->size() == 1)
-            timers.firstSeedTime.stopTimer();
+        // Mark the end of the send buffer
+        rowToSend.push_back(CommunicationConstants::endOfSendTag());
 
-        this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(rowToSend)));
+        if(this->base->size() == 1) {
+            timers.firstSeedTime.stopTimer();
+            std::cout << "found first seed" << std::endl;
+        }
+
+        this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(move(rowToSend))));
 
         // Keep at least one seed until finalize is called. Otherwise there is no garuntee of
         //  how many seeds there are left to find.

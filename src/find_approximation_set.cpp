@@ -1,6 +1,11 @@
+#include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/representative_subset.h"
-#include "data_tools/normalizer.h"
-#include "data_tools/matrix_builder.h"
+#include "data_tools/data_row_visitor.h"
+#include "data_tools/to_binary_visitor.h"
+#include "data_tools/dot_product_visitor.h"
+#include "data_tools/data_row.h"
+#include "data_tools/data_row_factory.h"
+#include "data_tools/base_data.h"
 #include "representative_subset_calculator/timers/timers.h"
 #include "representative_subset_calculator/naive_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
@@ -21,21 +26,16 @@ int main(int argc, char** argv) {
     timers.loadingDatasetTime.startTimer();
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
-    DataLoader *dataLoader = Orchestrator::buildDataLoader(appData, inputFile);
-    NaiveData data(*dataLoader);
+    std::unique_ptr<FullyLoadedData> data(Orchestrator::buildData(appData, inputFile));
     inputFile.close();
     timers.loadingDatasetTime.stopTimer();
 
-    delete dataLoader;
-
     timers.totalCalculationTime.startTimer();
-
     std::unique_ptr<SubsetCalculator> calculator(Orchestrator::getCalculator(appData));
-    std::unique_ptr<Subset> solution = calculator->getApproximationSet(data, appData.outputSetSize);
-
+    std::unique_ptr<Subset> solution = calculator->getApproximationSet(*data.get(), appData.outputSetSize);
     timers.totalCalculationTime.stopTimer();
 
-    nlohmann::json result = Orchestrator::buildOutput(appData, *solution.get(), data, timers);
+    nlohmann::json result = Orchestrator::buildOutput(appData, *solution.get(), *data.get(), timers);
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
     outputFile << result.dump(2);

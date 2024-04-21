@@ -6,22 +6,17 @@
 #include "lazy_fast_representative_subset_calculator.h"
 #include "similarity_matrix/tests.h"
 
-static const NaiveData data(
-    DATA,
-    DATA.size(),
-    DATA[0].size()
-);
-
 #include "kernel_matrix/tests.h"
 #include "orchestrator/tests.h"
 #include "buffers/tests.h"
 #include "streaming/tests.h"
 
-static const size_t k = DATA.size();
+static const size_t k = DENSE_DATA.size();
 static const double epsilon = 0.01;
 
 static std::unique_ptr<Subset> testCalculator(SubsetCalculator *calculator) {
-    std::unique_ptr<Subset> res = calculator->getApproximationSet(data, k);
+    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(DENSE_DATA));
+    std::unique_ptr<Subset> res = calculator->getApproximationSet(*data, k);
 
     CHECK(res->size() == k);
     std::set<size_t> seen;
@@ -29,6 +24,8 @@ static std::unique_ptr<Subset> testCalculator(SubsetCalculator *calculator) {
         const auto & row = seed;
         CHECK(seen.find(row) == seen.end());
         seen.insert(row);
+        CHECK(row >= 0);
+        CHECK(row < DENSE_DATA.size());
     }
 
     delete calculator;

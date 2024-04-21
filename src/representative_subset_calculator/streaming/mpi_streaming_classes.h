@@ -13,9 +13,6 @@ class MpiSendRequest {
     : rowToSend(move(rowToSend)) {}
 
     void isend(const unsigned int tag) {
-        if (tag == CommunicationConstants::getStopTag()) {
-            std::cout << "sending seed with tag " << tag << std::endl;
-        }
         MPI_Isend(rowToSend.data(), rowToSend.size(), MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &request);
     }
 
@@ -28,6 +25,7 @@ class MpiSendRequest {
 class MpiRankBuffer : public RankBuffer {
     private:
     const unsigned int rank;
+    const DataRowFactory &factory;
 
     std::vector<double> buffer;
     MPI_Request request;
@@ -37,14 +35,17 @@ class MpiRankBuffer : public RankBuffer {
     public:
     MpiRankBuffer(
         const unsigned int rank,
-        const size_t rowSize
+        const size_t rowSize,
+        const DataRowFactory &factory
     ) : 
         // need space for the row's global index and the local rank's
         //  marginal gain when adding this row to it's local solution.
-        buffer(rowSize + 2),
+        //  Also, need space for the final stop tag.
+        buffer(rowSize + 3, 0),
         rank(rank),
         isStillReceiving(true),
-        rankSolution(std::unique_ptr<MutableSubset>(NaiveMutableSubset::makeNew()))
+        rankSolution(std::unique_ptr<MutableSubset>(NaiveMutableSubset::makeNew())),
+        factory(factory)
     {
         this->readyForNextReceive();
     }
@@ -95,10 +96,18 @@ class MpiRankBuffer : public RankBuffer {
     }
 
     CandidateSeed* extractSeedFromBuffer() {
-        const unsigned int globalRowIndex = this->buffer.back();
-        const double localMarginalGain = this->buffer[this->buffer.size() - 2];
-        std::vector<double> data(this->buffer.begin(), this->buffer.end() - 2);
+        auto endOfData = this->buffer.end() - 1;
+        while (*endOfData != CommunicationConstants::endOfSendTag()) {
+            endOfData--;
+        }
+
+        // Remove the stop tag. This will allow the next send to be received.
+        *endOfData = 0;
+
+        const size_t globalRowIndex = static_cast<size_t>(*(endOfData - 1));
+        const double localMarginalGain = *(endOfData - 2);
+        std::vector<double> data(this->buffer.begin(), endOfData - 2);
         this->rankSolution->addRow(globalRowIndex, localMarginalGain);
-        return new CandidateSeed(globalRowIndex, move(data), this->rank);
+        return new CandidateSeed(globalRowIndex, this->factory.getFromBinary(move(data)), this->rank);
     }
 };

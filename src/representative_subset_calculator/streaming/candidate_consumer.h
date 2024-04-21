@@ -51,7 +51,11 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         #pragma omp parallel for
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[i]);
+            
+            // TODO: Only process the first seed from each sender
             if (this->firstGlobalRows.find(seed->getRow()) == this->firstGlobalRows.end()) {
+                
+                // TODO: This should just be a dot product, no need for similarity matrix here
                 MutableSimilarityMatrix tempMatrix;
                 tempMatrix.addRow(seed->getData());
                 rowToMarginal[i].second = tempMatrix.getCoverage();

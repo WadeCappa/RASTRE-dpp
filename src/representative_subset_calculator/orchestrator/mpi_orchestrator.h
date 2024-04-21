@@ -60,7 +60,7 @@ class MpiOrchestrator : public Orchestrator {
     static nlohmann::json buildMpiOutput(
         const AppData &appData, 
         const Subset &solution,
-        const Data &data,
+        const BaseData &data,
         const Timers &timers,
         const std::vector<unsigned int> &rowToRank
     ) {

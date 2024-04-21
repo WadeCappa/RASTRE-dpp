@@ -12,7 +12,11 @@ class NaiveSubsetCalculator : public SubsetCalculator {
     public:
     NaiveSubsetCalculator() {}
 
-    std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const Data &data, size_t k) {
+    std::unique_ptr<Subset> getApproximationSet(
+        std::unique_ptr<MutableSubset> consumer, 
+        const BaseData &data, 
+        size_t k
+    ) {
         MutableSimilarityMatrix matrix; 
         std::set<size_t> seen;
 
@@ -23,9 +27,8 @@ class NaiveSubsetCalculator : public SubsetCalculator {
 
             #pragma omp parallel for 
             for (size_t index = 0; index < data.totalRows(); index++) {
-                const auto & row = data.getRow(index);
                 MutableSimilarityMatrix tempMatrix(matrix);
-                tempMatrix.addRow(row);
+                tempMatrix.addRow(data.getRow(index));
                 marginals[index] = tempMatrix.getCoverage();
             }
 
@@ -45,7 +48,8 @@ class NaiveSubsetCalculator : public SubsetCalculator {
             }
 
             if (bestRow == -1) {
-                throw std::invalid_argument("FAILED to add element to matrix that increased marginal");
+                std::cout << "FAILED to add element to matrix that increased marginal" << std::endl;
+                return MutableSubset::upcast(move(consumer));
             }
 
             double marginalGain = highestMarginal - currentScore;

@@ -10,10 +10,10 @@ void validateValidRanks(const std::vector<unsigned int> &allRanks, const unsigne
 }
 
 TEST_CASE("Testing the proper blocking of a dataset with an evenly divisible dataset") {
-    const unsigned int WORLD_SIZE = DATA.size();
+    const unsigned int WORLD_SIZE = DENSE_DATA.size();
 
     AppData appData;
-    appData.numberOfDataRows = DATA.size();
+    appData.numberOfDataRows = DENSE_DATA.size();
     appData.worldSize = WORLD_SIZE;
     
     std::vector<unsigned int> previous;
