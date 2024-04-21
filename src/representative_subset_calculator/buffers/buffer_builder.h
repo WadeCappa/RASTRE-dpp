@@ -102,6 +102,8 @@ class GlobalBufferLoader : public BufferLoader {
         timers.globalCalculationTime.stopTimer();
 
         std::unique_ptr<Subset> bestLocal = this->getBestLocalSolution();
+
+        std::cout << "best local solution had score of " << bestLocal->getScore() << ", while the global solution had a score of " << globalResult->getScore() << std::endl;
         if (globalResult->getScore() > bestLocal->getScore()) {
             return globalResult; 
         } else {
@@ -170,31 +172,29 @@ class GlobalBufferLoader : public BufferLoader {
     std::unique_ptr<Subset> getBestLocalSolution() {
         std::vector<size_t> rows;
         double coverage;
-        double localMaxCoverage = -1;
+        double bestRankScore = -1;
         size_t maxRank = -1;
 
         for (size_t rank = 0; rank < worldSize; rank++) {
-            const size_t rankStart = displacements[rank];
+            const size_t scoreIndex = displacements[rank];
+            const double localRankScore = binaryInput[scoreIndex];
+            std::cout << "rank " << rank << " had local solution of score " << localRankScore << std::endl;
 
-            if (binaryInput[rankStart] >= localMaxCoverage) {
-                localMaxCoverage = binaryInput[rankStart];
+            if (localRankScore >= bestRankScore) {
+                bestRankScore = localRankScore;
                 maxRank = rank;
             }
-
         }
          
-        coverage = localMaxCoverage;
         // extract best local solution
         const size_t rankStart = displacements[maxRank];
         const size_t rankEnd = maxRank == worldSize - 1 ? binaryInput.size() : displacements[maxRank + 1];
-        for (
-            size_t rankCursor = rankStart + DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER; 
-            rankCursor < rankEnd; 
-            rankCursor += columnsPerRowInBuffer
-        ) {
-            rows.push_back(binaryInput[rankCursor]);
+        for (size_t i = rankStart; i < rankEnd; i++) {
+            if (binaryInput[i] == CommunicationConstants::endOfSendTag()) {
+                rows.push_back(binaryInput[i - 1]);
+            }
         }
 
-        return Subset::of(rows, coverage);
+        return Subset::of(rows, bestRankScore);
     }
 };

@@ -94,7 +94,6 @@ TEST_CASE("Test building send buffers for") {
 
     std::vector<size_t> mockSolutionRows = getRows(*MOCK_SOLUTION.get());
     for (size_t i = 0; i < MOCK_SOLUTION->size(); i++) {
-        std::cout << "looking at " << ((i + 1) * (data->totalColumns() + 1)) + 1 << std::endl;
         size_t sentRow = static_cast<size_t>(sendBuffer[((i + 1) * (data->totalColumns() + 2)) - 1 ]);
         CHECK(sentRow == mockSolutionRows[i]);
     }
