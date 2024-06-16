@@ -6,8 +6,11 @@
 class KernelMatrix {
     public:
     virtual double get(size_t j, size_t i) = 0;
-    virtual std::vector<double> getDiagonals(size_t rows) = 0;
+    virtual std::vector<double> getDiagonals() = 0;
 
+    double getCoverage() {
+        return KernelMatrix::getCoverage(this->getDiagonals());
+    }
 
     static double getDotProduct(const std::vector<double> &a, const std::vector<double> &b) {
         double res = 0;
@@ -16,6 +19,15 @@ class KernelMatrix {
         }
     
         return res;
+    }
+
+    static double getCoverage(std::vector<double> diagonals) {
+        double res = 0;
+        for (size_t index = 0; index < diagonals.size(); index++) {
+            res += std::log(diagonals[index]);
+        }
+
+        return res * 2;
     }
 };
 
@@ -46,13 +58,12 @@ class LazyKernelMatrix : public KernelMatrix {
         return this->kernelMatrix[j][i];
     }
 
-    std::vector<double> getDiagonals(size_t rows) {
-        std::vector<double> res(rows);
+    std::vector<double> getDiagonals() {
+        std::vector<double> res(this->data.totalRows());
         
         #pragma omp parallel for
-        for (size_t row = 0; row < rows; row++) {
-            double result = this->data.getRow(row).dotProduct(this->data.getRow(row));
-            result++; // add identity matrix
+        for (size_t row = 0; row < this->data.totalRows(); row++) {
+            double result = this->data.getRow(row).dotProduct(this->data.getRow(row)) + 1;
             res[row] = result;
             
             // Can be accessed in parallel since the vector's maps are only accessed exactly once and 
@@ -98,10 +109,10 @@ class NaiveKernelMatrix : public KernelMatrix {
         return this->kernelMatrix[j][i];
     }
 
-    std::vector<double> getDiagonals(size_t rows) {
-        std::vector<double> res(rows);
+    std::vector<double> getDiagonals() {
+        std::vector<double> res(this->kernelMatrix.size());
         
-        for (size_t index = 0; index < rows; index++) {
+        for (size_t index = 0; index < this->kernelMatrix.size(); index++) {
             res[index] = this->get(index, index);
         }
 

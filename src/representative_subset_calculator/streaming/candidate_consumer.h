@@ -54,11 +54,8 @@ class NaiveCandidateConsumer : public CandidateConsumer {
             
             // TODO: Only process the first seed from each sender
             if (this->firstGlobalRows.find(seed->getRow()) == this->firstGlobalRows.end()) {
-                
-                // TODO: This should just be a dot product, no need for similarity matrix here
-                MutableSimilarityMatrix tempMatrix;
-                tempMatrix.addRow(seed->getData());
-                rowToMarginal[i].second = tempMatrix.getCoverage();
+                const DataRow & row(seed->getData());
+                rowToMarginal[i].second = std::log(std::sqrt(row.dotProduct(row) + 1)) * 2;
             }
 
             rowToMarginal[i].first = seed->getRow();

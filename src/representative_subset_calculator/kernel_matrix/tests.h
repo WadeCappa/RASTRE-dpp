@@ -1,6 +1,5 @@
 #include <doctest/doctest.h>
 
-
 TEST_CASE("Kernel matracies are equivalent") {
     std::unique_ptr<FullyLoadedData> denseData(FullyLoadedData::load(DENSE_DATA));
     std::unique_ptr<NaiveKernelMatrix> naiveMatrix(NaiveKernelMatrix::from(*denseData));

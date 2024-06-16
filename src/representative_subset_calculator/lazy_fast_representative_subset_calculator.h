@@ -49,7 +49,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
 
         // Initialize kernel matrix 
         LazyKernelMatrix kernelMatrix(data);
-        std::vector<double> diagonals = kernelMatrix.getDiagonals(data.totalRows());
+        std::vector<double> diagonals = kernelMatrix.getDiagonals();
 
         // Initialize priority queue
         std::vector<size_t> priorityQueue;
