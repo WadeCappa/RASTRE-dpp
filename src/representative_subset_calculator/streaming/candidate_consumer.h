@@ -71,8 +71,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
             // TODO: Only process the first seed from each sender
             if (this->firstGlobalRows.find(seed->getRow()) == this->firstGlobalRows.end()) {
                 const DataRow & row(seed->getData());
-                double score = std::log(PerRowRelevanceCalculator::getScore(row, *calcFactory));
-                std::cout << "score of " << score << std::endl;
+                double score = std::log(std::sqrt(PerRowRelevanceCalculator::getScore(row, *calcFactory))) * 2;
                 rowToMarginal[i].second = score;
             }
 
