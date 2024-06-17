@@ -80,6 +80,11 @@ class MpiOrchestrator : public Orchestrator {
             titrator = new ThreeSieveBucketTitrator(appData.distributedEpsilon, appData.threeSieveT, appData.outputSetSize);
         }
 
-        return std::unique_ptr<NaiveCandidateConsumer>(new NaiveCandidateConsumer(std::unique_ptr<BucketTitrator>(titrator), numSenders));
+        return std::unique_ptr<NaiveCandidateConsumer>(
+            new NaiveCandidateConsumer(
+                std::unique_ptr<BucketTitrator>(titrator),
+                numSenders,
+                std::unique_ptr<RelevanceCalculatorFactory>(new NaiveRelevanceCalculatorFactory()))
+            );
     }
 };

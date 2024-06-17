@@ -26,6 +26,7 @@ class LazySubsetCalculator : public SubsetCalculator {
     ) {
         std::vector<std::pair<size_t, double>> heap;
         for (size_t index = 0; index < data.totalRows(); index++) {
+            // TODO: Use the kernel matrix here, keep diagonals as state
             MutableSimilarityMatrix matrix(data.getRow(index));
             heap.push_back(std::make_pair(index, matrix.getCoverage()));
         }
@@ -42,6 +43,7 @@ class LazySubsetCalculator : public SubsetCalculator {
             std::pop_heap(heap.begin(),heap.end(), comparitor); 
             heap.pop_back();
 
+            // TODO: Use the kernel matrix here, keep diagonals as state
             MutableSimilarityMatrix tempMatrix(matrix);
             tempMatrix.addRow(data.getRow(top.first));
             double marginal = tempMatrix.getCoverage();

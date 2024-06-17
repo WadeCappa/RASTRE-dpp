@@ -27,6 +27,7 @@ class NaiveSubsetCalculator : public SubsetCalculator {
 
             #pragma omp parallel for 
             for (size_t index = 0; index < data.totalRows(); index++) {
+                // TODO: Use the kernel matrix here, keep diagonals as state
                 MutableSimilarityMatrix tempMatrix(matrix);
                 tempMatrix.addRow(data.getRow(index));
                 marginals[index] = tempMatrix.getCoverage();

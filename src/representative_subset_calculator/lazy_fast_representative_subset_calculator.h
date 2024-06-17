@@ -48,8 +48,8 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         std::vector<size_t> u(data.totalRows(), 0);
 
         // Initialize kernel matrix 
-        LazyKernelMatrix kernelMatrix(data);
-        std::vector<double> diagonals = kernelMatrix.getDiagonals();
+        std::unique_ptr<LazyKernelMatrix> kernelMatrix(LazyKernelMatrix::from(data));
+        std::vector<double> diagonals = kernelMatrix->getDiagonals();
 
         // Initialize priority queue
         std::vector<size_t> priorityQueue;
@@ -68,7 +68,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
             for (size_t t = u[i]; t < consumer->size(); t++) {
                 size_t j_t = consumer->getRow(t); 
                 double dotProduct = KernelMatrix::getDotProduct(this->getSlice(v[i], consumer.get(), t), this->getSlice(v[j_t], consumer.get(), t));
-                v[i].insert({j_t, (kernelMatrix.get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t])});
+                v[i].insert({j_t, (kernelMatrix->get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t])});
                 diagonals[i] -= std::pow(v[i][j_t], 2);
             }
 
