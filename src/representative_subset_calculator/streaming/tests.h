@@ -32,6 +32,14 @@ std::unique_ptr<CandidateSeed> buildSeed() {
     return buildSeed(row, rank);
 }
 
+std::unique_ptr<BucketTitrator> getTitrator(unsigned int numThreads, double eps, unsigned int k) {
+    return std::unique_ptr<BucketTitrator>(new SieveStreamingBucketTitrator(numThreads, eps, k));
+}
+
+std::unique_ptr<NaiveCandidateConsumer> getConsumer(std::unique_ptr<BucketTitrator> titrator, size_t worldSize) {
+    return NaiveCandidateConsumer::from(move(titrator), worldSize);
+}
+
 class FakeReceiver : public Receiver {
     private:
     size_t nextIndex;
@@ -186,16 +194,17 @@ TEST_CASE("Candidate seed can exist") {
 
 TEST_CASE("Consumer can process seeds") {
     const unsigned int worldSize = 1;
-    NaiveCandidateConsumer consumer(std::unique_ptr<BucketTitrator>(new SieveStreamingBucketTitrator(5, EPSILON, 1)), worldSize);
+    NaiveRelevanceCalculatorFactory f;
+    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, 1), worldSize));
     Timers timers;
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     std::unique_ptr<CandidateSeed> seed(buildSeed());
     const unsigned int globalRow = seed->getRow();
 
     queue.push(move(seed));
-    consumer.accept(queue, timers);
+    consumer->accept(queue, timers);
 
-    std::unique_ptr<Subset> solution(consumer.getBestSolutionDestroyConsumer());
+    std::unique_ptr<Subset> solution(consumer->getBestSolutionDestroyConsumer());
     
     CHECK(solution->getScore() > 0);
     CHECK(solution->size() == 1);
@@ -204,15 +213,16 @@ TEST_CASE("Consumer can process seeds") {
 
 TEST_CASE("Consumer can find a solution") {
     const unsigned int worldSize = DENSE_DATA.size();
-    NaiveCandidateConsumer consumer(std::unique_ptr<BucketTitrator>(new SieveStreamingBucketTitrator(5, EPSILON, worldSize)), worldSize);
+    NaiveRelevanceCalculatorFactory f;
+    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, worldSize), worldSize));
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     Timers timers;
     for (size_t i = 0; i < worldSize; i++) {
         queue.push(buildSeed(i,i));
-        consumer.accept(queue, timers);
+        consumer->accept(queue, timers);
     }
 
-    std::unique_ptr<Subset> solution(consumer.getBestSolutionDestroyConsumer());
+    std::unique_ptr<Subset> solution(consumer->getBestSolutionDestroyConsumer());
     assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }
 
@@ -237,10 +247,11 @@ TEST_CASE("Test fake receiver") {
 TEST_CASE("Testing streaming with fake receiver") {
     const unsigned int worldSize = DENSE_DATA.size() / 2;
     FakeReceiver receiver(worldSize);
-    NaiveCandidateConsumer consumer(std::unique_ptr<BucketTitrator>(new SieveStreamingBucketTitrator(5, EPSILON, DENSE_DATA.size())), worldSize);
+    NaiveRelevanceCalculatorFactory f;
+    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, DENSE_DATA.size()), worldSize));
 
     Timers timers;
-    SeiveGreedyStreamer streamer(receiver, consumer, timers);
+    SeiveGreedyStreamer streamer(receiver, *consumer, timers);
     std::unique_ptr<Subset> solution(streamer.resolveStream());
     assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }
@@ -293,10 +304,10 @@ TEST_CASE("Testing multiple buffers") {
 TEST_CASE("Testing end to end without MPI") {
     const unsigned int worldSize = DENSE_DATA.size()/2;
     NaiveReceiver receiver(buildFakeBuffers(worldSize));
-    NaiveCandidateConsumer consumer(std::unique_ptr<BucketTitrator>(new SieveStreamingBucketTitrator(5, EPSILON, DENSE_DATA.size())), worldSize);
+    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, DENSE_DATA.size()), worldSize));
 
     Timers timers;
-    SeiveGreedyStreamer streamer(receiver, consumer, timers);
+    SeiveGreedyStreamer streamer(receiver, *consumer, timers);
     std::unique_ptr<Subset> solution(streamer.resolveStream());
     assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }
@@ -305,10 +316,11 @@ TEST_CASE("Testing end to end without MPI") {
 TEST_CASE("Testing end to end ThreeSieveStreaming without MPI") {
     const unsigned int worldSize = DENSE_DATA.size()/2;
     NaiveReceiver receiver(buildFakeBuffers(worldSize));
-    NaiveCandidateConsumer consumer(std::unique_ptr<BucketTitrator>(new ThreeSieveBucketTitrator(EPSILON, T, DENSE_DATA.size())), worldSize);
+    NaiveRelevanceCalculatorFactory f;
+    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(EPSILON, T, DENSE_DATA.size()), worldSize));
 
     Timers timers;
-    SeiveGreedyStreamer streamer(receiver, consumer, timers);
+    SeiveGreedyStreamer streamer(receiver, *consumer, timers);
     std::unique_ptr<Subset> solution(streamer.resolveStream());
     assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }

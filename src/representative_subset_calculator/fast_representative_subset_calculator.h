@@ -2,7 +2,6 @@
 #include <vector>
 #include <math.h>
 #include <unordered_set>
-#include "kernel_matrix/kernel_matrix.h"
 
 class FastSubsetCalculator : public SubsetCalculator {
     private:
@@ -45,7 +44,7 @@ class FastSubsetCalculator : public SubsetCalculator {
         std::unordered_set<size_t> seen;
 
         std::unique_ptr<NaiveKernelMatrix> kernelMatrix(NaiveKernelMatrix::from(data));
-        std::vector<double> diagonals = kernelMatrix->getDiagonals(data.totalRows()); 
+        std::vector<double> diagonals = kernelMatrix->getDiagonals(); 
 
         std::vector<std::vector<double>> c(data.totalRows(), std::vector<double>());
 

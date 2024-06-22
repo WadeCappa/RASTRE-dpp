@@ -1,5 +1,8 @@
 #include <set>
 #include "timers/timers.h"
+#include "kernel_matrix/relevance_calculator.h"
+#include "kernel_matrix/relevance_calculator_factory.h"
+#include "kernel_matrix/kernel_matrix.h"
 #include "naive_representative_subset_calculator.h"
 #include "lazy_representative_subset_calculator.h"
 #include "fast_representative_subset_calculator.h"

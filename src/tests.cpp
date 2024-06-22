@@ -3,12 +3,12 @@
 #include "representative_subset_calculator/streaming/communication_constants.h"
 
 static const std::vector<std::vector<double>> DENSE_DATA = {
-    {4,17,20,5231,4,21},
+    {4,17,20,1,4,21},
     {5,7,31,45,3,24},
-    {2.63212,5.12566,763,15,215,4},
+    {2.63212,5.12566,73,15,15,4},
     {12,6,47,32,74,4},
     {1,2,3,4,5,6},
-    {6,31,54,3.5,23,547}
+    {6,31,54,3.5,23,57}
 };
 
 static const std::vector<std::vector<double>> SPARSE_DATA = {

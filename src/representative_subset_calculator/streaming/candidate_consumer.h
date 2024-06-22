@@ -10,19 +10,35 @@ class NaiveCandidateConsumer : public CandidateConsumer {
     private:
     const unsigned int numberOfSenders;
     const std::unique_ptr<BucketTitrator> titrator;
+    std::unique_ptr<RelevanceCalculatorFactory> calcFactory;
 
     std::unordered_set<unsigned int> seenFirstElement;
     std::unordered_set<unsigned int> firstGlobalRows;
     double bestMarginal;
 
-    public:
-    NaiveCandidateConsumer(
+    public: 
+    static std::unique_ptr<NaiveCandidateConsumer> from(
         std::unique_ptr<BucketTitrator> titrator,
         const unsigned int numberOfSenders
+    ) {
+        return std::unique_ptr<NaiveCandidateConsumer>(
+            new NaiveCandidateConsumer(
+                move(titrator), 
+                numberOfSenders, 
+                std::unique_ptr<RelevanceCalculatorFactory>(new NaiveRelevanceCalculatorFactory())
+            )
+        );
+    }
+
+    NaiveCandidateConsumer(
+        std::unique_ptr<BucketTitrator> titrator,
+        const unsigned int numberOfSenders,
+        std::unique_ptr<RelevanceCalculatorFactory> calcFactory
     ) : 
         titrator(move(titrator)),
         numberOfSenders(numberOfSenders),
-        bestMarginal(0)
+        bestMarginal(0),
+        calcFactory(move(calcFactory))
     {}
 
     std::unique_ptr<Subset> getBestSolutionDestroyConsumer() {
@@ -54,11 +70,9 @@ class NaiveCandidateConsumer : public CandidateConsumer {
             
             // TODO: Only process the first seed from each sender
             if (this->firstGlobalRows.find(seed->getRow()) == this->firstGlobalRows.end()) {
-                
-                // TODO: This should just be a dot product, no need for similarity matrix here
-                MutableSimilarityMatrix tempMatrix;
-                tempMatrix.addRow(seed->getData());
-                rowToMarginal[i].second = tempMatrix.getCoverage();
+                const DataRow & row(seed->getData());
+                double score = std::log(std::sqrt(PerRowRelevanceCalculator::getScore(row, *calcFactory))) * 2;
+                rowToMarginal[i].second = score;
             }
 
             rowToMarginal[i].first = seed->getRow();
