@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
     Timers timers;
     timers.loadingDatasetTime.startTimer();
     std::ifstream inputFile;
-    inputFile.open(appData.inputFile);
+    inputFile.open(appData.loadInput.inputFile);
     std::unique_ptr<SegmentedData> data(Orchestrator::buildMpiData(appData, inputFile, rowToRank));
     inputFile.close();
     timers.loadingDatasetTime.stopTimer();

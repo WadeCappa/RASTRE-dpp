@@ -5,9 +5,24 @@
 #include<cstdlib>
 
 #include <random>
+#include <optional>
+
+const static std::string EMPTY_STRING = "\n";
+
+struct loadInput {
+    std::string inputFile = EMPTY_STRING;
+} typedef LoadInput;
+
+struct generateInput {
+    // should be an enum
+    int generationStrategy = 0;
+    size_t genRows;
+    size_t genCols;
+    double sparsity = -1; // default value
+    std::string seed = EMPTY_STRING;
+} typedef GenerateInput;
 
 struct appData{
-    std::string inputFile;
     std::string outputFile;
     size_t outputSetSize;
     unsigned int adjacencyListColumnCount = 0;
@@ -23,6 +38,9 @@ struct appData{
     int worldSize = 1;
     int worldRank = 0;
     size_t numberOfDataRows;
+
+   LoadInput loadInput;
+   GenerateInput generateInput;
 } typedef AppData;
 
 class Orchestrator {
@@ -46,7 +64,7 @@ class Orchestrator {
         nlohmann::json output {
             {"rows", data.totalRows()},
             {"columns", data.totalColumns()},
-            {"inputFile", appData.inputFile}
+            {"inputFile", appData.loadInput.inputFile}
         };
 
         return output;
@@ -64,7 +82,6 @@ class Orchestrator {
     }
 
     static void addCmdOptions(CLI::App &app, AppData &appData) {
-        app.add_option("-i,--input", appData.inputFile, "Path to input file. Should contain data in row vector format.")->required();
         app.add_option("-o,--output", appData.outputFile, "Path to output file.")->required();
         app.add_option("-k,--outputSetSize", appData.outputSetSize, "Sets the desired size of the representative set.")->required();
         app.add_option("-e,--epsilon", appData.epsilon, "Only used for the fast greedy variants. Determines the threshold for when seed selection is terminated.");
@@ -72,6 +89,17 @@ class Orchestrator {
         app.add_option("--adjacencyListColumnCount", appData.adjacencyListColumnCount, "To load an adjacnency list, set this value to the number of columns per row expected in the underlying matrix.");
         app.add_flag("--loadBinary", appData.binaryInput, "Use this flag if you want to load a binary input file.");
         app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
+    
+        CLI::App *loadInput = app.add_subcommand("loadInput", "loads the requested input from the provided path");
+        CLI::App *genInput = app.add_subcommand("generateInput", "generates synthetic data");
+
+        genInput->add_option("-g,--generationStrategy", appData.generateInput.generationStrategy);
+        genInput->add_option("--genRows", appData.generateInput.genRows)->required();
+        genInput->add_option("--genCols", appData.generateInput.genCols)->required();
+        genInput->add_option("--sparsity", appData.generateInput.sparsity)->required();
+        genInput->add_option("--generationSeed", appData.generateInput.seed);
+
+        loadInput->add_option("-i,--input", appData.loadInput.inputFile, "Path to input file. Should contain data in row vector format.")->required();
     }
 
     static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
@@ -81,6 +109,21 @@ class Orchestrator {
         app.add_option("--distributedEpsilon", appData.distributedEpsilon, "Only used for streaming. Defaults to 0.13.");
         app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
         app.add_option("--alpha", appData.alpha, "Only used for the truncated setting.");
+    }
+
+    static std::unique_ptr<FullyLoadedData> getData(AppData& appData) {
+        // build data step
+        if (appData.loadInput.inputFile == EMPTY_STRING) {
+            if (appData.generateInput.seed == EMPTY_STRING) {
+            }
+
+        } else {
+            std::ifstream inputFile;
+            inputFile.open(appData.loadInput.inputFile);
+            std::unique_ptr<FullyLoadedData> data(Orchestrator::buildData(appData, inputFile));
+            inputFile.close();
+            return move(data);
+        }
     }
 
     static SubsetCalculator* getCalculator(const AppData &appData) {
