@@ -19,7 +19,7 @@ struct generateInput {
     size_t genRows;
     size_t genCols;
     double sparsity = -1; // default value
-    std::string seed = EMPTY_STRING;
+    std::string seed;
 } typedef GenerateInput;
 
 struct appData{
@@ -97,7 +97,7 @@ class Orchestrator {
         genInput->add_option("--genRows", appData.generateInput.genRows)->required();
         genInput->add_option("--genCols", appData.generateInput.genCols)->required();
         genInput->add_option("--sparsity", appData.generateInput.sparsity)->required();
-        genInput->add_option("--generationSeed", appData.generateInput.seed);
+        genInput->add_option("--generationSeed", appData.generateInput.seed)->required();
 
         loadInput->add_option("-i,--input", appData.loadInput.inputFile, "Path to input file. Should contain data in row vector format.")->required();
     }
@@ -109,21 +109,6 @@ class Orchestrator {
         app.add_option("--distributedEpsilon", appData.distributedEpsilon, "Only used for streaming. Defaults to 0.13.");
         app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
         app.add_option("--alpha", appData.alpha, "Only used for the truncated setting.");
-    }
-
-    static std::unique_ptr<FullyLoadedData> getData(AppData& appData) {
-        // build data step
-        if (appData.loadInput.inputFile == EMPTY_STRING) {
-            if (appData.generateInput.seed == EMPTY_STRING) {
-            }
-
-        } else {
-            std::ifstream inputFile;
-            inputFile.open(appData.loadInput.inputFile);
-            std::unique_ptr<FullyLoadedData> data(Orchestrator::buildData(appData, inputFile));
-            inputFile.close();
-            return move(data);
-        }
     }
 
     static SubsetCalculator* getCalculator(const AppData &appData) {
@@ -183,7 +168,11 @@ class Orchestrator {
         return SegmentedData::load(*factory, data, rowToRank, appData.worldRank);
     }
 
-    static std::unique_ptr<FullyLoadedData> buildData(const AppData& appData, std::istream &data) {
+    static std::unique_ptr<FullyLoadedData> genData(const AppData& appData) {
+        
+    }
+
+    static std::unique_ptr<FullyLoadedData> loadData(const AppData& appData, std::istream &data) {
         std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
         return FullyLoadedData::load(*factory, data);
     }

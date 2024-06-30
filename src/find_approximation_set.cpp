@@ -1,6 +1,3 @@
-#include <CLI/CLI.hpp>
-#include <nlohmann/json.hpp>
-
 #include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/representative_subset.h"
 #include "data_tools/data_row_visitor.h"
@@ -19,6 +16,9 @@
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/orchestrator/orchestrator.h"
 
+#include <CLI/CLI.hpp>
+#include <nlohmann/json.hpp>
+
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset."};
     AppData appData;
@@ -28,9 +28,23 @@ int main(int argc, char** argv) {
     Timers timers;
 
     timers.loadingDatasetTime.startTimer();
-    std::unique_ptr<FullyLoadedData> data(Orchestrator::getData(appData));
-    timers.loadingDatasetTime.stopTimer();
     
+    std::unique_ptr<FullyLoadedData> data;
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        // load data case
+
+        std::ifstream inputFile;
+        inputFile.open(appData.loadInput.inputFile);
+        data = Orchestrator::loadData(appData, inputFile);
+        inputFile.close();
+    } else if (appData.generateInput.seed != EMPTY_STRING) {
+        // generate data case
+
+        
+    }
+
+    timers.loadingDatasetTime.stopTimer();
+
     timers.totalCalculationTime.startTimer();
     std::unique_ptr<SubsetCalculator> calculator(Orchestrator::getCalculator(appData));
     std::unique_ptr<Subset> solution = calculator->getApproximationSet(*data.get(), appData.outputSetSize);
