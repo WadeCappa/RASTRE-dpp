@@ -25,9 +25,10 @@ class FullyLoadedData : public BaseData {
     static std::unique_ptr<FullyLoadedData> load(DataRowFactory &factory, std::istream &source) {
         size_t columns = 0;
         std::vector<std::unique_ptr<DataRow>> data;
+        FromFileLineFactory getter(source);
 
         while (true) {
-            DataRow* nextRow = factory.maybeGet(source);
+            DataRow* nextRow = factory.maybeGet(getter);
             if (nextRow == nullptr) {
                 break;
             }
@@ -89,9 +90,10 @@ class SegmentedData : public BaseData {
         std::vector<std::unique_ptr<DataRow>> data;
         std::vector<size_t> localRowToGlobalRow;
         size_t globalRow = 0;
+        FromFileLineFactory getter(source);
 
         while (true) {
-            DataRow* nextRow = factory.maybeGet(source);
+            DataRow* nextRow = factory.maybeGet(getter);
 
             if (nextRow == nullptr) {
                 break;

@@ -3,10 +3,37 @@
 #include <fstream>
 #include <memory>
 #include <map>
+#include <optional>
+
+class LineFactory {
+    public:
+    virtual std::optional<std::string> maybeGet() = 0;
+};
+
+class FromFileLineFactory : public LineFactory {
+    private:
+    std::istream &source;
+
+    public:
+    FromFileLineFactory(std::istream &source) : source(source) {}
+
+    std::optional<std::string> maybeGet() {
+        std::string data;
+
+        if (!std::getline(source, data)) {
+            return std::nullopt;
+        }
+
+        return move(data);
+    }
+};
+
+class GeneratedLineFactory : public LineFactory {
+};
 
 class DataRowFactory {
     public:
-    virtual DataRow* maybeGet(std::istream &source) = 0;
+    virtual DataRow* maybeGet(LineFactory &source) = 0;
     virtual std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const = 0;
     virtual std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const = 0;
 };
@@ -14,16 +41,16 @@ class DataRowFactory {
 // TODO: This should be a static constructor in the dense data row? 
 class DenseDataRowFactory : public DataRowFactory {
     public:
-    DataRow* maybeGet(std::istream &source) {
-        std::string data;
-        if (!std::getline(source, data)) {
+    DataRow* maybeGet(LineFactory &source) {
+        std::optional<std::string> data(source.maybeGet());
+        if (!data.has_value()) {
             return nullptr;
         }
         
         std::vector<double> result;
 
         char *token;
-        char *rest = data.data();
+        char *rest = data.value().data();
 
         while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
             result.push_back(std::stod(std::string(token)));
@@ -60,8 +87,7 @@ class SparseDataRowFactory : public DataRowFactory {
         totalColumns(totalColumns) 
     {}
 
-    DataRow* maybeGet(std::istream &source) {
-        std::string data;
+    DataRow* maybeGet(LineFactory &source) {
         std::map<size_t, double> result;
 
         while (true) {
@@ -74,7 +100,8 @@ class SparseDataRowFactory : public DataRowFactory {
                 }
             }
 
-            if (!std::getline(source, data)) {
+            std::optional<std::string> line(source.maybeGet());
+            if (!line.has_value()) {
                 if (this->hasData) {
                     this->hasData = false;
                     return new SparseDataRow(move(result), this->totalColumns);
@@ -85,7 +112,7 @@ class SparseDataRowFactory : public DataRowFactory {
 
             this->hasData = false;
 
-            std::istringstream stream(data);
+            std::istringstream stream(line.value().data());
             double number;
             size_t totalSeen = 0;
 
