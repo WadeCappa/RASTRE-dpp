@@ -161,11 +161,11 @@ class Orchestrator {
 
     static std::unique_ptr<SegmentedData> buildMpiData(
         const AppData& appData, 
-        std::istream &data, 
+        LineFactory &getter,
         const std::vector<unsigned int> &rowToRank
     ) {
         std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
-        return SegmentedData::load(*factory, data, rowToRank, appData.worldRank);
+        return SegmentedData::load(*factory, getter, rowToRank, appData.worldRank);
     }
 
     static std::unique_ptr<FullyLoadedData> loadData(const AppData& appData, LineFactory &getter) {

@@ -143,12 +143,13 @@ TEST_CASE("Testing sparse base data") {
 TEST_CASE("Testing segmented dense data") {
     std::string dataAsString = matrixToString(SPARSE_DATA);
     std::istringstream inputStream(dataAsString);
+    FromFileLineFactory getter(inputStream);
     SparseDataRowFactory factory(SPARSE_DATA_TOTAL_COLUMNS);
     
     std::vector<unsigned int> rankMapping({0, 1, 2, 3, 2, 1});
     const int rank = 2;
     
-    std::unique_ptr<SegmentedData> data(SegmentedData::load(factory, inputStream, rankMapping, rank));
+    std::unique_ptr<SegmentedData> data(SegmentedData::load(factory, getter, rankMapping, rank));
     CHECK(data->totalRows() == 2);
     verifyData(*data.get(), rankMapping, rank);
 }

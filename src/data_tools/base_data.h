@@ -81,7 +81,7 @@ class SegmentedData : public BaseData {
     public:
     static std::unique_ptr<SegmentedData> load(
         DataRowFactory &factory, 
-        std::istream &source, 
+        LineFactory &source, 
         const std::vector<unsigned int> &rankMapping, 
         const unsigned int rank
     ) {
@@ -89,10 +89,9 @@ class SegmentedData : public BaseData {
         std::vector<std::unique_ptr<DataRow>> data;
         std::vector<size_t> localRowToGlobalRow;
         size_t globalRow = 0;
-        FromFileLineFactory getter(source);
 
         while (true) {
-            DataRow* nextRow = factory.maybeGet(getter);
+            DataRow* nextRow = factory.maybeGet(source);
 
             if (nextRow == nullptr) {
                 break;
