@@ -12,6 +12,28 @@ class RandomNumberGenerator {
     virtual double getNumber() = 0;
 };
 
+class NormalRandomNumberGenerator : public RandomNumberGenerator {
+    private:
+    std::default_random_engine eng;
+    std::normal_distribution<double> distribution;
+
+    public:
+    NormalRandomNumberGenerator(
+        std::default_random_engine eng, 
+        std::normal_distribution<double> distribution
+    ) : eng(move(eng)), distribution(move(distribution)) {}
+    
+    static std::unique_ptr<RandomNumberGenerator> create(const long unsigned int seed) {
+        std::default_random_engine eng(seed);
+        std::normal_distribution<double> distribution;
+        return std::unique_ptr<RandomNumberGenerator>(new NormalRandomNumberGenerator(move(eng), move(distribution)));
+    }
+
+    double getNumber() {
+        return distribution(eng);
+    }
+};
+
 class LineFactory {
     public:
     virtual std::optional<std::string> maybeGet() = 0;
@@ -41,8 +63,7 @@ class GeneratedLineFactory : public LineFactory {
     const size_t numRows;
     const size_t numColumns;
     const double sparsity;
-    std::unique_ptr<RandomNumberGenerator> valueRng;
-    std::unique_ptr<RandomNumberGenerator> sparsityRng;
+    std::unique_ptr<RandomNumberGenerator> rng;
 
     size_t currentRow;
     size_t currentColumn;
@@ -52,14 +73,12 @@ class GeneratedLineFactory : public LineFactory {
         const size_t numRows,
         const size_t numColumns,
         const double sparsity,
-        std::unique_ptr<RandomNumberGenerator> valueRng,
-        std::unique_ptr<RandomNumberGenerator> sparsityRng
+        std::unique_ptr<RandomNumberGenerator> rng
     ) : 
         numRows(numRows),
         numColumns(numColumns),
         sparsity(sparsity),
-        valueRng(move(valueRng)),
-        sparsityRng(move(sparsityRng)),
+        rng(move(rng)),
         currentRow(0),
         currentColumn(0)
     {}
@@ -74,12 +93,12 @@ class GeneratedLineFactory : public LineFactory {
         // should use a constant to denote the delimeter here, pull from the 
         //  file that loads sparse rows
         std::string delimeter = " ";
-        res << this->currentRow << delimeter << this->currentColumn << delimeter << this->valueRng->getNumber();
+        res << this->currentRow << delimeter << this->currentColumn << delimeter << this->rng->getNumber();
         
         // increment column to avoid repeats
         this->currentColumn++;
 
-        while (this->sparsityRng->getNumber() < this->sparsity) {
+        while (this->rng->getNumber() < this->sparsity) {
             this->currentColumn++;
         }
 

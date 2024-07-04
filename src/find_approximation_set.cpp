@@ -28,13 +28,25 @@ int main(int argc, char** argv) {
     Timers timers;
 
     timers.loadingDatasetTime.startTimer();
+
+    // Put this somewhere more sane
+    const unsigned int DEFAULT_VALUE = -1;
     
-    std::unique_ptr<FromFileLineFactory> getter;
+    std::unique_ptr<LineFactory> getter;
     std::ifstream inputFile;
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         inputFile.open(appData.loadInput.inputFile);
         getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
-    } else if (appData.generateInput.seed != EMPTY_STRING) {
+    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
+        std::unique_ptr<RandomNumberGenerator> rng(NormalRandomNumberGenerator::create(appData.generateInput.seed));
+        getter = std::unique_ptr<GeneratedLineFactory>(
+            new GeneratedLineFactory(
+                appData.generateInput.genRows,
+                appData.generateInput.genCols,
+                appData.generateInput.sparsity,
+                move(rng)
+            )
+        );
     }
 
     std::unique_ptr<FullyLoadedData> data(Orchestrator::loadData(appData, *getter.get()));

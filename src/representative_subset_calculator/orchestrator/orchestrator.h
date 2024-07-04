@@ -19,7 +19,7 @@ struct generateInput {
     size_t genRows;
     size_t genCols;
     double sparsity = -1; // default value
-    std::string seed;
+    long unsigned int seed = -1;
 } typedef GenerateInput;
 
 struct appData{
