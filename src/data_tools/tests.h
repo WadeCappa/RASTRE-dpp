@@ -125,16 +125,18 @@ TEST_CASE("Testing loading sparse data") {
 TEST_CASE("Testing dense base data") {
     std::string dataAsString = matrixToString(DENSE_DATA);
     std::istringstream inputStream(dataAsString);
+    FromFileLineFactory getter(inputStream);
     DenseDataRowFactory factory;
-    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(factory, inputStream));
+    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(factory, getter));
     verifyData(*data.get());
 }
 
 TEST_CASE("Testing sparse base data") {
     std::string dataAsString = matrixToString(SPARSE_DATA);
     std::istringstream inputStream(dataAsString);
+    FromFileLineFactory getter(inputStream);
     SparseDataRowFactory factory(SPARSE_DATA_TOTAL_COLUMNS);
-    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(factory, inputStream));
+    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(factory, getter));
     verifyData(*data.get());
 }
 

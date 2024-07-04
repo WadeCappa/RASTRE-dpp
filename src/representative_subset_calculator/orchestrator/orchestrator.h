@@ -168,13 +168,9 @@ class Orchestrator {
         return SegmentedData::load(*factory, data, rowToRank, appData.worldRank);
     }
 
-    static std::unique_ptr<FullyLoadedData> genData(const AppData& appData) {
-        
-    }
-
-    static std::unique_ptr<FullyLoadedData> loadData(const AppData& appData, std::istream &data) {
+    static std::unique_ptr<FullyLoadedData> loadData(const AppData& appData, LineFactory &getter) {
         std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
-        return FullyLoadedData::load(*factory, data);
+        return FullyLoadedData::load(*factory, getter);
     }
 
     static std::unique_ptr<DataRowFactory> getDataRowFactory(const AppData& appData) {

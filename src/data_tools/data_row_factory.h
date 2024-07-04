@@ -5,6 +5,13 @@
 #include <map>
 #include <optional>
 
+#include <random>
+
+class RandomNumberGenerator {
+    public:
+    virtual double getNumber() = 0;
+};
+
 class LineFactory {
     public:
     virtual std::optional<std::string> maybeGet() = 0;
@@ -28,7 +35,61 @@ class FromFileLineFactory : public LineFactory {
     }
 };
 
+// No generator for dense datasets.
 class GeneratedLineFactory : public LineFactory {
+    private:
+    const size_t numRows;
+    const size_t numColumns;
+    const double sparsity;
+    std::unique_ptr<RandomNumberGenerator> valueRng;
+    std::unique_ptr<RandomNumberGenerator> sparsityRng;
+
+    size_t currentRow;
+    size_t currentColumn;
+
+    public:
+    GeneratedLineFactory(
+        const size_t numRows,
+        const size_t numColumns,
+        const double sparsity,
+        std::unique_ptr<RandomNumberGenerator> valueRng,
+        std::unique_ptr<RandomNumberGenerator> sparsityRng
+    ) : 
+        numRows(numRows),
+        numColumns(numColumns),
+        sparsity(sparsity),
+        valueRng(move(valueRng)),
+        sparsityRng(move(sparsityRng)),
+        currentRow(0),
+        currentColumn(0)
+    {}
+
+    std::optional<std::string> maybeGet() {
+        if (this->currentRow >= this->numRows) {
+            return std::nullopt;
+        }
+
+        std::stringstream res;
+
+        // should use a constant to denote the delimeter here, pull from the 
+        //  file that loads sparse rows
+        std::string delimeter = " ";
+        res << this->currentRow << delimeter << this->currentColumn << delimeter << this->valueRng->getNumber();
+        
+        // increment column to avoid repeats
+        this->currentColumn++;
+
+        while (this->sparsityRng->getNumber() < this->sparsity) {
+            this->currentColumn++;
+        }
+
+        if (this->currentColumn >= this->numColumns) {
+            this->currentRow++;
+            this->currentColumn %= this->numColumns;
+        }
+
+        return res.str();
+    }
 };
 
 class DataRowFactory {

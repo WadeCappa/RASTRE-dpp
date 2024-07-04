@@ -22,10 +22,9 @@ class FullyLoadedData : public BaseData {
     FullyLoadedData(const BaseData&);
 
     public:
-    static std::unique_ptr<FullyLoadedData> load(DataRowFactory &factory, std::istream &source) {
+    static std::unique_ptr<FullyLoadedData> load(DataRowFactory &factory, LineFactory &getter) {
         size_t columns = 0;
         std::vector<std::unique_ptr<DataRow>> data;
-        FromFileLineFactory getter(source);
 
         while (true) {
             DataRow* nextRow = factory.maybeGet(getter);

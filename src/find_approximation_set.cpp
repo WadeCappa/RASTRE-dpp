@@ -29,19 +29,18 @@ int main(int argc, char** argv) {
 
     timers.loadingDatasetTime.startTimer();
     
-    std::unique_ptr<FullyLoadedData> data;
+    std::unique_ptr<FromFileLineFactory> getter;
+    std::ifstream inputFile;
     if (appData.loadInput.inputFile != EMPTY_STRING) {
-        // load data case
-
-        std::ifstream inputFile;
         inputFile.open(appData.loadInput.inputFile);
-        data = Orchestrator::loadData(appData, inputFile);
-        inputFile.close();
+        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
     } else if (appData.generateInput.seed != EMPTY_STRING) {
-        // generate data case
-
-        
     }
+
+    std::unique_ptr<FullyLoadedData> data(Orchestrator::loadData(appData, *getter.get()));
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.close();
+    } 
 
     timers.loadingDatasetTime.stopTimer();
 
