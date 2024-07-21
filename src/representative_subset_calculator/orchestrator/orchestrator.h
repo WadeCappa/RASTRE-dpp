@@ -94,10 +94,10 @@ class Orchestrator {
         CLI::App *genInput = app.add_subcommand("generateInput", "generates synthetic data");
 
         genInput->add_option("-g,--generationStrategy", appData.generateInput.generationStrategy);
-        genInput->add_option("--genRows", appData.generateInput.genRows)->required();
-        genInput->add_option("--genCols", appData.generateInput.genCols)->required();
+        genInput->add_option("--rows", appData.generateInput.genRows)->required();
+        genInput->add_option("--cols", appData.generateInput.genCols)->required();
         genInput->add_option("--sparsity", appData.generateInput.sparsity)->required();
-        genInput->add_option("--generationSeed", appData.generateInput.seed)->required();
+        genInput->add_option("--seed", appData.generateInput.seed)->required();
 
         loadInput->add_option("-i,--input", appData.loadInput.inputFile, "Path to input file. Should contain data in row vector format.")->required();
     }
