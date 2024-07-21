@@ -49,10 +49,11 @@ static std::string matrixToString(const std::vector<std::vector<double>> &data) 
 
 static std::vector<std::unique_ptr<DataRow>> loadData(DataRowFactory &factory, std::istream &data) {
     std::vector<std::unique_ptr<DataRow>> res;
-    DataRow* nextRow = factory.maybeGet(data);
+    FromFileLineFactory getter(data);
+    DataRow* nextRow = factory.maybeGet(getter);
     while (nextRow != nullptr) {
         res.push_back(std::unique_ptr<DataRow>(nextRow));
-        nextRow = factory.maybeGet(data);
+        nextRow = factory.maybeGet(getter);
     }
 
     return move(res);
@@ -124,28 +125,31 @@ TEST_CASE("Testing loading sparse data") {
 TEST_CASE("Testing dense base data") {
     std::string dataAsString = matrixToString(DENSE_DATA);
     std::istringstream inputStream(dataAsString);
+    FromFileLineFactory getter(inputStream);
     DenseDataRowFactory factory;
-    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(factory, inputStream));
+    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(factory, getter));
     verifyData(*data.get());
 }
 
 TEST_CASE("Testing sparse base data") {
     std::string dataAsString = matrixToString(SPARSE_DATA);
     std::istringstream inputStream(dataAsString);
+    FromFileLineFactory getter(inputStream);
     SparseDataRowFactory factory(SPARSE_DATA_TOTAL_COLUMNS);
-    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(factory, inputStream));
+    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(factory, getter));
     verifyData(*data.get());
 }
 
 TEST_CASE("Testing segmented dense data") {
     std::string dataAsString = matrixToString(SPARSE_DATA);
     std::istringstream inputStream(dataAsString);
+    FromFileLineFactory getter(inputStream);
     SparseDataRowFactory factory(SPARSE_DATA_TOTAL_COLUMNS);
     
     std::vector<unsigned int> rankMapping({0, 1, 2, 3, 2, 1});
     const int rank = 2;
     
-    std::unique_ptr<SegmentedData> data(SegmentedData::load(factory, inputStream, rankMapping, rank));
+    std::unique_ptr<SegmentedData> data(SegmentedData::load(factory, getter, rankMapping, rank));
     CHECK(data->totalRows() == 2);
     verifyData(*data.get(), rankMapping, rank);
 }

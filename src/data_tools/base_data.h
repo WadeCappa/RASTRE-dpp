@@ -22,12 +22,12 @@ class FullyLoadedData : public BaseData {
     FullyLoadedData(const BaseData&);
 
     public:
-    static std::unique_ptr<FullyLoadedData> load(DataRowFactory &factory, std::istream &source) {
+    static std::unique_ptr<FullyLoadedData> load(DataRowFactory &factory, LineFactory &getter) {
         size_t columns = 0;
         std::vector<std::unique_ptr<DataRow>> data;
 
         while (true) {
-            DataRow* nextRow = factory.maybeGet(source);
+            DataRow* nextRow = factory.maybeGet(getter);
             if (nextRow == nullptr) {
                 break;
             }
@@ -81,7 +81,7 @@ class SegmentedData : public BaseData {
     public:
     static std::unique_ptr<SegmentedData> load(
         DataRowFactory &factory, 
-        std::istream &source, 
+        LineFactory &source, 
         const std::vector<unsigned int> &rankMapping, 
         const unsigned int rank
     ) {

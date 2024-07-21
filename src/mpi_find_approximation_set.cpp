@@ -184,10 +184,35 @@ int main(int argc, char** argv) {
 
     Timers timers;
     timers.loadingDatasetTime.startTimer();
+
+    // All of this is duplicated between files, you can pretty easily build another class
+    //  to contain this so you don't repeat yourself.
+    
+    // Put this somewhere more sane
+    const unsigned int DEFAULT_VALUE = -1;
+
+    std::unique_ptr<LineFactory> getter;
     std::ifstream inputFile;
-    inputFile.open(appData.inputFile);
-    std::unique_ptr<SegmentedData> data(Orchestrator::buildMpiData(appData, inputFile, rowToRank));
-    inputFile.close();
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.open(appData.loadInput.inputFile);
+        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
+    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
+        std::unique_ptr<RandomNumberGenerator> rng(NormalRandomNumberGenerator::create(appData.generateInput.seed));
+        getter = std::unique_ptr<GeneratedLineFactory>(
+            new GeneratedLineFactory(
+                appData.generateInput.genRows,
+                appData.generateInput.genCols,
+                appData.generateInput.sparsity,
+                move(rng)
+            )
+        );
+    }
+
+    std::unique_ptr<SegmentedData> data(Orchestrator::buildMpiData(appData, *getter.get(), rowToRank));
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.close();
+    } 
+
     timers.loadingDatasetTime.stopTimer();
 
     timers.barrierTime.startTimer();

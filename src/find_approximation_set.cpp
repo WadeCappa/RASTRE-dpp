@@ -26,11 +26,34 @@ int main(int argc, char** argv) {
     CLI11_PARSE(app, argc, argv);
 
     Timers timers;
+
     timers.loadingDatasetTime.startTimer();
+
+    // Put this somewhere more sane
+    const unsigned int DEFAULT_VALUE = -1;
+    
+    std::unique_ptr<LineFactory> getter;
     std::ifstream inputFile;
-    inputFile.open(appData.inputFile);
-    std::unique_ptr<FullyLoadedData> data(Orchestrator::buildData(appData, inputFile));
-    inputFile.close();
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.open(appData.loadInput.inputFile);
+        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
+    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
+        std::unique_ptr<RandomNumberGenerator> rng(NormalRandomNumberGenerator::create(appData.generateInput.seed));
+        getter = std::unique_ptr<GeneratedLineFactory>(
+            new GeneratedLineFactory(
+                appData.generateInput.genRows,
+                appData.generateInput.genCols,
+                appData.generateInput.sparsity,
+                move(rng)
+            )
+        );
+    }
+
+    std::unique_ptr<FullyLoadedData> data(Orchestrator::loadData(appData, *getter.get()));
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.close();
+    } 
+
     timers.loadingDatasetTime.stopTimer();
 
     timers.totalCalculationTime.startTimer();

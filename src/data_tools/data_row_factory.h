@@ -3,10 +3,117 @@
 #include <fstream>
 #include <memory>
 #include <map>
+#include <optional>
+
+#include <random>
+
+class RandomNumberGenerator {
+    public:
+    virtual double getNumber() = 0;
+};
+
+class NormalRandomNumberGenerator : public RandomNumberGenerator {
+    private:
+    std::default_random_engine eng;
+    std::normal_distribution<double> distribution;
+
+    public:
+    NormalRandomNumberGenerator(
+        std::default_random_engine eng, 
+        std::normal_distribution<double> distribution
+    ) : eng(move(eng)), distribution(move(distribution)) {}
+    
+    static std::unique_ptr<RandomNumberGenerator> create(const long unsigned int seed) {
+        std::default_random_engine eng(seed);
+        std::normal_distribution<double> distribution;
+        return std::unique_ptr<RandomNumberGenerator>(new NormalRandomNumberGenerator(move(eng), move(distribution)));
+    }
+
+    double getNumber() {
+        return distribution(eng);
+    }
+};
+
+class LineFactory {
+    public:
+    virtual std::optional<std::string> maybeGet() = 0;
+};
+
+class FromFileLineFactory : public LineFactory {
+    private:
+    std::istream &source;
+
+    public:
+    FromFileLineFactory(std::istream &source) : source(source) {}
+
+    std::optional<std::string> maybeGet() {
+        std::string data;
+
+        if (!std::getline(source, data)) {
+            return std::nullopt;
+        }
+
+        return move(data);
+    }
+};
+
+// No generator for dense datasets.
+class GeneratedLineFactory : public LineFactory {
+    private:
+    const size_t numRows;
+    const size_t numColumns;
+    const double sparsity;
+    std::unique_ptr<RandomNumberGenerator> rng;
+
+    size_t currentRow;
+    size_t currentColumn;
+
+    public:
+    GeneratedLineFactory(
+        const size_t numRows,
+        const size_t numColumns,
+        const double sparsity,
+        std::unique_ptr<RandomNumberGenerator> rng
+    ) : 
+        numRows(numRows),
+        numColumns(numColumns),
+        sparsity(sparsity),
+        rng(move(rng)),
+        currentRow(0),
+        currentColumn(0)
+    {}
+
+    std::optional<std::string> maybeGet() {
+        if (this->currentRow >= this->numRows) {
+            return std::nullopt;
+        }
+
+        std::stringstream res;
+
+        // should use a constant to denote the delimeter here, pull from the 
+        //  file that loads sparse rows
+        std::string delimeter = " ";
+        res << this->currentRow << delimeter << this->currentColumn << delimeter << this->rng->getNumber();
+        
+        // increment column to avoid repeats
+        this->currentColumn++;
+
+        while (this->rng->getNumber() < this->sparsity) {
+            this->currentColumn++;
+        }
+
+        if (this->currentColumn >= this->numColumns) {
+            this->currentRow++;
+            this->currentColumn %= this->numColumns;
+        }
+
+        return res.str();
+    }
+};
 
 class DataRowFactory {
     public:
-    virtual DataRow* maybeGet(std::istream &source) = 0;
+    virtual DataRow* maybeGet(LineFactory &source) = 0;
     virtual std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const = 0;
     virtual std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const = 0;
 };
@@ -14,16 +121,16 @@ class DataRowFactory {
 // TODO: This should be a static constructor in the dense data row? 
 class DenseDataRowFactory : public DataRowFactory {
     public:
-    DataRow* maybeGet(std::istream &source) {
-        std::string data;
-        if (!std::getline(source, data)) {
+    DataRow* maybeGet(LineFactory &source) {
+        std::optional<std::string> data(source.maybeGet());
+        if (!data.has_value()) {
             return nullptr;
         }
         
         std::vector<double> result;
 
         char *token;
-        char *rest = data.data();
+        char *rest = data.value().data();
 
         while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
             result.push_back(std::stod(std::string(token)));
@@ -60,8 +167,7 @@ class SparseDataRowFactory : public DataRowFactory {
         totalColumns(totalColumns) 
     {}
 
-    DataRow* maybeGet(std::istream &source) {
-        std::string data;
+    DataRow* maybeGet(LineFactory &source) {
         std::map<size_t, double> result;
 
         while (true) {
@@ -74,7 +180,8 @@ class SparseDataRowFactory : public DataRowFactory {
                 }
             }
 
-            if (!std::getline(source, data)) {
+            std::optional<std::string> line(source.maybeGet());
+            if (!line.has_value()) {
                 if (this->hasData) {
                     this->hasData = false;
                     return new SparseDataRow(move(result), this->totalColumns);
@@ -85,7 +192,7 @@ class SparseDataRowFactory : public DataRowFactory {
 
             this->hasData = false;
 
-            std::istringstream stream(data);
+            std::istringstream stream(line.value().data());
             double number;
             size_t totalSeen = 0;
 

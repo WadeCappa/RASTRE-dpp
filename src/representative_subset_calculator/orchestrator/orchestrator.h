@@ -5,9 +5,24 @@
 #include<cstdlib>
 
 #include <random>
+#include <optional>
+
+const static std::string EMPTY_STRING = "\n";
+
+struct loadInput {
+    std::string inputFile = EMPTY_STRING;
+} typedef LoadInput;
+
+struct generateInput {
+    // should be an enum
+    int generationStrategy = 0;
+    size_t genRows;
+    size_t genCols;
+    double sparsity = -1; // default value
+    long unsigned int seed = -1;
+} typedef GenerateInput;
 
 struct appData{
-    std::string inputFile;
     std::string outputFile;
     size_t outputSetSize;
     unsigned int adjacencyListColumnCount = 0;
@@ -23,6 +38,9 @@ struct appData{
     int worldSize = 1;
     int worldRank = 0;
     size_t numberOfDataRows;
+
+   LoadInput loadInput;
+   GenerateInput generateInput;
 } typedef AppData;
 
 class Orchestrator {
@@ -46,7 +64,7 @@ class Orchestrator {
         nlohmann::json output {
             {"rows", data.totalRows()},
             {"columns", data.totalColumns()},
-            {"inputFile", appData.inputFile}
+            {"inputFile", appData.loadInput.inputFile}
         };
 
         return output;
@@ -64,7 +82,6 @@ class Orchestrator {
     }
 
     static void addCmdOptions(CLI::App &app, AppData &appData) {
-        app.add_option("-i,--input", appData.inputFile, "Path to input file. Should contain data in row vector format.")->required();
         app.add_option("-o,--output", appData.outputFile, "Path to output file.")->required();
         app.add_option("-k,--outputSetSize", appData.outputSetSize, "Sets the desired size of the representative set.")->required();
         app.add_option("-e,--epsilon", appData.epsilon, "Only used for the fast greedy variants. Determines the threshold for when seed selection is terminated.");
@@ -72,6 +89,17 @@ class Orchestrator {
         app.add_option("--adjacencyListColumnCount", appData.adjacencyListColumnCount, "To load an adjacnency list, set this value to the number of columns per row expected in the underlying matrix.");
         app.add_flag("--loadBinary", appData.binaryInput, "Use this flag if you want to load a binary input file.");
         app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
+    
+        CLI::App *loadInput = app.add_subcommand("loadInput", "loads the requested input from the provided path");
+        CLI::App *genInput = app.add_subcommand("generateInput", "generates synthetic data");
+
+        genInput->add_option("-g,--generationStrategy", appData.generateInput.generationStrategy);
+        genInput->add_option("--rows", appData.generateInput.genRows)->required();
+        genInput->add_option("--cols", appData.generateInput.genCols)->required();
+        genInput->add_option("--sparsity", appData.generateInput.sparsity)->required();
+        genInput->add_option("--seed", appData.generateInput.seed)->required();
+
+        loadInput->add_option("-i,--input", appData.loadInput.inputFile, "Path to input file. Should contain data in row vector format.")->required();
     }
 
     static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
@@ -133,16 +161,16 @@ class Orchestrator {
 
     static std::unique_ptr<SegmentedData> buildMpiData(
         const AppData& appData, 
-        std::istream &data, 
+        LineFactory &getter,
         const std::vector<unsigned int> &rowToRank
     ) {
         std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
-        return SegmentedData::load(*factory, data, rowToRank, appData.worldRank);
+        return SegmentedData::load(*factory, getter, rowToRank, appData.worldRank);
     }
 
-    static std::unique_ptr<FullyLoadedData> buildData(const AppData& appData, std::istream &data) {
+    static std::unique_ptr<FullyLoadedData> loadData(const AppData& appData, LineFactory &getter) {
         std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
-        return FullyLoadedData::load(*factory, data);
+        return FullyLoadedData::load(*factory, getter);
     }
 
     static std::unique_ptr<DataRowFactory> getDataRowFactory(const AppData& appData) {
