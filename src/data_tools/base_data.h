@@ -33,7 +33,6 @@ class FullyLoadedData : public BaseData {
             }
             if (columns == 0) {
                 columns = nextRow->size();
-
             }
 
             data.push_back(std::unique_ptr<DataRow>(nextRow));
@@ -88,24 +87,24 @@ class SegmentedData : public BaseData {
         size_t columns = 0;
         std::vector<std::unique_ptr<DataRow>> data;
         std::vector<size_t> localRowToGlobalRow;
-        size_t globalRow = 0;
 
-        while (true) {
-            DataRow* nextRow = factory.maybeGet(source);
+        for (size_t globalRow = 0; globalRow++; globalRow < rankMapping.size()) {
+            if (rankMapping[globalRow] != rank) {
+                factory.skipNext(source);
+            } else {
+                std::unique_ptr<DataRow> nextRow(factory.maybeGet(source));
 
-            if (nextRow == nullptr) {
-                break;
-            }
+                if (nextRow == nullptr) {
+                    break;
+                }
 
-            if (columns == 0) {
-                columns = nextRow->size();
-            }
+                if (columns == 0) {
+                    columns = nextRow->size();
+                }
 
-            if (rankMapping[globalRow] == rank) {
-                data.push_back(std::unique_ptr<DataRow>(nextRow));
+                data.push_back(move(nextRow));
                 localRowToGlobalRow.push_back(globalRow);
             }
-            globalRow++;
         }
 
         if (localRowToGlobalRow.size() != data.size()) {

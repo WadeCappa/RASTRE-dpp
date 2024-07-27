@@ -10,6 +10,7 @@
 class RandomNumberGenerator {
     public:
     virtual double getNumber() = 0;
+    virtual void skipNextElements(size_t elementsToSkip) = 0;
 };
 
 class NormalRandomNumberGenerator : public RandomNumberGenerator {
@@ -22,11 +23,15 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
         std::default_random_engine eng, 
         std::normal_distribution<double> distribution
     ) : eng(move(eng)), distribution(move(distribution)) {}
-    
+
     static std::unique_ptr<RandomNumberGenerator> create(const long unsigned int seed) {
         std::default_random_engine eng(seed);
         std::normal_distribution<double> distribution;
         return std::unique_ptr<RandomNumberGenerator>(new NormalRandomNumberGenerator(move(eng), move(distribution)));
+    }
+    
+    void skipNextElements(size_t elementsToSkip) {
+        eng.discard(elementsToSkip);
     }
 
     double getNumber() {
@@ -37,6 +42,7 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
 class LineFactory {
     public:
     virtual std::optional<std::string> maybeGet() = 0;
+    virtual void skipNext() = 0;
 };
 
 class FromFileLineFactory : public LineFactory {
@@ -45,6 +51,11 @@ class FromFileLineFactory : public LineFactory {
 
     public:
     FromFileLineFactory(std::istream &source) : source(source) {}
+
+    void skipNext() {
+        std::string data;
+        std::getline(source, data);
+    }
 
     std::optional<std::string> maybeGet() {
         std::string data;
@@ -78,6 +89,10 @@ class GeneratedDenseLineFactory : public LineFactory {
         rng(move(rng)),
         currentRow(0)
     {}
+
+    void skipNext() {
+        this->rng->skipNextElements(this->numColumns);
+    }
 
     std::optional<std::string> maybeGet() {
         if (this->currentRow >= this->numRows) {
@@ -121,6 +136,12 @@ class GeneratedSparseLineFactory : public LineFactory {
         currentColumn(0)
     {}
 
+    void skipNext() {
+        // TODO: this has not yet been implemented for this class. A 
+        //  refactor is required.
+        this->maybeGet();
+    }
+
     std::optional<std::string> maybeGet() {
         if (this->currentRow >= this->numRows) {
             return std::nullopt;
@@ -154,6 +175,7 @@ class DataRowFactory {
     virtual DataRow* maybeGet(LineFactory &source) = 0;
     virtual std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const = 0;
     virtual std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const = 0;
+    virtual void skipNext(LineFactory &source) = 0;
 };
 
 class DenseDataRowFactory : public DataRowFactory {
@@ -173,6 +195,10 @@ class DenseDataRowFactory : public DataRowFactory {
             result.push_back(std::stod(std::string(token)));
 
         return new DenseDataRow(move(result));
+    }
+
+    void skipNext(LineFactory &source) {
+        source.skipNext();
     }
 
     std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const {
@@ -203,6 +229,10 @@ class SparseDataRowFactory : public DataRowFactory {
         hasData(false),
         totalColumns(totalColumns) 
     {}
+
+    void skipNext(LineFactory &source) {
+        std::unique_ptr<DataRow> _line(maybeGet(source));
+    }
 
     DataRow* maybeGet(LineFactory &source) {
         std::map<size_t, double> result;
