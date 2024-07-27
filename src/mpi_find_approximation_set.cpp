@@ -197,15 +197,7 @@ int main(int argc, char** argv) {
         inputFile.open(appData.loadInput.inputFile);
         getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
     } else if (appData.generateInput.seed != DEFAULT_VALUE) {
-        std::unique_ptr<RandomNumberGenerator> rng(NormalRandomNumberGenerator::create(appData.generateInput.seed));
-        getter = std::unique_ptr<GeneratedLineFactory>(
-            new GeneratedLineFactory(
-                appData.generateInput.genRows,
-                appData.generateInput.genCols,
-                appData.generateInput.sparsity,
-                move(rng)
-            )
-        );
+        getter = Orchestrator::getLineGenerator(appData);
     }
 
     std::unique_ptr<SegmentedData> data(Orchestrator::buildMpiData(appData, *getter.get(), rowToRank));

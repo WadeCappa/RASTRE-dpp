@@ -8,6 +8,7 @@
 #include <optional>
 
 const static std::string EMPTY_STRING = "\n";
+const static double DEFAULT_GENERATED_SPARSITY = -1;
 
 struct loadInput {
     std::string inputFile = EMPTY_STRING;
@@ -18,7 +19,7 @@ struct generateInput {
     int generationStrategy = 0;
     size_t genRows;
     size_t genCols;
-    double sparsity = -1; // default value
+    double sparsity = DEFAULT_GENERATED_SPARSITY;
     long unsigned int seed = -1;
 } typedef GenerateInput;
 
@@ -96,7 +97,7 @@ class Orchestrator {
         genInput->add_option("-g,--generationStrategy", appData.generateInput.generationStrategy);
         genInput->add_option("--rows", appData.generateInput.genRows)->required();
         genInput->add_option("--cols", appData.generateInput.genCols)->required();
-        genInput->add_option("--sparsity", appData.generateInput.sparsity)->required();
+        genInput->add_option("--sparsity", appData.generateInput.sparsity);
         genInput->add_option("--seed", appData.generateInput.seed)->required();
 
         loadInput->add_option("-i,--input", appData.loadInput.inputFile, "Path to input file. Should contain data in row vector format.")->required();
@@ -157,6 +158,29 @@ class Orchestrator {
         };
 
         return output;
+    }
+
+    static std::unique_ptr<LineFactory> getLineGenerator(const AppData& appData) {
+        std::unique_ptr<RandomNumberGenerator> rng(NormalRandomNumberGenerator::create(appData.generateInput.seed));
+
+        if (appData.generateInput.sparsity != DEFAULT_GENERATED_SPARSITY) {
+            return std::unique_ptr<GeneratedSparseLineFactory>(
+                new GeneratedSparseLineFactory(
+                    appData.generateInput.genRows,
+                    appData.generateInput.genCols,
+                    appData.generateInput.sparsity,
+                    move(rng)
+                )
+            );
+        } else {
+            return std::unique_ptr<GeneratedDenseLineFactory>(
+                new GeneratedDenseLineFactory(
+                    appData.generateInput.genRows,
+                    appData.generateInput.genCols,
+                    move(rng)
+                )
+            );
+        }
     }
 
     static std::unique_ptr<SegmentedData> buildMpiData(

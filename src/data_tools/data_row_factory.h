@@ -57,8 +57,46 @@ class FromFileLineFactory : public LineFactory {
     }
 };
 
-// No generator for dense datasets.
-class GeneratedLineFactory : public LineFactory {
+class GeneratedDenseLineFactory : public LineFactory {
+    private:
+    static constexpr const char* delimeter = ",";
+
+    const size_t numRows;
+    const size_t numColumns;
+    std::unique_ptr<RandomNumberGenerator> rng;
+
+    size_t currentRow;
+
+    public:
+    GeneratedDenseLineFactory(
+        const size_t numRows,
+        const size_t numColumns,
+        std::unique_ptr<RandomNumberGenerator> rng
+    ) : 
+        numRows(numRows),
+        numColumns(numColumns),
+        rng(move(rng)),
+        currentRow(0)
+    {}
+
+    std::optional<std::string> maybeGet() {
+        if (this->currentRow >= this->numRows) {
+            return std::nullopt;
+        }
+        
+        std::stringstream res;
+
+        for (size_t i = 0; i < this->numColumns - 1; i++) {
+            res << this->rng->getNumber() << ",";
+        }
+        res << this->rng->getNumber();
+
+        this->currentRow++;
+        return res.str();
+    }
+};
+
+class GeneratedSparseLineFactory : public LineFactory {
     private:
     const size_t numRows;
     const size_t numColumns;
@@ -69,7 +107,7 @@ class GeneratedLineFactory : public LineFactory {
     size_t currentColumn;
 
     public:
-    GeneratedLineFactory(
+    GeneratedSparseLineFactory(
         const size_t numRows,
         const size_t numColumns,
         const double sparsity,
@@ -118,7 +156,6 @@ class DataRowFactory {
     virtual std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const = 0;
 };
 
-// TODO: This should be a static constructor in the dense data row? 
 class DenseDataRowFactory : public DataRowFactory {
     public:
     DataRow* maybeGet(LineFactory &source) {
