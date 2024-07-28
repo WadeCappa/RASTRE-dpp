@@ -117,6 +117,7 @@ void streaming(
     MPI_Gather(&rowSize, 1, MPI_INT, rowSizes.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     if (appData.worldRank == 0) {
+        rowSize = rowSizes.back();
         std::cout << "rank 0 entered into the streaming function and knows the total columns of "<< rowSize << std::endl;
         timers.totalCalculationTime.startTimer();
 
@@ -125,7 +126,6 @@ void streaming(
         //  have, but you need to be prepared for worst case in the receiver (allocation is cheaper
         //  than sends anyway).
         rowSize = appData.adjacencyListColumnCount > 0 ? rowSizes.back() : rowSizes.back() * 2;
-
 
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
         std::unique_ptr<Receiver> receiver(
