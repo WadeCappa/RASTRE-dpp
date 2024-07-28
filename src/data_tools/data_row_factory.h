@@ -167,9 +167,8 @@ class GeneratedSparseLineFactory : public LineFactory {
     {}
 
     void skipNext() {
-        // TODO: this has not yet been implemented for this class. A 
-        //  refactor is required.
-        this->maybeGet();
+        this->includeEdgeRng->skipNextElements(this->numColumns);
+        this->edgeValueRng->skipNextElements(this->numColumns);
     }
 
     std::optional<std::string> maybeGet() {
