@@ -74,7 +74,7 @@ class FullyLoadedData : public BaseData {
         std::vector<std::unique_ptr<DataRow>> data;
 
         while (true) {
-            DataRow* nextRow = factory.maybeGet(getter);
+            std::unique_ptr<DataRow> nextRow(factory.maybeGet(getter));
             if (nextRow == nullptr) {
                 break;
             }
@@ -82,7 +82,7 @@ class FullyLoadedData : public BaseData {
                 columns = nextRow->size();
             }
 
-            data.push_back(std::unique_ptr<DataRow>(nextRow));
+            data.push_back(move(nextRow));
         }
 
         return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(data), columns));

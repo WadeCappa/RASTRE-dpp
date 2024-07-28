@@ -50,9 +50,9 @@ static std::string matrixToString(const std::vector<std::vector<double>> &data) 
 static std::vector<std::unique_ptr<DataRow>> loadData(DataRowFactory &factory, std::istream &data) {
     std::vector<std::unique_ptr<DataRow>> res;
     FromFileLineFactory getter(data);
-    DataRow* nextRow = factory.maybeGet(getter);
+    std::unique_ptr<DataRow> nextRow(factory.maybeGet(getter));
     while (nextRow != nullptr) {
-        res.push_back(std::unique_ptr<DataRow>(nextRow));
+        res.push_back(move(nextRow));
         nextRow = factory.maybeGet(getter);
     }
 

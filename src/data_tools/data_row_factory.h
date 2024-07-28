@@ -206,7 +206,7 @@ class GeneratedSparseLineFactory : public LineFactory {
 
 class DataRowFactory {
     public:
-    virtual DataRow* maybeGet(LineFactory &source) = 0;
+    virtual std::unique_ptr<DataRow> maybeGet(LineFactory &source) = 0;
     virtual std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const = 0;
     virtual std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const = 0;
     virtual void skipNext(LineFactory &source) = 0;
@@ -214,7 +214,7 @@ class DataRowFactory {
 
 class DenseDataRowFactory : public DataRowFactory {
     public:
-    DataRow* maybeGet(LineFactory &source) {
+    std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
         std::optional<std::string> data(source.maybeGet());
         if (!data.has_value()) {
             return nullptr;
@@ -227,7 +227,7 @@ class DenseDataRowFactory : public DataRowFactory {
 
         while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
             result.push_back(std::stod(std::string(token)));
-        return new DenseDataRow(move(result));
+        return std::unique_ptr<DataRow>(new DenseDataRow(move(result)));
     }
 
     void skipNext(LineFactory &source) {
@@ -267,7 +267,7 @@ class SparseDataRowFactory : public DataRowFactory {
         std::unique_ptr<DataRow> _line(maybeGet(source));
     }
 
-    DataRow* maybeGet(LineFactory &source) {
+    std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
         std::map<size_t, double> result;
 
         while (true) {
@@ -276,7 +276,7 @@ class SparseDataRowFactory : public DataRowFactory {
                     result.insert({to, value});
                 } else {
                     this->expectedRow++;
-                    return new SparseDataRow(move(result), this->totalColumns);
+                    return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
                 }
             }
 
@@ -284,7 +284,7 @@ class SparseDataRowFactory : public DataRowFactory {
             if (!line.has_value()) {
                 if (this->hasData) {
                     this->hasData = false;
-                    return new SparseDataRow(move(result), this->totalColumns);
+                    return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
                 } else {
                     return nullptr;
                 }
@@ -319,7 +319,7 @@ class SparseDataRowFactory : public DataRowFactory {
             } else {
                 this->expectedRow++;
                 this->hasData = true;
-                return new SparseDataRow(move(result), this->totalColumns);
+                return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
             }
         } 
     }
