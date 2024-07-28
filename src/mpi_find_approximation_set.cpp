@@ -117,6 +117,7 @@ void streaming(
     MPI_Gather(&rowSize, 1, MPI_INT, rowSizes.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     if (appData.worldRank == 0) {
+        rowSize = rowSizes.back();
         std::cout << "rank 0 entered into the streaming function and knows the total columns of "<< rowSize << std::endl;
         timers.totalCalculationTime.startTimer();
 
@@ -125,7 +126,6 @@ void streaming(
         //  have, but you need to be prepared for worst case in the receiver (allocation is cheaper
         //  than sends anyway).
         rowSize = appData.adjacencyListColumnCount > 0 ? rowSizes.back() : rowSizes.back() * 2;
-
 
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
         std::unique_ptr<Receiver> receiver(
@@ -197,15 +197,7 @@ int main(int argc, char** argv) {
         inputFile.open(appData.loadInput.inputFile);
         getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
     } else if (appData.generateInput.seed != DEFAULT_VALUE) {
-        std::unique_ptr<RandomNumberGenerator> rng(NormalRandomNumberGenerator::create(appData.generateInput.seed));
-        getter = std::unique_ptr<GeneratedLineFactory>(
-            new GeneratedLineFactory(
-                appData.generateInput.genRows,
-                appData.generateInput.genCols,
-                appData.generateInput.sparsity,
-                move(rng)
-            )
-        );
+        getter = Orchestrator::getLineGenerator(appData);
     }
 
     std::unique_ptr<SegmentedData> data(Orchestrator::buildMpiData(appData, *getter.get(), rowToRank));

@@ -1,5 +1,6 @@
 
-class ToBinaryVisitor : public DataRowVisitor {
+class ToBinaryVisitor : public ReturningDataRowVisitor<std::vector<double>> {
+    private:
     std::vector<double> binary;
 
     public:
@@ -14,7 +15,7 @@ class ToBinaryVisitor : public DataRowVisitor {
         }
     }
 
-    std::vector<double> getAndDestroy() {
+    std::vector<double> get() {
         return move(binary);
     }
 };

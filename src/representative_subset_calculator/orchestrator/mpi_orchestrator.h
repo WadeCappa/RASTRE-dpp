@@ -5,14 +5,31 @@
 class MpiOrchestrator : public Orchestrator {
 
     public:
+    static nlohmann::json buildDatasetOutputFromMachines(
+        const BaseData &data,
+        const AppData &appData
+    ) {
+        nlohmann::json outputData(Orchestrator::buildDatasetJson(data, appData));
+        return aggregateJsonAtZero(outputData, appData.worldRank, appData.worldSize);
+    }
+
     static nlohmann::json getTimersFromMachines(
         const Timers &localTimers,
         const int worldRank,
         const int worldSize
     ) {
         nlohmann::json localTimerJson = localTimers.outputToJson();
+        return aggregateJsonAtZero(localTimerJson, worldRank, worldSize);
+    }
+
+    private:
+    static nlohmann::json aggregateJsonAtZero(
+        const nlohmann::json json,
+        const int worldRank,
+        const int worldSize
+    ) {
         std::ostringstream outputStream;
-        outputStream << localTimerJson.dump();
+        outputStream << json.dump();
         std::string localTimeData(outputStream.str());
 
         // send timer string lengths
@@ -57,6 +74,7 @@ class MpiOrchestrator : public Orchestrator {
         return output;
     }
 
+    public:
     static nlohmann::json buildMpiOutput(
         const AppData &appData, 
         const Subset &solution,
@@ -65,8 +83,8 @@ class MpiOrchestrator : public Orchestrator {
         const std::vector<unsigned int> &rowToRank
     ) {
         nlohmann::json output = Orchestrator::buildOutputBase(appData, solution, data, timers);
-
         output.push_back({"timers", getTimersFromMachines(timers, appData.worldRank, appData.worldSize)});
+        output.push_back({"dataset", buildDatasetOutputFromMachines(data, appData)});
 
         return output;
     }

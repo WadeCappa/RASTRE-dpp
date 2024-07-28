@@ -1,7 +1,7 @@
 #include <optional>
 #include <iostream>
 
-class DenseDotProductDataRowVisitor : public DataRowVisitor {
+class DenseDotProductDataRowVisitor : public ReturningDataRowVisitor<double> {
     private:
     std::optional<double> result;
     const std::vector<double>& base;
@@ -28,12 +28,12 @@ class DenseDotProductDataRowVisitor : public DataRowVisitor {
         this->result = dotProduct;
     }
 
-    std::optional<double> get() const {
-        return this->result;
+    double get() {
+        return this->result.value();
     }
 };
 
-class SparseDotProductDataRowVisitor : public DataRowVisitor {
+class SparseDotProductDataRowVisitor : public ReturningDataRowVisitor<double> {
     private:
     std::optional<double> result;
     const std::map<size_t, double>& base;
@@ -71,7 +71,7 @@ class SparseDotProductDataRowVisitor : public DataRowVisitor {
         this->result = dotProduct;
     }
 
-    std::optional<double> get() const {
-        return this->result;
+    double get() {
+        return this->result.value();
     }
 };

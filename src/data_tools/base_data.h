@@ -3,13 +3,60 @@
 #include <cstddef>
 #include <optional>
 #include <cassert>
+#include <bits/stdc++.h> 
 
+struct diagnostics {
+    double sparsity;
+    size_t numberOfNonEmptyCells;
+} typedef Diagnostics;
 
 class BaseData {
     public:
     virtual const DataRow& getRow(size_t i) const = 0;
     virtual size_t totalRows() const = 0;
     virtual size_t totalColumns() const = 0;
+
+    Diagnostics DEBUG_getDiagnostics() const {
+        size_t rows = this->totalRows();
+        if (rows == 0) {
+            return Diagnostics{0, 0};
+        }
+
+        class DiagnosticsVisitor : public ReturningDataRowVisitor<Diagnostics> {
+            private:
+            std::vector<double> sparsity;
+            size_t totalNonEmptyCells;
+            size_t i;
+            
+            public:
+            DiagnosticsVisitor(size_t rows) 
+            : sparsity(rows), i(0), totalNonEmptyCells(0) {}
+
+            void visitDenseDataRow(const std::vector<double>& data) {
+                sparsity[i++] = 0.0;
+                totalNonEmptyCells += data.size();
+            }
+
+            void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
+                sparsity[i++] = (double)((double)(totalColumns - data.size()) / (double)totalColumns);
+                totalNonEmptyCells += data.size();
+            }
+
+            Diagnostics get() {
+                return Diagnostics{
+                    std::accumulate(sparsity.begin(), sparsity.end(), 0.0) / sparsity.size(),
+                    totalNonEmptyCells
+                };
+            }
+        };
+
+        DiagnosticsVisitor visitor(rows);
+        for (size_t i = 0; i < rows; i++) {
+            this->getRow(i).voidVisit(visitor);
+        }
+
+        return visitor.get();
+    }
 };
 
 class FullyLoadedData : public BaseData {
@@ -27,16 +74,15 @@ class FullyLoadedData : public BaseData {
         std::vector<std::unique_ptr<DataRow>> data;
 
         while (true) {
-            DataRow* nextRow = factory.maybeGet(getter);
+            std::unique_ptr<DataRow> nextRow(factory.maybeGet(getter));
             if (nextRow == nullptr) {
                 break;
             }
             if (columns == 0) {
                 columns = nextRow->size();
-
             }
 
-            data.push_back(std::unique_ptr<DataRow>(nextRow));
+            data.push_back(move(nextRow));
         }
 
         return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(data), columns));
@@ -88,24 +134,24 @@ class SegmentedData : public BaseData {
         size_t columns = 0;
         std::vector<std::unique_ptr<DataRow>> data;
         std::vector<size_t> localRowToGlobalRow;
-        size_t globalRow = 0;
 
-        while (true) {
-            DataRow* nextRow = factory.maybeGet(source);
+        for (size_t globalRow = 0; globalRow < rankMapping.size(); globalRow++) {
+            if (rankMapping[globalRow] != rank) {
+                factory.skipNext(source);
+            } else {
+                std::unique_ptr<DataRow> nextRow(factory.maybeGet(source));
 
-            if (nextRow == nullptr) {
-                break;
-            }
+                if (nextRow == nullptr) {
+                    break;
+                }
 
-            if (columns == 0) {
-                columns = nextRow->size();
-            }
+                if (columns == 0) {
+                    columns = nextRow->size();
+                }
 
-            if (rankMapping[globalRow] == rank) {
-                data.push_back(std::unique_ptr<DataRow>(nextRow));
+                data.push_back(move(nextRow));
                 localRowToGlobalRow.push_back(globalRow);
             }
-            globalRow++;
         }
 
         if (localRowToGlobalRow.size() != data.size()) {

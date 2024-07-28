@@ -22,8 +22,7 @@ class BufferBuilder : public Buffer {
         #pragma omp parallel for
         for (size_t localRowIndex = 0; localRowIndex < localSolution.size(); localRowIndex++) {
             ToBinaryVisitor v;
-            data.getRow(localSolution.getRow(localRowIndex)).visit(v);
-            buffers[localRowIndex] = v.getAndDestroy();
+            buffers[localRowIndex] = data.getRow(localSolution.getRow(localRowIndex)).visit(v);
             buffers[localRowIndex].push_back(data.getRemoteIndexForRow(localSolution.getRow(localRowIndex)));
             buffers[localRowIndex].push_back(CommunicationConstants::endOfSendTag());
         }

@@ -8,8 +8,14 @@ static const std::string DELIMETER = ",";
 class DataRow {
     public:
     virtual size_t size() const = 0;
-    virtual void visit(DataRowVisitor &visitor) const = 0;
     virtual double dotProduct(const DataRow& dataRow) const = 0;
+    virtual void voidVisit(DataRowVisitor &visitor) const = 0;
+
+    template <typename T>
+    T visit(ReturningDataRowVisitor<T>& visitor) const {
+        this->voidVisit(visitor);
+        return visitor.get();
+    }
 }; 
 
 class DenseDataRow : public DataRow {
@@ -37,11 +43,10 @@ class DenseDataRow : public DataRow {
 
     double dotProduct(const DataRow& dataRow) const {
         DenseDotProductDataRowVisitor visitor(this->data);
-        dataRow.visit(visitor);
-        return visitor.get().value();
+        return dataRow.visit(visitor);
     }
 
-    void visit(DataRowVisitor &visitor) const {
+    void voidVisit(DataRowVisitor &visitor) const {
         visitor.visitDenseDataRow(this->data);
     }
 };
@@ -65,11 +70,10 @@ class SparseDataRow : public DataRow {
 
     double dotProduct(const DataRow& dataRow) const {
         SparseDotProductDataRowVisitor visitor(this->rowToValue);
-        dataRow.visit(visitor);
-        return visitor.get().value();
+        return dataRow.visit(visitor);
     }
 
-    void visit(DataRowVisitor &visitor) const {
+    void voidVisit(DataRowVisitor &visitor) const {
         visitor.visitSparseDataRow(this->rowToValue, this->totalColumns);
     }
 };

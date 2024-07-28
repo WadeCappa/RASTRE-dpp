@@ -8,6 +8,7 @@
 #include <optional>
 
 const static std::string EMPTY_STRING = "\n";
+const static double DEFAULT_GENERATED_SPARSITY = -1;
 
 struct loadInput {
     std::string inputFile = EMPTY_STRING;
@@ -16,9 +17,9 @@ struct loadInput {
 struct generateInput {
     // should be an enum
     int generationStrategy = 0;
-    size_t genRows;
-    size_t genCols;
-    double sparsity = -1; // default value
+    size_t genRows = 0;
+    size_t genCols = 0;
+    double sparsity = DEFAULT_GENERATED_SPARSITY;
     long unsigned int seed = -1;
 } typedef GenerateInput;
 
@@ -61,10 +62,25 @@ class Orchestrator {
     }
 
     static nlohmann::json buildDatasetJson(const BaseData &data, const AppData &appData) {
+        Diagnostics diagnostics = data.DEBUG_getDiagnostics();
         nlohmann::json output {
             {"rows", data.totalRows()},
             {"columns", data.totalColumns()},
-            {"inputFile", appData.loadInput.inputFile}
+            {"sparsity", diagnostics.sparsity},
+            {"nonEmptyCells", diagnostics.numberOfNonEmptyCells}
+        };
+
+        return output;
+    }
+
+    static nlohmann::json getInputSettings(const AppData &appData) {
+        nlohmann::json output {
+            {"inputFile", appData.loadInput.inputFile},
+            {"generationStrategy", appData.generateInput.generationStrategy}, 
+            {"generatedRows", appData.generateInput.genRows},
+            {"generatedCols", appData.generateInput.genCols},
+            {"seed", appData.generateInput.seed},
+            {"sparsity", appData.generateInput.sparsity}
         };
 
         return output;
@@ -96,7 +112,7 @@ class Orchestrator {
         genInput->add_option("-g,--generationStrategy", appData.generateInput.generationStrategy);
         genInput->add_option("--rows", appData.generateInput.genRows)->required();
         genInput->add_option("--cols", appData.generateInput.genCols)->required();
-        genInput->add_option("--sparsity", appData.generateInput.sparsity)->required();
+        genInput->add_option("--sparsity", appData.generateInput.sparsity);
         genInput->add_option("--seed", appData.generateInput.seed)->required();
 
         loadInput->add_option("-i,--input", appData.loadInput.inputFile, "Path to input file. Should contain data in row vector format.")->required();
@@ -150,13 +166,38 @@ class Orchestrator {
         nlohmann::json output {
             {"k", appData.outputSetSize}, 
             {"algorithm", algorithmToString(appData)},
+            {"inputSettings", getInputSettings(appData)},
             {"epsilon", appData.epsilon},
             {"Rows", solution.toJson()},
-            {"dataset", buildDatasetJson(data, appData)},
             {"worldSize", appData.worldSize}
         };
 
         return output;
+    }
+
+    static std::unique_ptr<LineFactory> getLineGenerator(const AppData& appData) {
+        std::unique_ptr<RandomNumberGenerator> rng(NormalRandomNumberGenerator::create(appData.generateInput.seed));
+
+        if (appData.generateInput.sparsity != DEFAULT_GENERATED_SPARSITY) {
+            std::unique_ptr<RandomNumberGenerator> sparsityRng(UniformRandomNumberGenerator::create(appData.generateInput.seed + 1));
+            return std::unique_ptr<GeneratedSparseLineFactory>(
+                new GeneratedSparseLineFactory(
+                    appData.generateInput.genRows,
+                    appData.generateInput.genCols,
+                    appData.generateInput.sparsity,
+                    move(rng),
+                    move(sparsityRng)
+                )
+            );
+        } else {
+            return std::unique_ptr<GeneratedDenseLineFactory>(
+                new GeneratedDenseLineFactory(
+                    appData.generateInput.genRows,
+                    appData.generateInput.genCols,
+                    move(rng)
+                )
+            );
+        }
     }
 
     static std::unique_ptr<SegmentedData> buildMpiData(

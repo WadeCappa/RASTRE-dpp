@@ -10,6 +10,7 @@
 class RandomNumberGenerator {
     public:
     virtual double getNumber() = 0;
+    virtual void skipNextElements(size_t elementsToSkip) = 0;
 };
 
 class NormalRandomNumberGenerator : public RandomNumberGenerator {
@@ -22,11 +23,15 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
         std::default_random_engine eng, 
         std::normal_distribution<double> distribution
     ) : eng(move(eng)), distribution(move(distribution)) {}
-    
+
     static std::unique_ptr<RandomNumberGenerator> create(const long unsigned int seed) {
         std::default_random_engine eng(seed);
         std::normal_distribution<double> distribution;
         return std::unique_ptr<RandomNumberGenerator>(new NormalRandomNumberGenerator(move(eng), move(distribution)));
+    }
+    
+    void skipNextElements(size_t elementsToSkip) {
+        eng.discard(elementsToSkip);
     }
 
     double getNumber() {
@@ -34,9 +39,37 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
     }
 };
 
+class UniformRandomNumberGenerator : public RandomNumberGenerator {
+    private:
+    std::default_random_engine eng;
+    std::uniform_real_distribution<double> distribution;
+
+    public:
+    UniformRandomNumberGenerator(
+        std::default_random_engine eng, 
+        std::uniform_real_distribution<double> distribution
+    ) : eng(move(eng)), distribution(move(distribution)) {}
+
+    static std::unique_ptr<RandomNumberGenerator> create(const long unsigned int seed) {
+        std::default_random_engine eng(seed);
+        std::uniform_real_distribution<double> distribution(0.0, 1.0);
+        return std::unique_ptr<RandomNumberGenerator>(new UniformRandomNumberGenerator(move(eng), move(distribution)));
+    }
+    
+    void skipNextElements(size_t elementsToSkip) {
+        eng.discard(elementsToSkip);
+    }
+
+    double getNumber() {
+        return distribution(eng);
+    }
+
+};
+
 class LineFactory {
     public:
     virtual std::optional<std::string> maybeGet() = 0;
+    virtual void skipNext() = 0;
 };
 
 class FromFileLineFactory : public LineFactory {
@@ -45,6 +78,11 @@ class FromFileLineFactory : public LineFactory {
 
     public:
     FromFileLineFactory(std::istream &source) : source(source) {}
+
+    void skipNext() {
+        std::string data;
+        std::getline(source, data);
+    }
 
     std::optional<std::string> maybeGet() {
         std::string data;
@@ -57,49 +95,94 @@ class FromFileLineFactory : public LineFactory {
     }
 };
 
-// No generator for dense datasets.
-class GeneratedLineFactory : public LineFactory {
+class GeneratedDenseLineFactory : public LineFactory {
+    private:
+    static constexpr const char* delimeter = ",";
+
+    const size_t numRows;
+    const size_t numColumns;
+    std::unique_ptr<RandomNumberGenerator> rng;
+
+    size_t currentRow;
+
+    public:
+    GeneratedDenseLineFactory(
+        const size_t numRows,
+        const size_t numColumns,
+        std::unique_ptr<RandomNumberGenerator> rng
+    ) : 
+        numRows(numRows),
+        numColumns(numColumns),
+        rng(move(rng)),
+        currentRow(0)
+    {}
+
+    void skipNext() {
+        this->rng->skipNextElements(this->numColumns);
+    }
+
+    std::optional<std::string> maybeGet() {
+        if (this->currentRow >= this->numRows) {
+            return std::nullopt;
+        }
+        
+        std::stringstream res;
+
+        for (size_t i = 0; i < this->numColumns - 1; i++) {
+            res << this->rng->getNumber() << ",";
+        }
+        res << this->rng->getNumber();
+
+        this->currentRow++;
+        return res.str();
+    }
+};
+
+class GeneratedSparseLineFactory : public LineFactory {
     private:
     const size_t numRows;
     const size_t numColumns;
     const double sparsity;
-    std::unique_ptr<RandomNumberGenerator> rng;
+    std::unique_ptr<RandomNumberGenerator> edgeValueRng;
+    std::unique_ptr<RandomNumberGenerator> includeEdgeRng;
 
     size_t currentRow;
     size_t currentColumn;
 
     public:
-    GeneratedLineFactory(
+    GeneratedSparseLineFactory(
         const size_t numRows,
         const size_t numColumns,
         const double sparsity,
-        std::unique_ptr<RandomNumberGenerator> rng
+        std::unique_ptr<RandomNumberGenerator> edgeValueRng,
+        std::unique_ptr<RandomNumberGenerator> includeEdgeRng 
     ) : 
         numRows(numRows),
         numColumns(numColumns),
         sparsity(sparsity),
-        rng(move(rng)),
+        edgeValueRng(move(edgeValueRng)),
+        includeEdgeRng(move(includeEdgeRng)),
         currentRow(0),
         currentColumn(0)
     {}
+
+    void skipNext() {
+        this->includeEdgeRng->skipNextElements(this->numColumns);
+        this->edgeValueRng->skipNextElements(this->numColumns);
+    }
 
     std::optional<std::string> maybeGet() {
         if (this->currentRow >= this->numRows) {
             return std::nullopt;
         }
 
-        std::stringstream res;
+        double edgeValue = this->edgeValueRng->getNumber();
 
-        // should use a constant to denote the delimeter here, pull from the 
-        //  file that loads sparse rows
-        std::string delimeter = " ";
-        res << this->currentRow << delimeter << this->currentColumn << delimeter << this->rng->getNumber();
-        
-        // increment column to avoid repeats
-        this->currentColumn++;
-
-        while (this->rng->getNumber() < this->sparsity) {
+        while (this->includeEdgeRng->getNumber() < this->sparsity) {
             this->currentColumn++;
+
+            // generate another value to make sure skips by row are accurate.
+            edgeValue = this->edgeValueRng->getNumber();
         }
 
         if (this->currentColumn >= this->numColumns) {
@@ -107,21 +190,31 @@ class GeneratedLineFactory : public LineFactory {
             this->currentColumn %= this->numColumns;
         }
 
+        std::stringstream res;
+
+        // should use a constant to denote the delimeter here, pull from the 
+        //  file that loads sparse rows
+        std::string delimeter = " ";
+        res << this->currentRow << delimeter << this->currentColumn << delimeter << edgeValue;
+        
+        // increment column to avoid repeats
+        this->currentColumn++;
+
         return res.str();
     }
 };
 
 class DataRowFactory {
     public:
-    virtual DataRow* maybeGet(LineFactory &source) = 0;
+    virtual std::unique_ptr<DataRow> maybeGet(LineFactory &source) = 0;
     virtual std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const = 0;
     virtual std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const = 0;
+    virtual void skipNext(LineFactory &source) = 0;
 };
 
-// TODO: This should be a static constructor in the dense data row? 
 class DenseDataRowFactory : public DataRowFactory {
     public:
-    DataRow* maybeGet(LineFactory &source) {
+    std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
         std::optional<std::string> data(source.maybeGet());
         if (!data.has_value()) {
             return nullptr;
@@ -134,8 +227,11 @@ class DenseDataRowFactory : public DataRowFactory {
 
         while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
             result.push_back(std::stod(std::string(token)));
+        return std::unique_ptr<DataRow>(new DenseDataRow(move(result)));
+    }
 
-        return new DenseDataRow(move(result));
+    void skipNext(LineFactory &source) {
+        source.skipNext();
     }
 
     std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const {
@@ -167,7 +263,11 @@ class SparseDataRowFactory : public DataRowFactory {
         totalColumns(totalColumns) 
     {}
 
-    DataRow* maybeGet(LineFactory &source) {
+    void skipNext(LineFactory &source) {
+        std::unique_ptr<DataRow> _line(maybeGet(source));
+    }
+
+    std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
         std::map<size_t, double> result;
 
         while (true) {
@@ -176,7 +276,7 @@ class SparseDataRowFactory : public DataRowFactory {
                     result.insert({to, value});
                 } else {
                     this->expectedRow++;
-                    return new SparseDataRow(move(result), this->totalColumns);
+                    return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
                 }
             }
 
@@ -184,7 +284,7 @@ class SparseDataRowFactory : public DataRowFactory {
             if (!line.has_value()) {
                 if (this->hasData) {
                     this->hasData = false;
-                    return new SparseDataRow(move(result), this->totalColumns);
+                    return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
                 } else {
                     return nullptr;
                 }
@@ -219,7 +319,7 @@ class SparseDataRowFactory : public DataRowFactory {
             } else {
                 this->expectedRow++;
                 this->hasData = true;
-                return new SparseDataRow(move(result), this->totalColumns);
+                return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
             }
         } 
     }
