@@ -164,12 +164,14 @@ class Orchestrator {
         std::unique_ptr<RandomNumberGenerator> rng(NormalRandomNumberGenerator::create(appData.generateInput.seed));
 
         if (appData.generateInput.sparsity != DEFAULT_GENERATED_SPARSITY) {
+            std::unique_ptr<RandomNumberGenerator> sparsityRng(UniformRandomNumberGenerator::create(appData.generateInput.seed + 1));
             return std::unique_ptr<GeneratedSparseLineFactory>(
                 new GeneratedSparseLineFactory(
                     appData.generateInput.genRows,
                     appData.generateInput.genCols,
                     appData.generateInput.sparsity,
-                    move(rng)
+                    move(rng),
+                    move(sparsityRng)
                 )
             );
         } else {

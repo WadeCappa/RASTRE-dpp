@@ -88,7 +88,7 @@ class SegmentedData : public BaseData {
         std::vector<std::unique_ptr<DataRow>> data;
         std::vector<size_t> localRowToGlobalRow;
 
-        for (size_t globalRow = 0; globalRow++; globalRow < rankMapping.size()) {
+        for (size_t globalRow = 0; globalRow < rankMapping.size(); globalRow++) {
             if (rankMapping[globalRow] != rank) {
                 factory.skipNext(source);
             } else {

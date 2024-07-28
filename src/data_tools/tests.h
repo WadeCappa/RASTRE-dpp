@@ -148,7 +148,7 @@ TEST_CASE("Testing segmented dense data") {
     
     std::vector<unsigned int> rankMapping({0, 1, 2, 3, 2, 1});
     const int rank = 2;
-    
+
     std::unique_ptr<SegmentedData> data(SegmentedData::load(factory, getter, rankMapping, rank));
     CHECK(data->totalRows() == 2);
     verifyData(*data.get(), rankMapping, rank);

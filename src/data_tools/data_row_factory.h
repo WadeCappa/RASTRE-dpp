@@ -39,6 +39,33 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
     }
 };
 
+class UniformRandomNumberGenerator : public RandomNumberGenerator {
+    private:
+    std::default_random_engine eng;
+    std::uniform_real_distribution<double> distribution;
+
+    public:
+    UniformRandomNumberGenerator(
+        std::default_random_engine eng, 
+        std::uniform_real_distribution<double> distribution
+    ) : eng(move(eng)), distribution(move(distribution)) {}
+
+    static std::unique_ptr<RandomNumberGenerator> create(const long unsigned int seed) {
+        std::default_random_engine eng(seed);
+        std::uniform_real_distribution<double> distribution(0.0, 1.0);
+        return std::unique_ptr<RandomNumberGenerator>(new UniformRandomNumberGenerator(move(eng), move(distribution)));
+    }
+    
+    void skipNextElements(size_t elementsToSkip) {
+        eng.discard(elementsToSkip);
+    }
+
+    double getNumber() {
+        return distribution(eng);
+    }
+
+};
+
 class LineFactory {
     public:
     virtual std::optional<std::string> maybeGet() = 0;
@@ -116,7 +143,8 @@ class GeneratedSparseLineFactory : public LineFactory {
     const size_t numRows;
     const size_t numColumns;
     const double sparsity;
-    std::unique_ptr<RandomNumberGenerator> rng;
+    std::unique_ptr<RandomNumberGenerator> edgeValueRng;
+    std::unique_ptr<RandomNumberGenerator> includeEdgeRng;
 
     size_t currentRow;
     size_t currentColumn;
@@ -126,12 +154,14 @@ class GeneratedSparseLineFactory : public LineFactory {
         const size_t numRows,
         const size_t numColumns,
         const double sparsity,
-        std::unique_ptr<RandomNumberGenerator> rng
+        std::unique_ptr<RandomNumberGenerator> edgeValueRng,
+        std::unique_ptr<RandomNumberGenerator> includeEdgeRng 
     ) : 
         numRows(numRows),
         numColumns(numColumns),
         sparsity(sparsity),
-        rng(move(rng)),
+        edgeValueRng(move(edgeValueRng)),
+        includeEdgeRng(move(includeEdgeRng)),
         currentRow(0),
         currentColumn(0)
     {}
@@ -147,24 +177,29 @@ class GeneratedSparseLineFactory : public LineFactory {
             return std::nullopt;
         }
 
-        std::stringstream res;
+        double edgeValue = this->edgeValueRng->getNumber();
 
-        // should use a constant to denote the delimeter here, pull from the 
-        //  file that loads sparse rows
-        std::string delimeter = " ";
-        res << this->currentRow << delimeter << this->currentColumn << delimeter << this->rng->getNumber();
-        
-        // increment column to avoid repeats
-        this->currentColumn++;
-
-        while (this->rng->getNumber() < this->sparsity) {
+        while (this->includeEdgeRng->getNumber() < this->sparsity) {
             this->currentColumn++;
+
+            // generate another value to make sure skips by row are accurate.
+            edgeValue = this->edgeValueRng->getNumber();
         }
 
         if (this->currentColumn >= this->numColumns) {
             this->currentRow++;
             this->currentColumn %= this->numColumns;
         }
+
+        std::stringstream res;
+
+        // should use a constant to denote the delimeter here, pull from the 
+        //  file that loads sparse rows
+        std::string delimeter = " ";
+        res << this->currentRow << delimeter << this->currentColumn << delimeter << edgeValue;
+        
+        // increment column to avoid repeats
+        this->currentColumn++;
 
         return res.str();
     }
