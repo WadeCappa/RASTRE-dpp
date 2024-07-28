@@ -65,7 +65,20 @@ class Orchestrator {
         nlohmann::json output {
             {"rows", data.totalRows()},
             {"columns", data.totalColumns()},
-            {"inputFile", appData.loadInput.inputFile}
+            {"sparsity", data.DEBUG_calculateSparsity()}
+        };
+
+        return output;
+    }
+
+    static nlohmann::json getInputSettings(const AppData &appData) {
+        nlohmann::json output {
+            {"inputFile", appData.loadInput.inputFile},
+            {"generationStrategy", appData.generateInput.generationStrategy}, 
+            {"generatedRows", appData.generateInput.genRows},
+            {"generatedCols", appData.generateInput.genCols},
+            {"seed", appData.generateInput.seed},
+            {"sparsity", appData.generateInput.sparsity}
         };
 
         return output;
@@ -151,9 +164,9 @@ class Orchestrator {
         nlohmann::json output {
             {"k", appData.outputSetSize}, 
             {"algorithm", algorithmToString(appData)},
+            {"inputSettings", getInputSettings(appData)},
             {"epsilon", appData.epsilon},
             {"Rows", solution.toJson()},
-            {"dataset", buildDatasetJson(data, appData)},
             {"worldSize", appData.worldSize}
         };
 

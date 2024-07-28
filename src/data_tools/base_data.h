@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <optional>
 #include <cassert>
+#include <bits/stdc++.h> 
 
 
 class BaseData {
@@ -10,6 +11,35 @@ class BaseData {
     virtual const DataRow& getRow(size_t i) const = 0;
     virtual size_t totalRows() const = 0;
     virtual size_t totalColumns() const = 0;
+
+    double DEBUG_calculateSparsity() const {
+        class SparsityCalculatorDataRowVisitor : public ReturningDataRowVisitor<double> {
+            private:
+            double res;
+
+            public:
+            void visitDenseDataRow(const std::vector<double>& _data) {
+                this->res = 1;
+            }
+
+            void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
+                this-> res = data.size() / totalColumns;
+            }
+
+            double get() {
+                return res;
+            }
+        };
+
+        size_t rows = this->totalRows();
+        std::vector<double> sparsityPerRow(rows);
+        for (size_t i = 0; i < rows; i++) {
+            SparsityCalculatorDataRowVisitor sparsityVisitor;
+            sparsityPerRow[i] = this->getRow(i).visit(sparsityVisitor);
+        }
+
+        return std::accumulate(sparsityPerRow.begin(), sparsityPerRow.end(), 0.0) / sparsityPerRow.size(); 
+    }
 };
 
 class FullyLoadedData : public BaseData {

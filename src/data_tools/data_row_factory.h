@@ -227,7 +227,6 @@ class DenseDataRowFactory : public DataRowFactory {
 
         while ((token = strtok_r(rest, DELIMETER.data(), &rest)))
             result.push_back(std::stod(std::string(token)));
-
         return new DenseDataRow(move(result));
     }
 

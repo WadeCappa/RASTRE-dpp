@@ -61,7 +61,7 @@ static std::vector<std::unique_ptr<DataRow>> loadData(DataRowFactory &factory, s
 
 static void verifyData(const DataRow& row, const size_t expectedRow) {
     DataRowVerifier visitor(expectedRow);
-    row.visit(visitor);
+    row.voidVisit(visitor);
 }
 
 static void verifyData(std::vector<std::unique_ptr<DataRow>> loadedData) {
@@ -201,12 +201,11 @@ TEST_CASE("Testing dense binary to data row conversion") {
         DenseDataRowFactory factory;
         std::unique_ptr<DataRow> row(factory.getFromBinary(DENSE_DATA[i]));
         DataRowVerifier visitor(i);
-        row->visit(visitor);
+        row->voidVisit(visitor);
     
         // Test data row to binary
         ToBinaryVisitor toBinary;
-        row->visit(toBinary);
-        std::vector<double> newBinary(toBinary.getAndDestroy());
+        std::vector<double> newBinary(row->visit(toBinary));
         
         // Verify old and new binaries are equivalent
         CHECK(newBinary == DENSE_DATA[i]);
@@ -219,14 +218,13 @@ TEST_CASE("Testing sparse binary to data row conversion") {
     
         // Test data row to binary
         ToBinaryVisitor toBinary;
-        row->visit(toBinary);
-        std::vector<double> newBinary(toBinary.getAndDestroy());
+        std::vector<double> newBinary(row->visit(toBinary));
     
         // Try loading from binary
         SparseDataRowFactory factory(SPARSE_DATA_TOTAL_COLUMNS);
         std::unique_ptr<DataRow> fromBinaryRow(factory.getFromBinary(move(newBinary)));
         DataRowVerifier visitor(i);
-        fromBinaryRow->visit(visitor);
+        fromBinaryRow->voidVisit(visitor);
     }
 }
 
