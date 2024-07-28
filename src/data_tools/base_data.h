@@ -5,6 +5,10 @@
 #include <cassert>
 #include <bits/stdc++.h> 
 
+struct diagnostics {
+    double sparsity;
+    size_t numberOfNonEmptyCells;
+} typedef Diagnostics;
 
 class BaseData {
     public:
@@ -12,37 +16,46 @@ class BaseData {
     virtual size_t totalRows() const = 0;
     virtual size_t totalColumns() const = 0;
 
-    double DEBUG_calculateSparsity() const {
-        class SparsityCalculatorDataRowVisitor : public ReturningDataRowVisitor<double> {
-            private:
-            double res;
+    Diagnostics DEBUG_getDiagnostics() const {
+        size_t rows = this->totalRows();
+        if (rows == 0) {
+            return Diagnostics{0, 0};
+        }
 
+        class DiagnosticsVisitor : public ReturningDataRowVisitor<Diagnostics> {
+            private:
+            std::vector<double> sparsity;
+            size_t totalNonEmptyCells;
+            size_t i;
+            
             public:
-            void visitDenseDataRow(const std::vector<double>& _data) {
-                this->res = 0.0;
+            DiagnosticsVisitor(size_t rows) 
+            : sparsity(rows), i(0), totalNonEmptyCells(0) {}
+
+            void visitDenseDataRow(const std::vector<double>& data) {
+                sparsity[i++] = 0.0;
+                totalNonEmptyCells += data.size();
             }
 
             void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
-                this-> res = (double)((double)(totalColumns - data.size()) / (double)totalColumns);
+                sparsity[i++] = (double)((double)(totalColumns - data.size()) / (double)totalColumns);
+                totalNonEmptyCells += data.size();
             }
 
-            double get() {
-                return res;
+            Diagnostics get() {
+                return Diagnostics{
+                    std::accumulate(sparsity.begin(), sparsity.end(), 0.0) / sparsity.size(),
+                    totalNonEmptyCells
+                };
             }
         };
 
-        size_t rows = this->totalRows();
-        if (rows == 0) {
-            return 0;
-        }
-
-        std::vector<double> sparsityPerRow(rows);
+        DiagnosticsVisitor visitor(rows);
         for (size_t i = 0; i < rows; i++) {
-            SparsityCalculatorDataRowVisitor sparsityVisitor;
-            sparsityPerRow[i] = this->getRow(i).visit(sparsityVisitor);
+            this->getRow(i).voidVisit(visitor);
         }
 
-        return std::accumulate(sparsityPerRow.begin(), sparsityPerRow.end(), 0.0) / sparsityPerRow.size(); 
+        return visitor.get();
     }
 };
 

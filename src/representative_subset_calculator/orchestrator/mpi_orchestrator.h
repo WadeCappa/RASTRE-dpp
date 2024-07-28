@@ -83,9 +83,7 @@ class MpiOrchestrator : public Orchestrator {
         const std::vector<unsigned int> &rowToRank
     ) {
         nlohmann::json output = Orchestrator::buildOutputBase(appData, solution, data, timers);
-
         output.push_back({"timers", getTimersFromMachines(timers, appData.worldRank, appData.worldSize)});
-
         output.push_back({"dataset", buildDatasetOutputFromMachines(data, appData)});
 
         return output;

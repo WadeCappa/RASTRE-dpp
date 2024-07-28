@@ -62,10 +62,12 @@ class Orchestrator {
     }
 
     static nlohmann::json buildDatasetJson(const BaseData &data, const AppData &appData) {
+        Diagnostics diagnostics = data.DEBUG_getDiagnostics();
         nlohmann::json output {
             {"rows", data.totalRows()},
             {"columns", data.totalColumns()},
-            {"sparsity", data.DEBUG_calculateSparsity()}
+            {"sparsity", diagnostics.sparsity},
+            {"nonEmptyCells", diagnostics.numberOfNonEmptyCells}
         };
 
         return output;
