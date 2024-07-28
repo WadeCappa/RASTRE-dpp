@@ -41,24 +41,28 @@ void randGreedi(
     const std::vector<unsigned int> &rowToRank, 
     Timers &timers
 ) {
-    timers.totalCalculationTime.startTimer();
-    std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
-
-    timers.localCalculationTime.startTimer();
-    std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(data, appData.outputSetSize));
-    timers.localCalculationTime.stopTimer();
-
-    // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
-    timers.bufferEncodingTime.startTimer();
-    std::vector<double> sendBuffer;
-    unsigned int sendDataSize = BufferBuilder::buildSendBuffer(data, *localSolution.get(), sendBuffer);
+    
+    unsigned int sendDataSize = 0;
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
-    timers.bufferEncodingTime.stopTimer();
+    std::vector<double> sendBuffer;
 
+    if (appData.worldRank != 0) {
+        timers.totalCalculationTime.startTimer();
+        std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
+        
+        timers.localCalculationTime.startTimer();
+        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(data, appData.outputSetSize));
+        timers.localCalculationTime.stopTimer();
+        
+        // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
+        timers.bufferEncodingTime.startTimer();
+        sendDataSize = BufferBuilder::buildSendBuffer(data, *localSolution.get(), sendBuffer);
+        timers.bufferEncodingTime.stopTimer();
+    }
+    
     timers.communicationTime.startTimer();
     MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
-    timers.communicationTime.stopTimer();
-
+    
     timers.bufferEncodingTime.startTimer();
     std::vector<double> receiveBuffer;
     std::vector<int> displacements;
@@ -67,10 +71,10 @@ void randGreedi(
         BufferBuilder::buildDisplacementBuffer(receivingDataSizesBuffer, displacements);
     }
     timers.bufferEncodingTime.stopTimer();
-
+    
     timers.communicationTime.startTimer();
     MPI_Gatherv(
-        sendBuffer.data(), 
+        (appData.worldRank == 0) ? MPI_IN_PLACE : sendBuffer.data(), 
         sendBuffer.size(), 
         MPI_DOUBLE, 
         receiveBuffer.data(), 
@@ -81,7 +85,7 @@ void randGreedi(
         MPI_COMM_WORLD
     );
     timers.communicationTime.stopTimer();
-
+    
     if (appData.worldRank == 0) {
         std::unique_ptr<SubsetCalculator> globalCalculator(MpiOrchestrator::getCalculator(appData));
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
@@ -216,7 +220,7 @@ int main(int argc, char** argv) {
     } else if (appData.distributedAlgorithm == 1 || appData.distributedAlgorithm == 2) {
         streaming(appData, *data, rowToRank, timers);
     } else {
-        std::cout << "did not recognized distributedAlgorithm of " << appData.distributedAlgorithm << std::endl;
+        std::cout << "did not recognize distributed Algorithm of " << appData.distributedAlgorithm << std::endl;
     }
 
     MPI_Finalize();

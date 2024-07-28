@@ -146,7 +146,8 @@ class Orchestrator {
     //  the rows that this given rank cares about. This will improve performance while loading the dataset.
     static std::vector<unsigned int> getRowToRank(const AppData &appData, const int seed) {
         std::vector<unsigned int> rowToRank(appData.numberOfDataRows, -1);
-        const unsigned int lowestMachine = appData.distributedAlgorithm == 0 ? 0 : 1;
+        // Rank 0 won't have local solvers irrespective of aggregation strategy
+        const unsigned int lowestMachine = appData.distributedAlgorithm == 1;
         std::uniform_int_distribution<int> uniform_distribution(lowestMachine, appData.worldSize - 1);
         std::default_random_engine number_selecter(seed);
 
