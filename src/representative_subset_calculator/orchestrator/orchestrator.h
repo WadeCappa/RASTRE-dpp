@@ -17,8 +17,8 @@ struct loadInput {
 struct generateInput {
     // should be an enum
     int generationStrategy = 0;
-    size_t genRows;
-    size_t genCols;
+    size_t genRows = 0;
+    size_t genCols = 0;
     double sparsity = DEFAULT_GENERATED_SPARSITY;
     long unsigned int seed = -1;
 } typedef GenerateInput;

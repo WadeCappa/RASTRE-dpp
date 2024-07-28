@@ -19,11 +19,11 @@ class BaseData {
 
             public:
             void visitDenseDataRow(const std::vector<double>& _data) {
-                this->res = 1;
+                this->res = 0.0;
             }
 
             void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
-                this-> res = data.size() / totalColumns;
+                this-> res = (double)((double)(totalColumns - data.size()) / (double)totalColumns);
             }
 
             double get() {
@@ -32,6 +32,10 @@ class BaseData {
         };
 
         size_t rows = this->totalRows();
+        if (rows == 0) {
+            return 0;
+        }
+
         std::vector<double> sparsityPerRow(rows);
         for (size_t i = 0; i < rows; i++) {
             SparsityCalculatorDataRowVisitor sparsityVisitor;
