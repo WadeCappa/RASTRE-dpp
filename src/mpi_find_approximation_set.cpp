@@ -58,7 +58,7 @@ void randGreedi(
         timers.bufferEncodingTime.startTimer();
         sendDataSize = BufferBuilder::buildSendBuffer(data, *localSolution.get(), sendBuffer);
         timers.bufferEncodingTime.stopTimer();
-    }
+    } 
     
     timers.communicationTime.startTimer();
     MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -74,7 +74,8 @@ void randGreedi(
     
     timers.communicationTime.startTimer();
     MPI_Gatherv(
-        (appData.worldRank == 0) ? MPI_IN_PLACE : sendBuffer.data(), 
+        // (appData.worldRank == 0) ? MPI_IN_PLACE : sendBuffer.data(), 
+        sendBuffer.data(),
         sendBuffer.size(), 
         MPI_DOUBLE, 
         receiveBuffer.data(), 
@@ -87,6 +88,7 @@ void randGreedi(
     timers.communicationTime.stopTimer();
     
     if (appData.worldRank == 0) {
+
         std::unique_ptr<SubsetCalculator> globalCalculator(MpiOrchestrator::getCalculator(appData));
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
         GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers);
@@ -187,6 +189,10 @@ int main(int argc, char** argv) {
     std::vector<unsigned int> rowToRank = MpiOrchestrator::getRowToRank(appData, seed);
 
     Timers timers;
+    std::vector<Timers> comparisonTimers(3);
+
+    for (auto t: comparisonTimers)
+        t.loadingDatasetTime.startTimer();
     timers.loadingDatasetTime.startTimer();
 
     // All of this is duplicated between files, you can pretty easily build another class
@@ -209,16 +215,45 @@ int main(int argc, char** argv) {
         inputFile.close();
     } 
 
+    for (auto t: comparisonTimers)
+        t.loadingDatasetTime.stopTimer();
     timers.loadingDatasetTime.stopTimer();
 
+    for (auto t: comparisonTimers)
+        t.barrierTime.startTimer();
     timers.barrierTime.startTimer();
+
     MPI_Barrier(MPI_COMM_WORLD);
+
+    for (auto t: comparisonTimers)
+        t.barrierTime.stopTimer();
     timers.barrierTime.stopTimer();
 
     if (appData.distributedAlgorithm == 0) {
         randGreedi(appData, *data, rowToRank, timers);
     } else if (appData.distributedAlgorithm == 1 || appData.distributedAlgorithm == 2) {
         streaming(appData, *data, rowToRank, timers);
+    } else if (appData.distributedAlgorithm == 3) {
+
+        std::string output = appData.outputFile;
+        std::cout << "Commencing Baseline RandGreedI..." << std::endl; 
+        appData.distributedAlgorithm = 0;
+        appData.outputFile = output + "_RandGreedI_Base.json";
+        randGreedi(appData, *data, rowToRank, comparisonTimers[0]);
+        std::cout << "Finished Baseline RandGreedI..." << std::endl; 
+
+        std::cout << "Commencing RandGreedI + Streaming with Sieve Streaming..." << std::endl; 
+        appData.distributedAlgorithm = 1;
+        appData.outputFile = output + "_RandGreedI_Sieve.json";
+        randGreedi(appData, *data, rowToRank, comparisonTimers[1]);
+        std::cout << "Finished RandGreedI + Streaming with Sieve Streaming..." << std::endl; 
+
+        std::cout << "Commencing RandGreedI + Streaming with Three-Sieves Streaming..." << std::endl; 
+        appData.distributedAlgorithm = 2;
+        appData.outputFile = output + "_RandGreedI_ThreeSieve.json";
+        randGreedi(appData, *data, rowToRank, comparisonTimers[2]);
+        std::cout << "Finished RandGreedI + Streaming with Three-Sieves Streaming..." << std::endl; 
+
     } else {
         std::cout << "did not recognize distributed Algorithm of " << appData.distributedAlgorithm << std::endl;
     }

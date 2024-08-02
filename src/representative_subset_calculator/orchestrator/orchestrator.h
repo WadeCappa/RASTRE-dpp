@@ -121,7 +121,7 @@ class Orchestrator {
     static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
         Orchestrator::addCmdOptions(app, appData);
         app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
-        app.add_option("-d,--distributedAlgorithm", appData.distributedAlgorithm, "0) randGreedi\n1) SieveStreaming\n2) ThreeSieves\nDefaults to ThreeSieves");
+        app.add_option("-d,--distributedAlgorithm", appData.distributedAlgorithm, "0) randGreedi\n1) SieveStreaming\n2) ThreeSieves\nDefaults to ThreeSieves\n3)Comparison Mode");
         app.add_option("--distributedEpsilon", appData.distributedEpsilon, "Only used for streaming. Defaults to 0.13.");
         app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
         app.add_option("--alpha", appData.alpha, "Only used for the truncated setting.");
@@ -147,7 +147,7 @@ class Orchestrator {
     static std::vector<unsigned int> getRowToRank(const AppData &appData, const int seed) {
         std::vector<unsigned int> rowToRank(appData.numberOfDataRows, -1);
         // Rank 0 won't have local solvers irrespective of aggregation strategy
-        const unsigned int lowestMachine = appData.distributedAlgorithm == 1;
+        const unsigned int lowestMachine = 1;
         std::uniform_int_distribution<int> uniform_distribution(lowestMachine, appData.worldSize - 1);
         std::default_random_engine number_selecter(seed);
 

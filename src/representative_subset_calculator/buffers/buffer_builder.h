@@ -127,7 +127,7 @@ class GlobalBufferLoader : public BufferLoader {
     std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> rebuildData(
         const DataRowFactory &factory
     ) {
-        std::vector<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> tempData(worldSize);
+        std::vector<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> tempData(worldSize - 1);
     
         // Because we're sending local marginals along with the data, the input data is no longer uniform.
         #pragma omp parallel for 
@@ -135,27 +135,38 @@ class GlobalBufferLoader : public BufferLoader {
             std::vector<std::pair<size_t, std::unique_ptr<DataRow>>> rankData;
             const size_t rankStart = displacements[rank] + 1;
             const auto rankStop = (rank + 1) == worldSize ? binaryInput.end() : binaryInput.begin() + displacements[rank + 1];
-
+            
             auto index = binaryInput.begin() + rankStart;
             auto elementStop = binaryInput.begin() + rankStart;
+
+            // Otherwise it will get stuck inside the while loop and Seg Fault
+            if (rank == 0) continue;
+            
             while (index != rankStop && elementStop != rankStop) {
+                
                 if (*elementStop == CommunicationConstants::endOfSendTag()) {
+                    
+                    
+
                     std::unique_ptr<DataRow> dataRow(factory.getFromNaiveBinary(
                         move(std::vector<double>(index, elementStop - 1)))
                     );
 
                     const size_t globalTag = *(elementStop - 1);
-
-                    elementStop++;
-                    index = elementStop;
+                    
+                    elementStop++; 
+                    index = elementStop; 
 
                     rankData.push_back(std::make_pair(globalTag, move(dataRow)));
-                } else {
-                    elementStop++;
+                } else { 
+                    
+                    elementStop++; 
                 }
+                
             }
-
-            tempData[rank] = move(rankData);
+            
+            tempData[rank - 1] = move(rankData);
+            
         }
     
 
@@ -174,7 +185,7 @@ class GlobalBufferLoader : public BufferLoader {
         double bestRankScore = -1;
         size_t maxRank = -1;
 
-        for (size_t rank = 0; rank < worldSize; rank++) {
+        for (size_t rank = 1; rank < worldSize; rank++) {
             const size_t scoreIndex = displacements[rank];
             const double localRankScore = binaryInput[scoreIndex];
             std::cout << "rank " << rank << " had local solution of score " << localRankScore << std::endl;
