@@ -62,6 +62,7 @@ void randGreedi(
     
     timers.communicationTime.startTimer();
     MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+    timers.communicationTime.stopTimer();
     
     timers.bufferEncodingTime.startTimer();
     std::vector<double> receiveBuffer;
@@ -74,7 +75,6 @@ void randGreedi(
     
     timers.communicationTime.startTimer();
     MPI_Gatherv(
-        // (appData.worldRank == 0) ? MPI_IN_PLACE : sendBuffer.data(), 
         sendBuffer.data(),
         sendBuffer.size(), 
         MPI_DOUBLE, 
@@ -245,13 +245,13 @@ int main(int argc, char** argv) {
         std::cout << "Commencing RandGreedI + Streaming with Sieve Streaming..." << std::endl; 
         appData.distributedAlgorithm = 1;
         appData.outputFile = output + "_RandGreedI_Sieve.json";
-        randGreedi(appData, *data, rowToRank, comparisonTimers[1]);
+        streaming(appData, *data, rowToRank, comparisonTimers[1]);
         std::cout << "Finished RandGreedI + Streaming with Sieve Streaming..." << std::endl; 
 
         std::cout << "Commencing RandGreedI + Streaming with Three-Sieves Streaming..." << std::endl; 
         appData.distributedAlgorithm = 2;
         appData.outputFile = output + "_RandGreedI_ThreeSieve.json";
-        randGreedi(appData, *data, rowToRank, comparisonTimers[2]);
+        streaming(appData, *data, rowToRank, comparisonTimers[2]);
         std::cout << "Finished RandGreedI + Streaming with Three-Sieves Streaming..." << std::endl; 
 
     } else {
