@@ -45,9 +45,9 @@ void randGreedi(
     unsigned int sendDataSize = 0;
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
     std::vector<double> sendBuffer;
-
+    timers.totalCalculationTime.startTimer();
     if (appData.worldRank != 0) {
-        timers.totalCalculationTime.startTimer();
+        
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         
         timers.localCalculationTime.startTimer();
