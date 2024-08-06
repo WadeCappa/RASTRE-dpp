@@ -143,6 +143,7 @@ class GeneratedSparseLineFactory : public LineFactory {
     const size_t numRows;
     const size_t numColumns;
     const double sparsity;
+    const size_t mimic;
     std::unique_ptr<RandomNumberGenerator> edgeValueRng;
     std::unique_ptr<RandomNumberGenerator> includeEdgeRng;
 
@@ -154,12 +155,14 @@ class GeneratedSparseLineFactory : public LineFactory {
         const size_t numRows,
         const size_t numColumns,
         const double sparsity,
+        const size_t mimic,
         std::unique_ptr<RandomNumberGenerator> edgeValueRng,
         std::unique_ptr<RandomNumberGenerator> includeEdgeRng 
     ) : 
         numRows(numRows),
         numColumns(numColumns),
         sparsity(sparsity),
+        mimic(mimic),
         edgeValueRng(move(edgeValueRng)),
         includeEdgeRng(move(includeEdgeRng)),
         currentRow(0),
@@ -176,13 +179,13 @@ class GeneratedSparseLineFactory : public LineFactory {
             return std::nullopt;
         }
 
-        double edgeValue = this->edgeValueRng->getNumber();
+        double edgeValue = (this->mimic) ? 1 : this->edgeValueRng->getNumber();
 
         while (this->includeEdgeRng->getNumber() < this->sparsity) {
             this->currentColumn++;
 
             // generate another value to make sure skips by row are accurate.
-            edgeValue = this->edgeValueRng->getNumber();
+            edgeValue = (this->mimic) ? 1 : this->edgeValueRng->getNumber();
         }
 
         if (this->currentColumn >= this->numColumns) {

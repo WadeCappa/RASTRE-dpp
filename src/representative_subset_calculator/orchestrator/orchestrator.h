@@ -21,6 +21,7 @@ struct generateInput {
     size_t genCols = 0;
     double sparsity = DEFAULT_GENERATED_SPARSITY;
     long unsigned int seed = -1;
+    size_t mimic = 0;
 } typedef GenerateInput;
 
 struct appData{
@@ -114,6 +115,7 @@ class Orchestrator {
         genInput->add_option("--cols", appData.generateInput.genCols)->required();
         genInput->add_option("--sparsity", appData.generateInput.sparsity);
         genInput->add_option("--seed", appData.generateInput.seed)->required();
+        genInput->add_option("--mimicReal", appData.generateInput.mimic, "Mimic real world binarized datasets. 0)False by default, 1)True");
 
         loadInput->add_option("-i,--input", appData.loadInput.inputFile, "Path to input file. Should contain data in row vector format.")->required();
     }
@@ -186,6 +188,7 @@ class Orchestrator {
                     appData.generateInput.genRows,
                     appData.generateInput.genCols,
                     appData.generateInput.sparsity,
+                    appData.generateInput.mimic,
                     move(rng),
                     move(sparsityRng)
                 )
