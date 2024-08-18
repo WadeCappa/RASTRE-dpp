@@ -141,15 +141,20 @@ class SegmentedData : public BaseData {
 
         std::vector<std::unique_ptr<DataRow>> data(localRowToGlobalRow.size());
 
+        // using a random high constant because omp_get_num_threads lies. Hopefully
+        //  the number of threads on a system is less than this.
+        std::vector<std::unique_ptr<GeneratedLineFactory>> gettersForRanks;
+        for (int i = 0; i < 2048; i++) {
+            gettersForRanks.push_back(getter.copy());
+        }
+
         #pragma omp parallel for 
         for (size_t i = 0; i < localRowToGlobalRow.size(); i++) {
-            std::unique_ptr<GeneratedLineFactory> localGetter(getter.copy());
-
-            // This might be expensive to do from scratch for every row. Look into a way to persist this.
-            localGetter->jumpToLine(localRowToGlobalRow[i]);
-            std::unique_ptr<DataRow> nextRow(factory.maybeGet(*localGetter));
+            GeneratedLineFactory &localGetter(*gettersForRanks[omp_get_thread_num()]);
+            localGetter.jumpToLine(localRowToGlobalRow[i]);
+            std::unique_ptr<DataRow> nextRow(factory.maybeGet(localGetter));
             if (nextRow == nullptr) {
-                std::cout << "Retrieved nullptr which is unexpected in a parallel load" << std::endl;
+                std::cout << "Retrieved nullptr during load. This typically points to a misconfiguration." << std::endl;
                 continue;
             }
 
