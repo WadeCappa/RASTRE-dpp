@@ -109,10 +109,10 @@ class Orchestrator {
         CLI::App *loadInput = app.add_subcommand("loadInput", "loads the requested input from the provided path");
         CLI::App *genInput = app.add_subcommand("generateInput", "generates synthetic data");
 
-        genInput->add_option("-g,--generationStrategy", appData.generateInput.generationStrategy);
+        genInput->add_option("-g,--generationStrategy", appData.generateInput.generationStrategy, "Refers to the value of edges. 0)(DEFAULT) normal distribution, 1) edges are alwayas 1");
         genInput->add_option("--rows", appData.generateInput.genRows)->required();
         genInput->add_option("--cols", appData.generateInput.genCols)->required();
-        genInput->add_option("--sparsity", appData.generateInput.sparsity);
+        genInput->add_option("--sparsity", appData.generateInput.sparsity, "Note that edges are generated uniformly at random.");
         genInput->add_option("--seed", appData.generateInput.seed)->required();
 
         loadInput->add_option("-i,--input", appData.loadInput.inputFile, "Path to input file. Should contain data in row vector format.")->required();
@@ -121,7 +121,7 @@ class Orchestrator {
     static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
         Orchestrator::addCmdOptions(app, appData);
         app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
-        app.add_option("-d,--distributedAlgorithm", appData.distributedAlgorithm, "0) randGreedi\n1) SieveStreaming\n2) ThreeSieves\nDefaults to ThreeSieves");
+        app.add_option("-d,--distributedAlgorithm", appData.distributedAlgorithm, "0) randGreedi\n1) SieveStreaming\n2) ThreeSieves\nDefaults to ThreeSieves\n3)Comparison Mode");
         app.add_option("--distributedEpsilon", appData.distributedEpsilon, "Only used for streaming. Defaults to 0.13.");
         app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
         app.add_option("--alpha", appData.alpha, "Only used for the truncated setting.");
@@ -146,7 +146,8 @@ class Orchestrator {
     //  the rows that this given rank cares about. This will improve performance while loading the dataset.
     static std::vector<unsigned int> getRowToRank(const AppData &appData, const int seed) {
         std::vector<unsigned int> rowToRank(appData.numberOfDataRows, -1);
-        const unsigned int lowestMachine = appData.distributedAlgorithm == 0 ? 0 : 1;
+        // Rank 0 won't have local solvers irrespective of aggregation strategy
+        const unsigned int lowestMachine = 1;
         std::uniform_int_distribution<int> uniform_distribution(lowestMachine, appData.worldSize - 1);
         std::default_random_engine number_selecter(seed);
 
@@ -175,8 +176,22 @@ class Orchestrator {
         return output;
     }
 
+    static std::unique_ptr<RandomNumberGenerator> getRandomNumberGeneratorForEdges(const AppData& appData) {
+        if (appData.generateInput.generationStrategy == 0) {
+            return NormalRandomNumberGenerator::create(appData.generateInput.seed);
+        } else if (appData.generateInput.generationStrategy == 1) {
+            if (appData.generateInput.sparsity == DEFAULT_GENERATED_SPARSITY) {
+                throw std::invalid_argument("Cannot use generationStrategy of 1 with a dense generator");
+            }
+
+            return AlwaysOneGenerator::create();
+        }
+
+        throw std::invalid_argument("Unrecognized generationStrategy");
+    }
+
     static std::unique_ptr<LineFactory> getLineGenerator(const AppData& appData) {
-        std::unique_ptr<RandomNumberGenerator> rng(NormalRandomNumberGenerator::create(appData.generateInput.seed));
+        std::unique_ptr<RandomNumberGenerator> rng(getRandomNumberGeneratorForEdges(appData));
 
         if (appData.generateInput.sparsity != DEFAULT_GENERATED_SPARSITY) {
             std::unique_ptr<RandomNumberGenerator> sparsityRng(UniformRandomNumberGenerator::create(appData.generateInput.seed + 1));

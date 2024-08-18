@@ -13,6 +13,21 @@ class RandomNumberGenerator {
     virtual void skipNextElements(size_t elementsToSkip) = 0;
 };
 
+class AlwaysOneGenerator : public RandomNumberGenerator {
+    public:
+    static std::unique_ptr<RandomNumberGenerator> create() {
+        return std::unique_ptr<RandomNumberGenerator>(new AlwaysOneGenerator());
+    }
+    
+    void skipNextElements(size_t _elementsToSkip) {
+        // no-op
+    }
+
+    double getNumber() {
+        return 1;
+    }
+};
+
 class NormalRandomNumberGenerator : public RandomNumberGenerator {
     private:
     std::default_random_engine eng;

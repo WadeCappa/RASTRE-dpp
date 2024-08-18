@@ -138,7 +138,7 @@ class GlobalBufferLoader : public BufferLoader {
 
             auto index = binaryInput.begin() + rankStart;
             auto elementStop = binaryInput.begin() + rankStart;
-            while (index != rankStop && elementStop != rankStop) {
+            while (index < rankStop && elementStop < rankStop) {
                 if (*elementStop == CommunicationConstants::endOfSendTag()) {
                     std::unique_ptr<DataRow> dataRow(factory.getFromNaiveBinary(
                         move(std::vector<double>(index, elementStop - 1)))
