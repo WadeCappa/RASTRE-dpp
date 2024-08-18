@@ -38,7 +38,7 @@ struct appData{
 
     int worldSize = 1;
     int worldRank = 0;
-    size_t numberOfDataRows;
+    size_t numberOfDataRows = 0;
 
    LoadInput loadInput;
    GenerateInput generateInput;
@@ -103,6 +103,7 @@ class Orchestrator {
         app.add_option("-e,--epsilon", appData.epsilon, "Only used for the fast greedy variants. Determines the threshold for when seed selection is terminated.");
         app.add_option("-a,--algorithm", appData.algorithm, "Determines the seed selection algorithm. 0) naive, 1) lazy, 2) fast greedy, 3) lazy fast greedy");
         app.add_option("--adjacencyListColumnCount", appData.adjacencyListColumnCount, "To load an adjacnency list, set this value to the number of columns per row expected in the underlying matrix.");
+        app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file. This is needed to distribute work and is required for multi-machine mode");
         app.add_flag("--loadBinary", appData.binaryInput, "Use this flag if you want to load a binary input file.");
         app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
     
@@ -120,7 +121,6 @@ class Orchestrator {
 
     static void addMpiCmdOptions(CLI::App &app, AppData &appData) {
         Orchestrator::addCmdOptions(app, appData);
-        app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file.")->required();
         app.add_option("-d,--distributedAlgorithm", appData.distributedAlgorithm, "0) randGreedi\n1) SieveStreaming\n2) ThreeSieves\nDefaults to ThreeSieves\n3)Comparison Mode");
         app.add_option("--distributedEpsilon", appData.distributedEpsilon, "Only used for streaming. Defaults to 0.13.");
         app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
@@ -190,7 +190,7 @@ class Orchestrator {
         throw std::invalid_argument("Unrecognized generationStrategy");
     }
 
-    static std::unique_ptr<LineFactory> getLineGenerator(const AppData& appData) {
+    static std::unique_ptr<GeneratedLineFactory> getLineGenerator(const AppData& appData) {
         std::unique_ptr<RandomNumberGenerator> rng(getRandomNumberGeneratorForEdges(appData));
 
         if (appData.generateInput.sparsity != DEFAULT_GENERATED_SPARSITY) {
@@ -213,6 +213,15 @@ class Orchestrator {
 
     static std::unique_ptr<SegmentedData> buildMpiData(
         const AppData& appData, 
+        GeneratedLineFactory &getter,
+        const std::vector<unsigned int> &rowToRank
+    ) {
+        std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
+        return SegmentedData::loadInParallel(*factory, getter, rowToRank, appData.worldRank);
+    }
+
+    static std::unique_ptr<SegmentedData> buildMpiData(
+        const AppData& appData, 
         LineFactory &getter,
         const std::vector<unsigned int> &rowToRank
     ) {
@@ -220,7 +229,17 @@ class Orchestrator {
         return SegmentedData::load(*factory, getter, rowToRank, appData.worldRank);
     }
 
-    static std::unique_ptr<FullyLoadedData> loadData(const AppData& appData, LineFactory &getter) {
+    static std::unique_ptr<BaseData> loadData(const AppData& appData, GeneratedLineFactory &getter) {
+        std::vector<unsigned int> rowToRank(appData.numberOfDataRows, 0);
+        return buildMpiData(appData, getter, rowToRank);
+    }
+
+    static std::unique_ptr<BaseData> loadData(const AppData& appData, LineFactory &getter) {
+        if (appData.numberOfDataRows > 0) {
+            std::vector<unsigned int> rowToRank(appData.numberOfDataRows, 0);
+            return buildMpiData(appData, getter, rowToRank);
+        }
+
         std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
         return FullyLoadedData::load(*factory, getter);
     }

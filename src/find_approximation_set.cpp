@@ -24,6 +24,8 @@ int main(int argc, char** argv) {
     AppData appData;
     Orchestrator::addCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
+    appData.worldRank = 0;
+    appData.worldSize = 1;
 
     Timers timers;
 
@@ -41,7 +43,7 @@ int main(int argc, char** argv) {
         getter = Orchestrator::getLineGenerator(appData);
     }
 
-    std::unique_ptr<FullyLoadedData> data(Orchestrator::loadData(appData, *getter.get()));
+    std::unique_ptr<BaseData> data(Orchestrator::loadData(appData, *getter.get()));
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         inputFile.close();
     } 

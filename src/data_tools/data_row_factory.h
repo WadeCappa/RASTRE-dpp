@@ -59,7 +59,7 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
     }
 
     std::unique_ptr<RandomNumberGenerator> copy() {
-        std::unique_ptr<RandomNumberGenerator>(new NormalRandomNumberGenerator(this->eng, this->distribution));
+        return std::unique_ptr<RandomNumberGenerator>(new NormalRandomNumberGenerator(this->eng, this->distribution));
     }
 };
 
@@ -89,7 +89,7 @@ class UniformRandomNumberGenerator : public RandomNumberGenerator {
     }
 
     std::unique_ptr<RandomNumberGenerator> copy() {
-        std::unique_ptr<RandomNumberGenerator>(new UniformRandomNumberGenerator(this->eng, this->distribution));
+        return std::unique_ptr<RandomNumberGenerator>(new UniformRandomNumberGenerator(this->eng, this->distribution));
     }
 };
 
@@ -165,7 +165,7 @@ class GeneratedDenseLineFactory : public GeneratedLineFactory {
         const size_t numRows,
         const size_t numColumns,
         std::unique_ptr<RandomNumberGenerator> rng) {
-        return create(numRows, numColumns, move(rng));
+        return create(numRows, numColumns, move(rng), 0);
     }
     
     void skipNext() {
@@ -194,8 +194,8 @@ class GeneratedDenseLineFactory : public GeneratedLineFactory {
         this->currentRow = line;
     }
     
-    virtual std::unique_ptr<GeneratedLineFactory> copy() {
-        return create(this->numRows, this->numColumns, rng->copy());
+    std::unique_ptr<GeneratedLineFactory> copy() {
+        return create(this->numRows, this->numColumns, rng->copy(), this->currentRow);
     }
 };
 
@@ -298,7 +298,7 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
         this->currentColumn = 0;
     }
 
-    virtual std::unique_ptr<GeneratedLineFactory> copy() {
+    std::unique_ptr<GeneratedLineFactory> copy() {
         return create(this->numRows, this->numColumns, this->sparsity, this->edgeValueRng->copy(), this->includeEdgeRng->copy(), this->currentRow, this->currentColumn);
     }
 };

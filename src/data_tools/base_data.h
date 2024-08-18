@@ -1,5 +1,6 @@
 
 #include <vector>
+#include <omp.h>
 #include <cstddef>
 #include <optional>
 #include <cassert>
@@ -69,28 +70,6 @@ class FullyLoadedData : public BaseData {
     FullyLoadedData(const BaseData&);
 
     public:
-    static std::unique_ptr<FullyLoadedData> loadInParallel(DataRowFactory &factory, GeneratedLineFactory &getter, const size_t totalRows) {
-        std::vector<std::unique_ptr<DataRow>> data(totalRows);
-
-        const int numThreads = omp_get_num_threads();
-        std::vector<std::unique_ptr<GeneratedLineFactory>> gettersForThreads(numThreads, getter.copy());
-
-        #pragma omp parallel for 
-        for (size_t i = 0; i < totalRows; i++) {
-            gettersForThreads[omp_get_thread_num()]->jumpToLine(i);
-            GeneratedLineFactory &localGetter = *gettersForThreads[omp_get_thread_num()];
-            std::unique_ptr<DataRow> nextRow(factory.maybeGet(localGetter));
-            if (nextRow == nullptr) {
-                throw std::invalid_argument("Retrieved nullptr which is unexpected in a parallel load");
-            }
-
-            data[i] = (move(nextRow));
-        }
-
-        const size_t columns = data.back()->size();
-        return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(data), columns));
-    }
-
     static std::unique_ptr<FullyLoadedData> load(DataRowFactory &factory, LineFactory &getter) {
         size_t columns = 0;
         std::vector<std::unique_ptr<DataRow>> data;
@@ -147,6 +126,40 @@ class SegmentedData : public BaseData {
     SegmentedData(const BaseData&);
 
     public:
+    static std::unique_ptr<SegmentedData> loadInParallel(
+        DataRowFactory &factory, 
+        GeneratedLineFactory &getter, 
+        const std::vector<unsigned int> &rankMapping, 
+        const unsigned int rank) {
+
+        std::vector<size_t> localRowToGlobalRow;
+        for (size_t globalRow = 0; globalRow < rankMapping.size(); globalRow++) {
+            if (rankMapping[globalRow] == rank) {
+                localRowToGlobalRow.push_back(globalRow);
+            }
+        }
+
+        std::vector<std::unique_ptr<DataRow>> data(localRowToGlobalRow.size());
+
+        #pragma omp parallel for 
+        for (size_t i = 0; i < localRowToGlobalRow.size(); i++) {
+            std::unique_ptr<GeneratedLineFactory> localGetter(getter.copy());
+
+            // This might be expensive to do from scratch for every row. Look into a way to persist this.
+            localGetter->jumpToLine(localRowToGlobalRow[i]);
+            std::unique_ptr<DataRow> nextRow(factory.maybeGet(*localGetter));
+            if (nextRow == nullptr) {
+                std::cout << "Retrieved nullptr which is unexpected in a parallel load" << std::endl;
+                continue;
+            }
+
+            data[i] = move(nextRow);
+        }
+
+        const size_t columns = localRowToGlobalRow.size() > 0 ? data.back()->size() : 0;
+        return std::unique_ptr<SegmentedData>(new SegmentedData(move(data), move(localRowToGlobalRow), columns));
+    }
+
     static std::unique_ptr<SegmentedData> load(
         DataRowFactory &factory, 
         LineFactory &source, 
