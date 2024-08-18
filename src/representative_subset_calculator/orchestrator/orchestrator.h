@@ -21,7 +21,6 @@ struct generateInput {
     size_t genCols = 0;
     double sparsity = DEFAULT_GENERATED_SPARSITY;
     long unsigned int seed = -1;
-    size_t mimic = 0;
 } typedef GenerateInput;
 
 struct appData{
@@ -110,12 +109,11 @@ class Orchestrator {
         CLI::App *loadInput = app.add_subcommand("loadInput", "loads the requested input from the provided path");
         CLI::App *genInput = app.add_subcommand("generateInput", "generates synthetic data");
 
-        genInput->add_option("-g,--generationStrategy", appData.generateInput.generationStrategy);
+        genInput->add_option("-g,--generationStrategy", appData.generateInput.generationStrategy, "Refers to the value of edges. 0)(DEFAULT) normal distribution, 1) edges are alwayas 1");
         genInput->add_option("--rows", appData.generateInput.genRows)->required();
         genInput->add_option("--cols", appData.generateInput.genCols)->required();
-        genInput->add_option("--sparsity", appData.generateInput.sparsity);
+        genInput->add_option("--sparsity", appData.generateInput.sparsity, "Note that edges are generated uniformly at random.");
         genInput->add_option("--seed", appData.generateInput.seed)->required();
-        genInput->add_option("--mimicReal", appData.generateInput.mimic, "Mimic real world binarized datasets. 0)False by default, 1)True");
 
         loadInput->add_option("-i,--input", appData.loadInput.inputFile, "Path to input file. Should contain data in row vector format.")->required();
     }
@@ -178,8 +176,22 @@ class Orchestrator {
         return output;
     }
 
+    static std::unique_ptr<RandomNumberGenerator> getRandomNumberGeneratorForEdges(const AppData& appData) {
+        if (appData.generateInput.generationStrategy == 0) {
+            return NormalRandomNumberGenerator::create(appData.generateInput.seed);
+        } else if (appData.generateInput.generationStrategy == 1) {
+            if (appData.generateInput.sparsity == DEFAULT_GENERATED_SPARSITY) {
+                throw std::invalid_argument("Cannot use generationStrategy of 1 with a dense generator");
+            }
+
+            return AlwaysOneGenerator::create();
+        }
+
+        throw std::invalid_argument("Unrecognized generationStrategy");
+    }
+
     static std::unique_ptr<LineFactory> getLineGenerator(const AppData& appData) {
-        std::unique_ptr<RandomNumberGenerator> rng(NormalRandomNumberGenerator::create(appData.generateInput.seed));
+        std::unique_ptr<RandomNumberGenerator> rng(getRandomNumberGeneratorForEdges(appData));
 
         if (appData.generateInput.sparsity != DEFAULT_GENERATED_SPARSITY) {
             std::unique_ptr<RandomNumberGenerator> sparsityRng(UniformRandomNumberGenerator::create(appData.generateInput.seed + 1));
@@ -188,7 +200,6 @@ class Orchestrator {
                     appData.generateInput.genRows,
                     appData.generateInput.genCols,
                     appData.generateInput.sparsity,
-                    appData.generateInput.mimic,
                     move(rng),
                     move(sparsityRng)
                 )

@@ -13,6 +13,21 @@ class RandomNumberGenerator {
     virtual void skipNextElements(size_t elementsToSkip) = 0;
 };
 
+class AlwaysOneGenerator : public RandomNumberGenerator {
+    public:
+    static std::unique_ptr<RandomNumberGenerator> create() {
+        return std::unique_ptr<RandomNumberGenerator>(new AlwaysOneGenerator());
+    }
+    
+    void skipNextElements(size_t _elementsToSkip) {
+        // no-op
+    }
+
+    double getNumber() {
+        return 1;
+    }
+};
+
 class NormalRandomNumberGenerator : public RandomNumberGenerator {
     private:
     std::default_random_engine eng;
@@ -143,7 +158,6 @@ class GeneratedSparseLineFactory : public LineFactory {
     const size_t numRows;
     const size_t numColumns;
     const double sparsity;
-    const size_t mimic;
     std::unique_ptr<RandomNumberGenerator> edgeValueRng;
     std::unique_ptr<RandomNumberGenerator> includeEdgeRng;
 
@@ -155,14 +169,12 @@ class GeneratedSparseLineFactory : public LineFactory {
         const size_t numRows,
         const size_t numColumns,
         const double sparsity,
-        const size_t mimic,
         std::unique_ptr<RandomNumberGenerator> edgeValueRng,
         std::unique_ptr<RandomNumberGenerator> includeEdgeRng 
     ) : 
         numRows(numRows),
         numColumns(numColumns),
         sparsity(sparsity),
-        mimic(mimic),
         edgeValueRng(move(edgeValueRng)),
         includeEdgeRng(move(includeEdgeRng)),
         currentRow(0),
@@ -179,13 +191,13 @@ class GeneratedSparseLineFactory : public LineFactory {
             return std::nullopt;
         }
 
-        double edgeValue = (this->mimic) ? 1 : this->edgeValueRng->getNumber();
+        double edgeValue = this->edgeValueRng->getNumber();
 
         while (this->includeEdgeRng->getNumber() < this->sparsity) {
             this->currentColumn++;
 
             // generate another value to make sure skips by row are accurate.
-            edgeValue = (this->mimic) ? 1 : this->edgeValueRng->getNumber();
+            edgeValue = this->edgeValueRng->getNumber();
         }
 
         if (this->currentColumn >= this->numColumns) {
