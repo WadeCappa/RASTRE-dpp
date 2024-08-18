@@ -69,6 +69,28 @@ class FullyLoadedData : public BaseData {
     FullyLoadedData(const BaseData&);
 
     public:
+    static std::unique_ptr<FullyLoadedData> loadInParallel(DataRowFactory &factory, GeneratedLineFactory &getter, const size_t totalRows) {
+        std::vector<std::unique_ptr<DataRow>> data(totalRows);
+
+        const int numThreads = omp_get_num_threads();
+        std::vector<std::unique_ptr<GeneratedLineFactory>> gettersForThreads(numThreads, getter.copy());
+
+        #pragma omp parallel for 
+        for (size_t i = 0; i < totalRows; i++) {
+            gettersForThreads[omp_get_thread_num()]->jumpToLine(i);
+            GeneratedLineFactory &localGetter = *gettersForThreads[omp_get_thread_num()];
+            std::unique_ptr<DataRow> nextRow(factory.maybeGet(localGetter));
+            if (nextRow == nullptr) {
+                throw std::invalid_argument("Retrieved nullptr which is unexpected in a parallel load");
+            }
+
+            data[i] = (move(nextRow));
+        }
+
+        const size_t columns = data.back()->size();
+        return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(data), columns));
+    }
+
     static std::unique_ptr<FullyLoadedData> load(DataRowFactory &factory, LineFactory &getter) {
         size_t columns = 0;
         std::vector<std::unique_ptr<DataRow>> data;
@@ -142,7 +164,7 @@ class SegmentedData : public BaseData {
                 std::unique_ptr<DataRow> nextRow(factory.maybeGet(source));
 
                 if (nextRow == nullptr) {
-                    break;
+                    throw std::invalid_argument("Retrieved nullptr which is unexpected in a parellel load. The number of rows you have provided was incorrect.");
                 }
 
                 if (columns == 0) {

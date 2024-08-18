@@ -195,22 +195,18 @@ class Orchestrator {
 
         if (appData.generateInput.sparsity != DEFAULT_GENERATED_SPARSITY) {
             std::unique_ptr<RandomNumberGenerator> sparsityRng(UniformRandomNumberGenerator::create(appData.generateInput.seed + 1));
-            return std::unique_ptr<GeneratedSparseLineFactory>(
-                new GeneratedSparseLineFactory(
+            return GeneratedSparseLineFactory::create(
                     appData.generateInput.genRows,
                     appData.generateInput.genCols,
                     appData.generateInput.sparsity,
                     move(rng),
                     move(sparsityRng)
-                )
             );
         } else {
-            return std::unique_ptr<GeneratedDenseLineFactory>(
-                new GeneratedDenseLineFactory(
-                    appData.generateInput.genRows,
-                    appData.generateInput.genCols,
-                    move(rng)
-                )
+            return GeneratedDenseLineFactory::create(
+                appData.generateInput.genRows,
+                appData.generateInput.genCols,
+                move(rng)
             );
         }
     }

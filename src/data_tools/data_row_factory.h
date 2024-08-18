@@ -11,6 +11,7 @@ class RandomNumberGenerator {
     public:
     virtual double getNumber() = 0;
     virtual void skipNextElements(size_t elementsToSkip) = 0;
+    virtual std::unique_ptr<RandomNumberGenerator> copy() = 0;
 };
 
 class AlwaysOneGenerator : public RandomNumberGenerator {
@@ -25,6 +26,10 @@ class AlwaysOneGenerator : public RandomNumberGenerator {
 
     double getNumber() {
         return 1;
+    }
+
+    std::unique_ptr<RandomNumberGenerator> copy() {
+        return create();
     }
 };
 
@@ -51,6 +56,10 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
 
     double getNumber() {
         return distribution(eng);
+    }
+
+    std::unique_ptr<RandomNumberGenerator> copy() {
+        std::unique_ptr<RandomNumberGenerator>(new NormalRandomNumberGenerator(this->eng, this->distribution));
     }
 };
 
@@ -79,6 +88,9 @@ class UniformRandomNumberGenerator : public RandomNumberGenerator {
         return distribution(eng);
     }
 
+    std::unique_ptr<RandomNumberGenerator> copy() {
+        std::unique_ptr<RandomNumberGenerator>(new UniformRandomNumberGenerator(this->eng, this->distribution));
+    }
 };
 
 class LineFactory {
@@ -110,7 +122,15 @@ class FromFileLineFactory : public LineFactory {
     }
 };
 
-class GeneratedDenseLineFactory : public LineFactory {
+class GeneratedLineFactory : public LineFactory {
+    public:
+
+    // Designed for parallel loads. This is an optimization and might be dangerous.
+    virtual void jumpToLine(const size_t line) = 0;
+    virtual std::unique_ptr<GeneratedLineFactory> copy() = 0;
+};
+
+class GeneratedDenseLineFactory : public GeneratedLineFactory {
     private:
     static constexpr const char* delimeter = ",";
 
@@ -120,18 +140,34 @@ class GeneratedDenseLineFactory : public LineFactory {
 
     size_t currentRow;
 
-    public:
     GeneratedDenseLineFactory(
         const size_t numRows,
         const size_t numColumns,
-        std::unique_ptr<RandomNumberGenerator> rng
+        std::unique_ptr<RandomNumberGenerator> rng,
+        size_t startingRow
     ) : 
         numRows(numRows),
         numColumns(numColumns),
         rng(move(rng)),
-        currentRow(0)
+        currentRow(startingRow)
     {}
 
+    static std::unique_ptr<GeneratedDenseLineFactory> create(
+        const size_t numRows,
+        const size_t numColumns,
+        std::unique_ptr<RandomNumberGenerator> rng,
+        size_t startingRow) {
+        return std::unique_ptr<GeneratedDenseLineFactory>(new GeneratedDenseLineFactory(numRows, numColumns, move(rng), startingRow));
+    }
+
+    public:
+    static std::unique_ptr<GeneratedDenseLineFactory> create(
+        const size_t numRows,
+        const size_t numColumns,
+        std::unique_ptr<RandomNumberGenerator> rng) {
+        return create(numRows, numColumns, move(rng));
+    }
+    
     void skipNext() {
         this->rng->skipNextElements(this->numColumns);
     }
@@ -151,9 +187,19 @@ class GeneratedDenseLineFactory : public LineFactory {
         this->currentRow++;
         return res.str();
     }
+
+    void jumpToLine(const size_t line) {
+        const size_t elementsToSkip = (line - this->currentRow) * this->numColumns;
+        this->rng->skipNextElements(elementsToSkip);
+        this->currentRow = line;
+    }
+    
+    virtual std::unique_ptr<GeneratedLineFactory> copy() {
+        return create(this->numRows, this->numColumns, rng->copy());
+    }
 };
 
-class GeneratedSparseLineFactory : public LineFactory {
+class GeneratedSparseLineFactory : public GeneratedLineFactory {
     private:
     const size_t numRows;
     const size_t numColumns;
@@ -164,22 +210,46 @@ class GeneratedSparseLineFactory : public LineFactory {
     size_t currentRow;
     size_t currentColumn;
 
-    public:
     GeneratedSparseLineFactory(
         const size_t numRows,
         const size_t numColumns,
         const double sparsity,
         std::unique_ptr<RandomNumberGenerator> edgeValueRng,
-        std::unique_ptr<RandomNumberGenerator> includeEdgeRng 
+        std::unique_ptr<RandomNumberGenerator> includeEdgeRng,
+        const size_t currentRow,
+        const size_t currentColumn
     ) : 
         numRows(numRows),
         numColumns(numColumns),
         sparsity(sparsity),
         edgeValueRng(move(edgeValueRng)),
         includeEdgeRng(move(includeEdgeRng)),
-        currentRow(0),
-        currentColumn(0)
+        currentRow(currentRow),
+        currentColumn(currentColumn)
     {}
+
+    static std::unique_ptr<GeneratedSparseLineFactory> create(
+        const size_t numRows,
+        const size_t numColumns,
+        const double sparsity,
+        std::unique_ptr<RandomNumberGenerator> edgeValueRng,
+        std::unique_ptr<RandomNumberGenerator> includeEdgeRng,
+        const size_t currentRow,
+        const size_t currentColumn) {
+        return std::unique_ptr<GeneratedSparseLineFactory>(new GeneratedSparseLineFactory(
+            numRows, numColumns, sparsity, move(edgeValueRng), move(includeEdgeRng), currentRow, currentColumn
+        ));
+    }
+
+    public:
+    static std::unique_ptr<GeneratedSparseLineFactory> create(
+        const size_t numRows,
+        const size_t numColumns,
+        const double sparsity,
+        std::unique_ptr<RandomNumberGenerator> edgeValueRng,
+        std::unique_ptr<RandomNumberGenerator> includeEdgeRng) {
+        return create(numRows, numColumns, sparsity, move(edgeValueRng), move(includeEdgeRng), 0, 0);
+    }
 
     void skipNext() {
         this->includeEdgeRng->skipNextElements(this->numColumns);
@@ -216,6 +286,20 @@ class GeneratedSparseLineFactory : public LineFactory {
         this->currentColumn++;
 
         return res.str();
+    }
+
+    void jumpToLine(const size_t line) {
+        const size_t elementsToSkip = (line - this->currentRow) * this->numColumns;
+        this->edgeValueRng->skipNextElements(elementsToSkip);
+        this->includeEdgeRng->skipNextElements(elementsToSkip);
+        this->currentRow = line;
+        
+        // This might be a bug, have to double check.
+        this->currentColumn = 0;
+    }
+
+    virtual std::unique_ptr<GeneratedLineFactory> copy() {
+        return create(this->numRows, this->numColumns, this->sparsity, this->edgeValueRng->copy(), this->includeEdgeRng->copy(), this->currentRow, this->currentColumn);
     }
 };
 
