@@ -56,6 +56,8 @@ class Orchestrator {
                 return "fast greedy";
             case 3:
                 return "lazy fast greedy";
+            case 4:
+                return "streaming";
             default:
                 throw new std::invalid_argument("Could not find algorithm");
         }
@@ -137,6 +139,8 @@ class Orchestrator {
                 return dynamic_cast<SubsetCalculator*>(new FastSubsetCalculator(appData.epsilon));
             case 3: 
                 return dynamic_cast<SubsetCalculator*>(new LazyFastSubsetCalculator(appData.epsilon));
+            case 4:
+                return dynamic_cast<SubsetCalculator*>(new SendAllSubsetCalculator());
             default:
                 throw new std::invalid_argument("Could not find algorithm");
         }

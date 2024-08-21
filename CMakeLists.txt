@@ -41,4 +41,13 @@ if (MPI_FOUND)
     target_link_libraries(mpi_find_approximation_set OpenMP::OpenMP_CXX)
 
     target_link_libraries(mpi_find_approximation_set MPI::MPI_CXX)
+
+    add_executable(streaming_find_approximation_set src/streaming_find_approximation_set.cpp)
+    target_link_libraries(streaming_find_approximation_set CLI11::CLI11)
+    target_link_libraries(streaming_find_approximation_set fmt::fmt)
+    target_link_libraries(streaming_find_approximation_set Eigen3::Eigen)
+    target_link_libraries(streaming_find_approximation_set nlohmann_json::nlohmann_json)
+    target_link_libraries(streaming_find_approximation_set OpenMP::OpenMP_CXX)
+
+    target_link_libraries(streaming_find_approximation_set MPI::MPI_CXX)
 endif()
