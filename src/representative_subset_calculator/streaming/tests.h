@@ -9,11 +9,11 @@
 #include "receiver_interface.h"
 #include "greedy_streamer.h"
 
-static const double EVERYTHING_ALLOWED_THRESHOLD = 0.0000001;
-static const double EVERYTHING_DISALLOWED_THRESHOLD = 0.999;
+static const float EVERYTHING_ALLOWED_THRESHOLD = 0.0000001;
+static const float EVERYTHING_DISALLOWED_THRESHOLD = 0.999;
 static const int K = 3;
 static const int T = 1;
-static double EPSILON = 0.5;
+static float EPSILON = 0.5;
 
 std::unique_ptr<CandidateSeed> buildSeed(const size_t row, const unsigned int rank) {
     return std::unique_ptr<CandidateSeed>(
@@ -32,7 +32,7 @@ std::unique_ptr<CandidateSeed> buildSeed() {
     return buildSeed(row, rank);
 }
 
-std::unique_ptr<BucketTitrator> getTitrator(unsigned int numThreads, double eps, unsigned int k) {
+std::unique_ptr<BucketTitrator> getTitrator(unsigned int numThreads, float eps, unsigned int k) {
     return std::unique_ptr<BucketTitrator>(new SieveStreamingBucketTitrator(numThreads, eps, k));
 }
 
@@ -118,7 +118,7 @@ class FakeRankBuffer : public RankBuffer {
         return this->rank;
     }
 
-    double getLocalSolutionScore() const {
+    float getLocalSolutionScore() const {
         return this->rankSolution->getScore();
     }
 

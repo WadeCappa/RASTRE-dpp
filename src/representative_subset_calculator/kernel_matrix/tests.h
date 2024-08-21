@@ -7,8 +7,8 @@ TEST_CASE("Kernel matracies are equivalent") {
 
     for (size_t j = 0; j < denseData->totalRows(); j++) {
         for (size_t i = 0; i < denseData->totalRows(); i++) {
-            double naiveValue = naiveMatrix->get(j, i);
-            double lazyValue = lazyMatrix->get(j, i);
+            float naiveValue = naiveMatrix->get(j, i);
+            float lazyValue = lazyMatrix->get(j, i);
             CHECK(naiveValue > lazyValue - LARGEST_ACCEPTABLE_ERROR);
             CHECK(naiveValue < lazyValue + LARGEST_ACCEPTABLE_ERROR);
         }

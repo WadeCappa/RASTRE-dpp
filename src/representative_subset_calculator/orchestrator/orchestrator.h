@@ -8,7 +8,7 @@
 #include <optional>
 
 const static std::string EMPTY_STRING = "\n";
-const static double DEFAULT_GENERATED_SPARSITY = -1;
+const static float DEFAULT_GENERATED_SPARSITY = -1;
 
 struct loadInput {
     std::string inputFile = EMPTY_STRING;
@@ -19,7 +19,7 @@ struct generateInput {
     int generationStrategy = 0;
     size_t genRows = 0;
     size_t genCols = 0;
-    double sparsity = DEFAULT_GENERATED_SPARSITY;
+    float sparsity = DEFAULT_GENERATED_SPARSITY;
     long unsigned int seed = -1;
 } typedef GenerateInput;
 
@@ -29,12 +29,12 @@ struct appData{
     unsigned int adjacencyListColumnCount = 0;
     bool binaryInput = false;
     bool normalizeInput = false;
-    double epsilon = -1;
+    float epsilon = -1;
     unsigned int algorithm;
     unsigned int distributedAlgorithm = 2;
-    double distributedEpsilon = 0.13;
+    float distributedEpsilon = 0.13;
     unsigned int threeSieveT;
-    double alpha = 1;
+    float alpha = 1;
 
     int worldSize = 1;
     int worldRank = 0;

@@ -34,7 +34,7 @@ class PerRowRelevanceCalculator {
     };
 
     public:
-    static double getScore(const DataRow &row, const RelevanceCalculatorFactory &factory) {
+    static float getScore(const DataRow &row, const RelevanceCalculatorFactory &factory) {
         DummyData data(row);
         return factory.build(data)->get(0, 0);
     }

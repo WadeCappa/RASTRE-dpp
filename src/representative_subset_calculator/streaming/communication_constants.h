@@ -12,7 +12,7 @@ class CommunicationConstants {
         return 0;
     }
 
-    static double endOfSendTag() {
+    static float endOfSendTag() {
         return -1;
     }
 };

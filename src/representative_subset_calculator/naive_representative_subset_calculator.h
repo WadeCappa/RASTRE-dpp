@@ -20,10 +20,10 @@ class NaiveSubsetCalculator : public SubsetCalculator {
         MutableSimilarityMatrix matrix; 
         std::set<size_t> seen;
 
-        double currentScore = 0;
+        float currentScore = 0;
 
         for (size_t seed = 0; seed < k; seed++) {
-            std::vector<double> marginals(data.totalRows());
+            std::vector<float> marginals(data.totalRows());
 
             #pragma omp parallel for 
             for (size_t index = 0; index < data.totalRows(); index++) {
@@ -33,8 +33,8 @@ class NaiveSubsetCalculator : public SubsetCalculator {
                 marginals[index] = tempMatrix.getCoverage();
             }
 
-            double highestMarginal = -std::numeric_limits<double>::max();
-            double changeInMarginal = 0;
+            float highestMarginal = -std::numeric_limits<float>::max();
+            float changeInMarginal = 0;
             size_t bestRow = -1;
             for (size_t index = 0; index < data.totalRows(); index++) {
                 if (seen.find(index) != seen.end()) {
@@ -53,7 +53,7 @@ class NaiveSubsetCalculator : public SubsetCalculator {
                 return MutableSubset::upcast(move(consumer));
             }
 
-            double marginalGain = highestMarginal - currentScore;
+            float marginalGain = highestMarginal - currentScore;
             consumer->addRow(bestRow, marginalGain);
             matrix.addRow(data.getRow(bestRow));
             seen.insert(bestRow);
