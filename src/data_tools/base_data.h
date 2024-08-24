@@ -141,10 +141,9 @@ class SegmentedData : public BaseData {
 
         std::vector<std::unique_ptr<DataRow>> data(localRowToGlobalRow.size());
 
-        // using a random high constant because omp_get_num_threads lies. Hopefully
-        //  the number of threads on a system is less than this.
         std::vector<std::unique_ptr<GeneratedLineFactory>> gettersForRanks;
-        for (int i = 0; i < 1024; i++) {
+        int maxThreads = omp_get_max_threads();
+        for (int i = 0; i < maxThreads; i++) {
             gettersForRanks.push_back(getter.copy());
         }
 
