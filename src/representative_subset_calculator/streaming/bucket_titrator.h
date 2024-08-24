@@ -3,6 +3,7 @@
 class BucketTitrator {
     public:
     virtual void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
+    virtual void processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
     virtual std::unique_ptr<Subset> getBestSolutionDestroyTitrator() = 0;
     virtual bool bucketsInitialized() const = 0;
     virtual void initBuckets(const double deltaZero) = 0;
@@ -46,6 +47,51 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         deltaZero(-1),
         k(k)
     {}
+
+    void processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+
+        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+
+        for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
+
+            std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
+            double singletonValue = 2 * std::log(std::sqrt(seed->getData().dotProduct(seed->getData()))); 
+            
+            if (singletonValue > deltaZero) {
+                
+                this->deltaZero = singletonValue;
+
+                
+                int i = this->totalBuckets - 1 + std::ceil( std::log(this->deltaZero) / std::log(1 + epsilon));
+                double threshold = std::pow(1 + epsilon, i);
+                std::cout << "Bucket Threshold: " << threshold << std::endl;
+                this->bucket = std::make_unique<ThresholdBucket>(threshold, k);
+                this->firstBucketBuilt = true;
+
+            }
+
+            if (this->bucket->attemptInsert(seed->getRow(), seed->getData())) {
+                this->t = 0; 
+            } else {
+                this->t += 1; 
+                if (this->t >= this->T && this->currentBucketIndex < this->totalBuckets) {
+                    this->t = 0;
+                    this->currentBucketIndex++;
+
+                    const double deltaZero = this->deltaZero;
+                    int i = this->totalBuckets - 1 - this->currentBucketIndex + std::ceil( std::log(deltaZero) / std::log(1 + epsilon));
+                    const double threshold = std::pow(1 + epsilon, i);
+                    std::cout << "Bucket Threshold: " << threshold << std::endl;
+                    //transfer current contents to next bucket
+                    this->bucket = bucket->transferContents(threshold);
+                }
+            }
+        }
+
+        for (size_t i = 0; i < pulledFromQueue.size(); i++) {
+            this->seedStorage.push_back(move(pulledFromQueue[i]));
+        }    
+    }
 
     void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
@@ -117,6 +163,8 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         epsilon(epsilon),
         k(k)
     {}
+
+    void processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {}
 
     void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
