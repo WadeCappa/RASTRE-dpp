@@ -23,11 +23,11 @@ class SendAllSubsetCalculator : public SubsetCalculator {
 
         std::unique_ptr<LazyKernelMatrix> kernelMatrix(LazyKernelMatrix::from(data));
         
-        std::vector<float> diagonals = kernelMatrix->getDiagonals();
+        std::vector<double> diagonals = kernelMatrix->getDiagonals();
         
 
         for (size_t i = 0; i < k; i++) {
-            float marginalGain = std::log(diagonals[i]);
+            double marginalGain = std::log(diagonals[i]);
             consumer->addRow(i, marginalGain);
         }
 

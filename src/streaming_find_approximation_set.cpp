@@ -128,16 +128,19 @@ int main(int argc, char** argv) {
     // Put this somewhere more sane
     const unsigned int DEFAULT_VALUE = -1;
 
-    std::unique_ptr<SegmentedData> data;
+    std::unique_ptr<LineFactory> getter;
+    std::ifstream inputFile;
     if (appData.loadInput.inputFile != EMPTY_STRING) {
-        std::ifstream inputFile;
         inputFile.open(appData.loadInput.inputFile);
-        std::unique_ptr<LineFactory> getter(std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile)));
-        inputFile.close();
+        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
     } else if (appData.generateInput.seed != DEFAULT_VALUE) {
-        std::unique_ptr<GeneratedLineFactory> getter(Orchestrator::getLineGenerator(appData));
-        data = Orchestrator::buildMpiData(appData, *getter.get(), rowToRank);
+        getter = Orchestrator::getLineGenerator(appData);
     }
+
+    std::unique_ptr<SegmentedData> data(Orchestrator::buildMpiData(appData, *getter.get(), rowToRank));
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.close();
+    } 
 
     timers.loadingDatasetTime.stopTimer();
 
