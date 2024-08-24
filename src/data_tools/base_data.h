@@ -144,7 +144,7 @@ class SegmentedData : public BaseData {
         // using a random high constant because omp_get_num_threads lies. Hopefully
         //  the number of threads on a system is less than this.
         std::vector<std::unique_ptr<GeneratedLineFactory>> gettersForRanks;
-        for (int i = 0; i < 2048; i++) {
+        for (int i = 0; i < 1024; i++) {
             gettersForRanks.push_back(getter.copy());
         }
 
