@@ -27,7 +27,7 @@ class StreamingSubset : public MutableSubset {
         timers.firstSeedTime.startTimer();
     }
 
-    double getScore() const {
+    float getScore() const {
         return base->getScore();
     }
 
@@ -66,11 +66,11 @@ class StreamingSubset : public MutableSubset {
         this->timers.communicationTime.stopTimer();
     }
 
-    void addRow(const size_t row, const double marginalGain) {
+    void addRow(const size_t row, const float marginalGain) {
         this->base->addRow(row, marginalGain);
 
         ToBinaryVisitor visitor;
-        std::vector<double> rowToSend(move(this->data.getRow(row).visit(visitor)));
+        std::vector<float> rowToSend(move(this->data.getRow(row).visit(visitor)));
 
         // second to last value should be the marginal gain of this element for the local solution
         rowToSend.push_back(marginalGain);

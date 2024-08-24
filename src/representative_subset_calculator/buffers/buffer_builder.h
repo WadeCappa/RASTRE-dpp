@@ -2,8 +2,8 @@
 class Buffer {
     private:
     protected:
-    static const size_t DOUBLES_FOR_LOCAL_MARGINAL_PER_BUFFER = 1;
-    static const size_t DOUBLES_FOR_ROW_INDEX_PER_COLUMN = 1;
+    static const size_t FLOATS_FOR_LOCAL_MARGINAL_PER_BUFFER = 1;
+    static const size_t FLOATS_FOR_ROW_INDEX_PER_COLUMN = 1;
 
     public:
 };
@@ -14,10 +14,10 @@ class BufferBuilder : public Buffer {
     static unsigned int buildSendBuffer(
         const SegmentedData &data, 
         const Subset &localSolution, 
-        std::vector<double> &buffer
+        std::vector<float> &buffer
     ) {
         // Need to include an additional column that marks the index of the sent row
-        std::vector<std::vector<double>> buffers(localSolution.size());
+        std::vector<std::vector<float>> buffers(localSolution.size());
 
         #pragma omp parallel for
         for (size_t localRowIndex = 0; localRowIndex < localSolution.size(); localRowIndex++) {
@@ -47,7 +47,7 @@ class BufferBuilder : public Buffer {
 
     static void buildReceiveBuffer(
         const std::vector<int> &sendSizes, 
-        std::vector<double> &receiveBuffer
+        std::vector<float> &receiveBuffer
     ) {
         size_t totalData = 0;
         for (const auto & d : sendSizes) {
@@ -78,7 +78,7 @@ class BufferLoader : public Buffer {
 class GlobalBufferLoader : public BufferLoader {
     private:
     Timers& timers;
-    const std::vector<double> &binaryInput;
+    const std::vector<float> &binaryInput;
     const size_t columnsPerRowInBuffer;
     const std::vector<int> &displacements;
     const size_t worldSize;
@@ -111,14 +111,14 @@ class GlobalBufferLoader : public BufferLoader {
     }
 
     GlobalBufferLoader(
-        const std::vector<double> &binaryInput, 
+        const std::vector<float> &binaryInput, 
         const size_t columnsPerRowInBuffer,
         const std::vector<int> &displacements,
         Timers &timers
     ) : 
     timers(timers),
     binaryInput(binaryInput), 
-    columnsPerRowInBuffer(columnsPerRowInBuffer + DOUBLES_FOR_ROW_INDEX_PER_COLUMN), 
+    columnsPerRowInBuffer(columnsPerRowInBuffer + FLOATS_FOR_ROW_INDEX_PER_COLUMN), 
     displacements(displacements),
     worldSize(displacements.size())
     {}
@@ -141,7 +141,7 @@ class GlobalBufferLoader : public BufferLoader {
             while (index < rankStop && elementStop < rankStop) {
                 if (*elementStop == CommunicationConstants::endOfSendTag()) {
                     std::unique_ptr<DataRow> dataRow(factory.getFromNaiveBinary(
-                        move(std::vector<double>(index, elementStop - 1)))
+                        move(std::vector<float>(index, elementStop - 1)))
                     );
 
                     const size_t globalTag = *(elementStop - 1);
@@ -170,13 +170,13 @@ class GlobalBufferLoader : public BufferLoader {
 
     std::unique_ptr<Subset> getBestLocalSolution() {
         std::vector<size_t> rows;
-        double coverage;
-        double bestRankScore = -1;
+        float coverage;
+        float bestRankScore = -1;
         size_t maxRank = -1;
 
         for (size_t rank = 0; rank < worldSize; rank++) {
             const size_t scoreIndex = displacements[rank];
-            const double localRankScore = binaryInput[scoreIndex];
+            const float localRankScore = binaryInput[scoreIndex];
             std::cout << "rank " << rank << " had local solution of score " << localRankScore << std::endl;
 
             if (localRankScore >= bestRankScore) {

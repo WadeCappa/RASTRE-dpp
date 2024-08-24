@@ -44,7 +44,7 @@ void randGreedi(
     
     unsigned int sendDataSize = 0;
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
-    std::vector<double> sendBuffer;
+    std::vector<float> sendBuffer;
     timers.totalCalculationTime.startTimer();
     if (appData.worldRank != 0) {
         
@@ -65,7 +65,7 @@ void randGreedi(
     timers.communicationTime.stopTimer();
     
     timers.bufferEncodingTime.startTimer();
-    std::vector<double> receiveBuffer;
+    std::vector<float> receiveBuffer;
     std::vector<int> displacements;
     if (appData.worldRank == 0) {
         BufferBuilder::buildReceiveBuffer(receivingDataSizesBuffer, receiveBuffer);
@@ -77,11 +77,11 @@ void randGreedi(
     MPI_Gatherv(
         sendBuffer.data(),
         sendBuffer.size(), 
-        MPI_DOUBLE, 
+        MPI_FLOAT, 
         receiveBuffer.data(), 
         receivingDataSizesBuffer.data(), 
         displacements.data(),
-        MPI_DOUBLE, 
+        MPI_FLOAT, 
         0, 
         MPI_COMM_WORLD
     );

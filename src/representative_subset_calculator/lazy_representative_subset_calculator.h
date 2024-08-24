@@ -11,7 +11,7 @@ class LazySubsetCalculator : public SubsetCalculator {
     private:
 
     struct HeapComparitor {
-        bool operator()(const std::pair<size_t, double> a, const std::pair<size_t, double> b) {
+        bool operator()(const std::pair<size_t, float> a, const std::pair<size_t, float> b) {
             return a.second < b.second;
         }
     };
@@ -24,7 +24,7 @@ class LazySubsetCalculator : public SubsetCalculator {
         const BaseData &data, 
         size_t k
     ) {
-        std::vector<std::pair<size_t, double>> heap;
+        std::vector<std::pair<size_t, float>> heap;
         for (size_t index = 0; index < data.totalRows(); index++) {
             // TODO: Use the kernel matrix here, keep diagonals as state
             MutableSimilarityMatrix matrix(data.getRow(index));
@@ -36,7 +36,7 @@ class LazySubsetCalculator : public SubsetCalculator {
 
         MutableSimilarityMatrix matrix;
 
-        double currentScore = 0;
+        float currentScore = 0;
 
         while (consumer->size() < k) {
             auto top = heap.front();
@@ -46,12 +46,12 @@ class LazySubsetCalculator : public SubsetCalculator {
             // TODO: Use the kernel matrix here, keep diagonals as state
             MutableSimilarityMatrix tempMatrix(matrix);
             tempMatrix.addRow(data.getRow(top.first));
-            double marginal = tempMatrix.getCoverage();
+            float marginal = tempMatrix.getCoverage();
 
             auto nextElement = heap.front();
 
             if (marginal >= nextElement.second) {
-                double marginalGain = marginal - currentScore;
+                float marginalGain = marginal - currentScore;
                 consumer->addRow(top.first, marginalGain);
                 matrix.addRow(data.getRow(top.first));
                 currentScore = marginal;

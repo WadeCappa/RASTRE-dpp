@@ -1,17 +1,17 @@
 #include <optional>
 #include <iostream>
 
-class DenseDotProductDataRowVisitor : public ReturningDataRowVisitor<double> {
+class DenseDotProductDataRowVisitor : public ReturningDataRowVisitor<float> {
     private:
-    std::optional<double> result;
-    const std::vector<double>& base;
+    std::optional<float> result;
+    const std::vector<float>& base;
 
     public:
-    DenseDotProductDataRowVisitor(const std::vector<double>& input) 
+    DenseDotProductDataRowVisitor(const std::vector<float>& input) 
     : base(input), result(std::nullopt) {}
 
-    void visitDenseDataRow(const std::vector<double>& data) {
-        double dotProduct = 0;
+    void visitDenseDataRow(const std::vector<float>& data) {
+        float dotProduct = 0;
         for (size_t i = 0; i < this->base.size() && i < data.size(); i++) {
             dotProduct += this->base[i] * data[i];
         }
@@ -19,8 +19,8 @@ class DenseDotProductDataRowVisitor : public ReturningDataRowVisitor<double> {
         this->result = dotProduct;
     }
 
-    void visitSparseDataRow(const std::map<size_t, double>& data, size_t _totalColumns) {
-        double dotProduct = 0;
+    void visitSparseDataRow(const std::map<size_t, float>& data, size_t _totalColumns) {
+        float dotProduct = 0;
         for (const auto & p : data) {
             dotProduct += this->base[p.first] * p.second;
         }
@@ -28,22 +28,22 @@ class DenseDotProductDataRowVisitor : public ReturningDataRowVisitor<double> {
         this->result = dotProduct;
     }
 
-    double get() {
+    float get() {
         return this->result.value();
     }
 };
 
-class SparseDotProductDataRowVisitor : public ReturningDataRowVisitor<double> {
+class SparseDotProductDataRowVisitor : public ReturningDataRowVisitor<float> {
     private:
-    std::optional<double> result;
-    const std::map<size_t, double>& base;
+    std::optional<float> result;
+    const std::map<size_t, float>& base;
 
     public:
-    SparseDotProductDataRowVisitor(const std::map<size_t, double>& input) 
+    SparseDotProductDataRowVisitor(const std::map<size_t, float>& input) 
     : base(input), result(std::nullopt) {}
 
-    void visitDenseDataRow(const std::vector<double>& data) {
-        double dotProduct = 0;
+    void visitDenseDataRow(const std::vector<float>& data) {
+        float dotProduct = 0;
         for (const auto & p : this->base) {
             dotProduct += data[p.first] * p.second;
         }
@@ -51,8 +51,8 @@ class SparseDotProductDataRowVisitor : public ReturningDataRowVisitor<double> {
         this->result = dotProduct;
     }
 
-    void visitSparseDataRow(const std::map<size_t, double>& data, size_t _totalColumns) {
-        double dotProduct = 0;
+    void visitSparseDataRow(const std::map<size_t, float>& data, size_t _totalColumns) {
+        float dotProduct = 0;
 
         auto baseIterator = this->base.begin();
         auto dataIterator = data.begin();
@@ -71,7 +71,7 @@ class SparseDotProductDataRowVisitor : public ReturningDataRowVisitor<double> {
         this->result = dotProduct;
     }
 
-    double get() {
+    float get() {
         return this->result.value();
     }
 };

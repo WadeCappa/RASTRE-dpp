@@ -17,17 +17,17 @@ class DataRowVerifier : public DataRowVisitor {
     public:
     DataRowVerifier(size_t expectedRow) : expectedRow(expectedRow) {}
 
-    void visitDenseDataRow(const std::vector<double>& data) {
+    void visitDenseDataRow(const std::vector<float>& data) {
         CHECK(data == DENSE_DATA[this->expectedRow]);
     }
 
-    void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
+    void visitSparseDataRow(const std::map<size_t, float>& data, size_t totalColumns) {
         CHECK(data == SPARSE_DATA_AS_MAP[expectedRow]);
         CHECK(totalColumns == SPARSE_DATA_TOTAL_COLUMNS);
     }
 };
 
-static std::string rowToString(const std::vector<double> &row) {
+static std::string rowToString(const std::vector<float> &row) {
     std::ostringstream outputStream;
     for (const auto & v : row) {
         outputStream << v << ",";
@@ -37,7 +37,7 @@ static std::string rowToString(const std::vector<double> &row) {
     return output;
 }
 
-static std::string matrixToString(const std::vector<std::vector<double>> &data) {
+static std::string matrixToString(const std::vector<std::vector<float>> &data) {
     std::string output = "";
     for (const auto & row : data) {
         output += rowToString(row);
@@ -91,7 +91,7 @@ static void verifyData(
     }
 }
 
-static void DEBUG_printData(const std::vector<std::vector<double>> &data) {
+static void DEBUG_printData(const std::vector<std::vector<float>> &data) {
     for (const auto & d : data) {
         for (const auto & v : d) {
             std::cout << v << ", ";
@@ -205,7 +205,7 @@ TEST_CASE("Testing dense binary to data row conversion") {
     
         // Test data row to binary
         ToBinaryVisitor toBinary;
-        std::vector<double> newBinary(row->visit(toBinary));
+        std::vector<float> newBinary(row->visit(toBinary));
         
         // Verify old and new binaries are equivalent
         CHECK(newBinary == DENSE_DATA[i]);
@@ -218,7 +218,7 @@ TEST_CASE("Testing sparse binary to data row conversion") {
     
         // Test data row to binary
         ToBinaryVisitor toBinary;
-        std::vector<double> newBinary(row->visit(toBinary));
+        std::vector<float> newBinary(row->visit(toBinary));
     
         // Try loading from binary
         SparseDataRowFactory factory(SPARSE_DATA_TOTAL_COLUMNS);
@@ -235,19 +235,19 @@ TEST_CASE("Testing dot products") {
             std::unique_ptr<DataRow> sparseRow(new SparseDataRow(SPARSE_DATA_AS_MAP[s], SPARSE_DATA_TOTAL_COLUMNS));
 
             // dense to dense
-            double denseToDense = denseRow->dotProduct(*denseRow);
+            float denseToDense = denseRow->dotProduct(*denseRow);
             CHECK(denseToDense > 0);
             
             // dense to sparse
-            double denseToSparse = denseRow->dotProduct(*sparseRow);
+            float denseToSparse = denseRow->dotProduct(*sparseRow);
             CHECK(denseToSparse > 0);
 
             // sparse to dense
-            double sparseToDense = sparseRow->dotProduct(*denseRow);
+            float sparseToDense = sparseRow->dotProduct(*denseRow);
             CHECK(sparseToDense > 0);
 
             // sparse to sparse
-            double sparseToSparse = sparseRow->dotProduct(*sparseRow);
+            float sparseToSparse = sparseRow->dotProduct(*sparseRow);
             CHECK(sparseToSparse > 0);
         }
     }
