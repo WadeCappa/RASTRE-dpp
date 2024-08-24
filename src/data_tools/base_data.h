@@ -153,8 +153,7 @@ class SegmentedData : public BaseData {
             localGetter.jumpToLine(localRowToGlobalRow[i]);
             std::unique_ptr<DataRow> nextRow(factory.maybeGet(localGetter));
             if (nextRow == nullptr) {
-                std::cout << "Retrieved nullptr during load. This typically points to a misconfiguration." << std::endl;
-                continue;
+                throw std::invalid_argument("Retrieved nullptr which is unexpected in a parellel load. The number of rows you have provided was incorrect.");
             }
 
             data[i] = move(nextRow);
@@ -181,7 +180,7 @@ class SegmentedData : public BaseData {
                 std::unique_ptr<DataRow> nextRow(factory.maybeGet(source));
 
                 if (nextRow == nullptr) {
-                    throw std::invalid_argument("Retrieved nullptr which is unexpected in a parellel load. The number of rows you have provided was incorrect.");
+                    throw std::invalid_argument("Retrieved nullptr which is unexpected during a multi-machine load. The number of rows you have provided was incorrect.");
                 }
 
                 if (columns == 0) {
