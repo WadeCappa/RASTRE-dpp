@@ -16,7 +16,7 @@
 #include "streaming/tests.h"
 
 static const size_t k = DENSE_DATA.size();
-static const double epsilon = 0.01;
+static const float epsilon = 0.01;
 
 static std::unique_ptr<Subset> testCalculator(SubsetCalculator *calculator) {
     std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(DENSE_DATA));

@@ -8,7 +8,7 @@ static const std::string DELIMETER = ",";
 class DataRow {
     public:
     virtual size_t size() const = 0;
-    virtual double dotProduct(const DataRow& dataRow) const = 0;
+    virtual float dotProduct(const DataRow& dataRow) const = 0;
     virtual void voidVisit(DataRowVisitor &visitor) const = 0;
 
     template <typename T>
@@ -20,20 +20,20 @@ class DataRow {
 
 class DenseDataRow : public DataRow {
     private:
-    std::vector<double> data;
+    std::vector<float> data;
 
     DenseDataRow(const DenseDataRow &);
 
     public:
     DenseDataRow() {}
     
-    DenseDataRow(std::vector<double> input) : data(move(input)) {}
+    DenseDataRow(std::vector<float> input) : data(move(input)) {}
 
-    static std::unique_ptr<DataRow> of(std::vector<double> data) {
+    static std::unique_ptr<DataRow> of(std::vector<float> data) {
         return std::unique_ptr<DataRow>(new DenseDataRow(move(data)));
     }
 
-    void push_back(double val) {
+    void push_back(float val) {
         this->data.push_back(val);
     }
 
@@ -41,7 +41,7 @@ class DenseDataRow : public DataRow {
         return this->data.size();
     }
 
-    double dotProduct(const DataRow& dataRow) const {
+    float dotProduct(const DataRow& dataRow) const {
         DenseDotProductDataRowVisitor visitor(this->data);
         return dataRow.visit(visitor);
     }
@@ -53,13 +53,13 @@ class DenseDataRow : public DataRow {
 
 class SparseDataRow : public DataRow {
     private:
-    const std::map<size_t, double> rowToValue;
+    const std::map<size_t, float> rowToValue;
     const size_t totalColumns;
 
     SparseDataRow(const SparseDataRow &);
 
     public:
-    SparseDataRow(std::map<size_t, double> map, size_t totalColumns) : 
+    SparseDataRow(std::map<size_t, float> map, size_t totalColumns) : 
         rowToValue(move(map)), 
         totalColumns(totalColumns) 
     {}
@@ -68,7 +68,7 @@ class SparseDataRow : public DataRow {
         return this->totalColumns;
     }
 
-    double dotProduct(const DataRow& dataRow) const {
+    float dotProduct(const DataRow& dataRow) const {
         SparseDotProductDataRowVisitor visitor(this->rowToValue);
         return dataRow.visit(visitor);
     }

@@ -9,7 +9,7 @@
 
 class RandomNumberGenerator {
     public:
-    virtual double getNumber() = 0;
+    virtual float getNumber() = 0;
     virtual void skipNextElements(size_t elementsToSkip) = 0;
 };
 
@@ -23,7 +23,7 @@ class AlwaysOneGenerator : public RandomNumberGenerator {
         // no-op
     }
 
-    double getNumber() {
+    float getNumber() {
         return 1;
     }
 };
@@ -31,17 +31,17 @@ class AlwaysOneGenerator : public RandomNumberGenerator {
 class NormalRandomNumberGenerator : public RandomNumberGenerator {
     private:
     std::default_random_engine eng;
-    std::normal_distribution<double> distribution;
+    std::normal_distribution<float> distribution;
 
     public:
     NormalRandomNumberGenerator(
         std::default_random_engine eng, 
-        std::normal_distribution<double> distribution
+        std::normal_distribution<float> distribution
     ) : eng(move(eng)), distribution(move(distribution)) {}
 
     static std::unique_ptr<RandomNumberGenerator> create(const long unsigned int seed) {
         std::default_random_engine eng(seed);
-        std::normal_distribution<double> distribution;
+        std::normal_distribution<float> distribution;
         return std::unique_ptr<RandomNumberGenerator>(new NormalRandomNumberGenerator(move(eng), move(distribution)));
     }
     
@@ -49,7 +49,7 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
         eng.discard(elementsToSkip);
     }
 
-    double getNumber() {
+    float getNumber() {
         return distribution(eng);
     }
 };
@@ -57,17 +57,17 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
 class UniformRandomNumberGenerator : public RandomNumberGenerator {
     private:
     std::default_random_engine eng;
-    std::uniform_real_distribution<double> distribution;
+    std::uniform_real_distribution<float> distribution;
 
     public:
     UniformRandomNumberGenerator(
         std::default_random_engine eng, 
-        std::uniform_real_distribution<double> distribution
+        std::uniform_real_distribution<float> distribution
     ) : eng(move(eng)), distribution(move(distribution)) {}
 
     static std::unique_ptr<RandomNumberGenerator> create(const long unsigned int seed) {
         std::default_random_engine eng(seed);
-        std::uniform_real_distribution<double> distribution(0.0, 1.0);
+        std::uniform_real_distribution<float> distribution(0.0, 1.0);
         return std::unique_ptr<RandomNumberGenerator>(new UniformRandomNumberGenerator(move(eng), move(distribution)));
     }
     
@@ -75,7 +75,7 @@ class UniformRandomNumberGenerator : public RandomNumberGenerator {
         eng.discard(elementsToSkip);
     }
 
-    double getNumber() {
+    float getNumber() {
         return distribution(eng);
     }
 
@@ -157,7 +157,7 @@ class GeneratedSparseLineFactory : public LineFactory {
     private:
     const size_t numRows;
     const size_t numColumns;
-    const double sparsity;
+    const float sparsity;
     std::unique_ptr<RandomNumberGenerator> edgeValueRng;
     std::unique_ptr<RandomNumberGenerator> includeEdgeRng;
 
@@ -168,7 +168,7 @@ class GeneratedSparseLineFactory : public LineFactory {
     GeneratedSparseLineFactory(
         const size_t numRows,
         const size_t numColumns,
-        const double sparsity,
+        const float sparsity,
         std::unique_ptr<RandomNumberGenerator> edgeValueRng,
         std::unique_ptr<RandomNumberGenerator> includeEdgeRng 
     ) : 
@@ -191,7 +191,7 @@ class GeneratedSparseLineFactory : public LineFactory {
             return std::nullopt;
         }
 
-        double edgeValue = this->edgeValueRng->getNumber();
+        float edgeValue = this->edgeValueRng->getNumber();
 
         while (this->includeEdgeRng->getNumber() < this->sparsity) {
             this->currentColumn++;
@@ -222,8 +222,8 @@ class GeneratedSparseLineFactory : public LineFactory {
 class DataRowFactory {
     public:
     virtual std::unique_ptr<DataRow> maybeGet(LineFactory &source) = 0;
-    virtual std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const = 0;
-    virtual std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const = 0;
+    virtual std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<float> binary) const = 0;
+    virtual std::unique_ptr<DataRow> getFromBinary(std::vector<float> binary) const = 0;
     virtual void skipNext(LineFactory &source) = 0;
 };
 
@@ -235,7 +235,7 @@ class DenseDataRowFactory : public DataRowFactory {
             return nullptr;
         }
         
-        std::vector<double> result;
+        std::vector<float> result;
 
         char *token;
         char *rest = data.value().data();
@@ -249,11 +249,11 @@ class DenseDataRowFactory : public DataRowFactory {
         source.skipNext();
     }
 
-    std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const {
+    std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<float> binary) const {
         return std::unique_ptr<DataRow>(new DenseDataRow(move(binary)));
     }
 
-    std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const {
+    std::unique_ptr<DataRow> getFromBinary(std::vector<float> binary) const {
         return this->getFromNaiveBinary(move(binary));
     }
 };
@@ -267,7 +267,7 @@ class SparseDataRowFactory : public DataRowFactory {
 
     long expectedRow;
     long currentRow;
-    double value = 1.0; 
+    float value = 1.0; 
     long to;
     bool hasData;
 
@@ -283,7 +283,7 @@ class SparseDataRowFactory : public DataRowFactory {
     }
 
     std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
-        std::map<size_t, double> result;
+        std::map<size_t, float> result;
 
         while (true) {
             if (this->hasData) {
@@ -308,7 +308,7 @@ class SparseDataRowFactory : public DataRowFactory {
             this->hasData = false;
 
             std::istringstream stream(line.value().data());
-            double number;
+            float number;
             size_t totalSeen = 0;
 
             // The expected format is a two ints a line, and 
@@ -339,8 +339,8 @@ class SparseDataRowFactory : public DataRowFactory {
         } 
     }
 
-    std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const {
-        std::map<size_t, double> res;
+    std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<float> binary) const {
+        std::map<size_t, float> res;
         for (size_t i = 0; i < binary.size(); i++) {
             if (binary[i] != 0) {
                 res.insert({static_cast<size_t>(i), binary[i]});
@@ -350,8 +350,8 @@ class SparseDataRowFactory : public DataRowFactory {
         return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));    
     }
 
-    std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const {
-        std::map<size_t, double> res;
+    std::unique_ptr<DataRow> getFromBinary(std::vector<float> binary) const {
+        std::map<size_t, float> res;
 
         if (binary.size() % 2 != 0) {
             throw std::invalid_argument("ERROR: Received an input that is not divisible by two. This will likely cause a seg fault");

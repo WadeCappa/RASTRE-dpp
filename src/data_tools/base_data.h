@@ -6,7 +6,7 @@
 #include <bits/stdc++.h> 
 
 struct diagnostics {
-    double sparsity;
+    float sparsity;
     size_t numberOfNonEmptyCells;
 } typedef Diagnostics;
 
@@ -24,7 +24,7 @@ class BaseData {
 
         class DiagnosticsVisitor : public ReturningDataRowVisitor<Diagnostics> {
             private:
-            std::vector<double> sparsity;
+            std::vector<float> sparsity;
             size_t totalNonEmptyCells;
             size_t i;
             
@@ -32,19 +32,19 @@ class BaseData {
             DiagnosticsVisitor(size_t rows) 
             : sparsity(rows), i(0), totalNonEmptyCells(0) {}
 
-            void visitDenseDataRow(const std::vector<double>& data) {
+            void visitDenseDataRow(const std::vector<float>& data) {
                 sparsity[i++] = 0.0;
                 totalNonEmptyCells += data.size();
             }
 
-            void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
-                sparsity[i++] = (double)((double)(totalColumns - data.size()) / (double)totalColumns);
+            void visitSparseDataRow(const std::map<size_t, float>& data, size_t totalColumns) {
+                sparsity[i++] = (float)((float)(totalColumns - data.size()) / (float)totalColumns);
                 totalNonEmptyCells += data.size();
             }
 
             Diagnostics get() {
                 return Diagnostics{
-                    std::accumulate(sparsity.begin(), sparsity.end(), 0.0) / sparsity.size(),
+                    std::accumulate(sparsity.begin(), sparsity.end(), (float)0.0) / sparsity.size(),
                     totalNonEmptyCells
                 };
             }
@@ -88,9 +88,9 @@ class FullyLoadedData : public BaseData {
         return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(data), columns));
     }
 
-    static std::unique_ptr<FullyLoadedData> load(std::vector<std::vector<double>> raw) {
+    static std::unique_ptr<FullyLoadedData> load(std::vector<std::vector<float>> raw) {
         std::vector<std::unique_ptr<DataRow>> data;
-        for (std::vector<double> v : raw) {
+        for (std::vector<float> v : raw) {
             data.push_back(std::unique_ptr<DataRow>(new DenseDataRow(move(v))));
         }
 

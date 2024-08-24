@@ -46,10 +46,10 @@ class NaiveReceiver : public Receiver {
     }
 
     std::unique_ptr<Subset> getBestReceivedSolution() {
-        double bestSolution = 0;
+        float bestSolution = 0;
         size_t bestRank = -1;
         for (size_t i = 0; i < this->buffers.size(); i++) {
-            const double rankScore = this->buffers[i]->getLocalSolutionScore();
+            const float rankScore = this->buffers[i]->getLocalSolutionScore();
             std::cout << "rank " << i << " had score of " << rankScore << std::endl;
             if (rankScore > bestSolution) {
                 bestRank = i;

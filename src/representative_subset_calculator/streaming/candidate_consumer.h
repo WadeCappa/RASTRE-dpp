@@ -14,8 +14,12 @@ class NaiveCandidateConsumer : public CandidateConsumer {
 
     std::unordered_set<unsigned int> seenFirstElement;
     std::unordered_set<unsigned int> firstGlobalRows;
+<<<<<<< HEAD
     double bestMarginal;
     size_t just_streaming;
+=======
+    float bestMarginal;
+>>>>>>> 185a2a3 (Refactors doubles to use floats instead (#46))
 
     public: 
     static std::unique_ptr<NaiveCandidateConsumer> from(
@@ -70,6 +74,10 @@ class NaiveCandidateConsumer : public CandidateConsumer {
     private:
     void tryToGetFirstMarginals(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+<<<<<<< HEAD
+=======
+        std::vector<std::pair<unsigned int, float>> rowToMarginal(pulledFromQueue.size(), std::make_pair(0,0));
+>>>>>>> 185a2a3 (Refactors doubles to use floats instead (#46))
         
         size_t maxElementsToConsider = 1;
         if (just_streaming == 0) maxElementsToConsider = pulledFromQueue.size();
@@ -83,7 +91,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
             // TODO: Only process the first seed from each sender
             if (this->firstGlobalRows.find(seed->getRow()) == this->firstGlobalRows.end()) {
                 const DataRow & row(seed->getData());
-                double score = std::log(std::sqrt(PerRowRelevanceCalculator::getScore(row, *calcFactory))) * 2;
+                float score = std::log(std::sqrt(PerRowRelevanceCalculator::getScore(row, *calcFactory))) * 2;
                 rowToMarginal[i].second = score;
             }
 
@@ -111,10 +119,14 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
     }
 
+<<<<<<< HEAD
     void tryToGetFirstMarginals(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, size_t just_streaming) {}
 
 
     double getDeltaZero() {
+=======
+    float getDeltaZero() {
+>>>>>>> 185a2a3 (Refactors doubles to use floats instead (#46))
         return bestMarginal;
     }
 };

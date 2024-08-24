@@ -2,7 +2,7 @@
 #include <doctest/doctest.h>
 #include "representative_subset_calculator/streaming/communication_constants.h"
 
-static const std::vector<std::vector<double>> DENSE_DATA = {
+static const std::vector<std::vector<float>> DENSE_DATA = {
     {4,17,20,1,4,21},
     {5,7,31,45,3,24},
     {2.63212,5.12566,73,15,15,4},
@@ -11,7 +11,7 @@ static const std::vector<std::vector<double>> DENSE_DATA = {
     {6,31,54,3.5,23,57}
 };
 
-static const std::vector<std::vector<double>> SPARSE_DATA = {
+static const std::vector<std::vector<float>> SPARSE_DATA = {
     {0, 1, 4.2},
     {0, 2, 32},
     {0, 4, 1.23},
@@ -39,11 +39,11 @@ size_t totalColumns() {
 
 static const size_t SPARSE_DATA_TOTAL_COLUMNS = totalColumns();
 
-std::vector<std::map<size_t, double>> toMap() {
-    std::vector<std::map<size_t, double>> res;
+std::vector<std::map<size_t, float>> toMap() {
+    std::vector<std::map<size_t, float>> res;
     for (const auto & r : SPARSE_DATA) {
         if (res.size() <= r[0]) {
-            res.push_back(std::map<size_t, double>());
+            res.push_back(std::map<size_t, float>());
         }
 
         res.back().insert({r[1], r[2]});
@@ -52,10 +52,10 @@ std::vector<std::map<size_t, double>> toMap() {
     return res;
 };
 
-static const std::vector<std::map<size_t, double>> SPARSE_DATA_AS_MAP = toMap();
+static const std::vector<std::map<size_t, float>> SPARSE_DATA_AS_MAP = toMap();
 
 // Do to rounding errors, these results may not always be exactly equivalent
-static const double LARGEST_ACCEPTABLE_ERROR = 0.00000001;
+static const float LARGEST_ACCEPTABLE_ERROR = 0.001;
 
 #include "data_tools/tests.h"
 
