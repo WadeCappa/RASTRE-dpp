@@ -14,7 +14,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
 
     std::unordered_set<unsigned int> seenFirstElement;
     std::unordered_set<unsigned int> firstGlobalRows;
-    double bestMarginal;
+    float bestMarginal;
 
     public: 
     static std::unique_ptr<NaiveCandidateConsumer> from(
@@ -62,7 +62,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
     private:
     void tryToGetFirstMarginals(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
-        std::vector<std::pair<unsigned int, double>> rowToMarginal(pulledFromQueue.size(), std::make_pair(0,0));
+        std::vector<std::pair<unsigned int, float>> rowToMarginal(pulledFromQueue.size(), std::make_pair(0,0));
         
         #pragma omp parallel for
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
@@ -71,7 +71,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
             // TODO: Only process the first seed from each sender
             if (this->firstGlobalRows.find(seed->getRow()) == this->firstGlobalRows.end()) {
                 const DataRow & row(seed->getData());
-                double score = std::log(std::sqrt(PerRowRelevanceCalculator::getScore(row, *calcFactory))) * 2;
+                float score = std::log(std::sqrt(PerRowRelevanceCalculator::getScore(row, *calcFactory))) * 2;
                 rowToMarginal[i].second = score;
             }
 
@@ -99,7 +99,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
     }
 
-    double getDeltaZero() {
+    float getDeltaZero() {
         return bestMarginal;
     }
 };

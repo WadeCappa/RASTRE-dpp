@@ -5,17 +5,17 @@
 
 class FastSubsetCalculator : public SubsetCalculator {
     private:
-    const double epsilon;
+    const float epsilon;
 
-    static std::pair<size_t, double> getNextHighestScore(
-        const std::vector<double> &diagonals, 
+    static std::pair<size_t, float> getNextHighestScore(
+        const std::vector<float> &diagonals, 
         const std::unordered_set<size_t> &seen 
     ) {
         size_t bestRow = -1;
-        double highestScore = -1;
+        float highestScore = -1;
 
         for (size_t i = 0; i < diagonals.size(); i++) {
-            double score = std::log(diagonals[i]);
+            float score = std::log(diagonals[i]);
             if (seen.find(i) == seen.end() && score > highestScore) {
                 highestScore = score;
                 bestRow = i;
@@ -30,7 +30,7 @@ class FastSubsetCalculator : public SubsetCalculator {
     }
 
   public:
-    FastSubsetCalculator(const double epsilon) : epsilon(epsilon) {
+    FastSubsetCalculator(const float epsilon) : epsilon(epsilon) {
         if (this->epsilon < 0) {
             throw std::invalid_argument("Epsilon is less than 0.");
         }
@@ -44,9 +44,9 @@ class FastSubsetCalculator : public SubsetCalculator {
         std::unordered_set<size_t> seen;
 
         std::unique_ptr<NaiveKernelMatrix> kernelMatrix(NaiveKernelMatrix::from(data));
-        std::vector<double> diagonals = kernelMatrix->getDiagonals(); 
+        std::vector<float> diagonals = kernelMatrix->getDiagonals(); 
 
-        std::vector<std::vector<double>> c(data.totalRows(), std::vector<double>());
+        std::vector<std::vector<float>> c(data.totalRows(), std::vector<float>());
 
         auto bestScore = getNextHighestScore(diagonals, seen);
         size_t j = bestScore.first;
@@ -60,7 +60,7 @@ class FastSubsetCalculator : public SubsetCalculator {
                     continue;
                 }
                 
-                double e = (kernelMatrix->get(j, i) - KernelMatrix::getDotProduct(c[j], c[i])) / std::sqrt(diagonals[j]);
+                float e = (kernelMatrix->get(j, i) - KernelMatrix::getDotProduct(c[j], c[i])) / std::sqrt(diagonals[j]);
                 c[i].push_back(e);
                 diagonals[i] -= std::pow(e, 2);
             }

@@ -5,15 +5,15 @@
 
 class MpiSendRequest {
     private:
-    const std::vector<double> rowToSend;
+    const std::vector<float> rowToSend;
     MPI_Request request;
 
     public:
-    MpiSendRequest(std::vector<double> rowToSend) 
+    MpiSendRequest(std::vector<float> rowToSend) 
     : rowToSend(move(rowToSend)) {}
 
     void isend(const unsigned int tag) {
-        MPI_Isend(rowToSend.data(), rowToSend.size(), MPI_DOUBLE, 0, tag, MPI_COMM_WORLD, &request);
+        MPI_Isend(rowToSend.data(), rowToSend.size(), MPI_FLOAT, 0, tag, MPI_COMM_WORLD, &request);
     }
 
     void waitForISend() {
@@ -27,7 +27,7 @@ class MpiRankBuffer : public RankBuffer {
     const unsigned int rank;
     const DataRowFactory &factory;
 
-    std::vector<double> buffer;
+    std::vector<float> buffer;
     MPI_Request request;
     bool isStillReceiving;
     std::unique_ptr<MutableSubset> rankSolution;
@@ -78,7 +78,7 @@ class MpiRankBuffer : public RankBuffer {
         return this->rank;
     }
 
-    double getLocalSolutionScore() const {
+    float getLocalSolutionScore() const {
         return this->rankSolution->getScore();
     }
 
@@ -90,7 +90,7 @@ class MpiRankBuffer : public RankBuffer {
     void readyForNextReceive() {
         MPI_Irecv(
             buffer.data(), buffer.size(), 
-            MPI_DOUBLE, rank, MPI_ANY_TAG, 
+            MPI_FLOAT, rank, MPI_ANY_TAG, 
             MPI_COMM_WORLD, &request
         );
     }
@@ -105,8 +105,8 @@ class MpiRankBuffer : public RankBuffer {
         *endOfData = 0;
 
         const size_t globalRowIndex = static_cast<size_t>(*(endOfData - 1));
-        const double localMarginalGain = *(endOfData - 2);
-        std::vector<double> data(this->buffer.begin(), endOfData - 2);
+        const float localMarginalGain = *(endOfData - 2);
+        std::vector<float> data(this->buffer.begin(), endOfData - 2);
         this->rankSolution->addRow(globalRowIndex, localMarginalGain);
         return new CandidateSeed(globalRowIndex, this->factory.getFromBinary(move(data)), this->rank);
     }

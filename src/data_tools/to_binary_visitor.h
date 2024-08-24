@@ -1,21 +1,21 @@
 
-class ToBinaryVisitor : public ReturningDataRowVisitor<std::vector<double>> {
+class ToBinaryVisitor : public ReturningDataRowVisitor<std::vector<float>> {
     private:
-    std::vector<double> binary;
+    std::vector<float> binary;
 
     public:
-    void visitDenseDataRow(const std::vector<double>& data) {
+    void visitDenseDataRow(const std::vector<float>& data) {
         binary = data;
     }
 
-    void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) {
+    void visitSparseDataRow(const std::map<size_t, float>& data, size_t totalColumns) {
         for (const auto & p : data) {
-            binary.push_back(static_cast<double>(p.first));
+            binary.push_back(static_cast<float>(p.first));
             binary.push_back(p.second);
         }
     }
 
-    std::vector<double> get() {
+    std::vector<float> get() {
         return move(binary);
     }
 };

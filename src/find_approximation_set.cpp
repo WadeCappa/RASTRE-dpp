@@ -28,6 +28,7 @@ int main(int argc, char** argv) {
     appData.worldSize = 1;
 
     Timers timers;
+    
 
     timers.loadingDatasetTime.startTimer();
 
@@ -51,10 +52,12 @@ int main(int argc, char** argv) {
     timers.loadingDatasetTime.stopTimer();
 
     timers.totalCalculationTime.startTimer();
+    
     std::unique_ptr<SubsetCalculator> calculator(Orchestrator::getCalculator(appData));
+    
     std::unique_ptr<Subset> solution = calculator->getApproximationSet(*data.get(), appData.outputSetSize);
+    
     timers.totalCalculationTime.stopTimer();
-
     nlohmann::json result = Orchestrator::buildOutput(appData, *solution.get(), *data.get(), timers);
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);

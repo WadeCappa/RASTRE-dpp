@@ -3,8 +3,8 @@
 
 class DataRowVisitor {
     public:
-    virtual void visitDenseDataRow(const std::vector<double>& data) = 0;
-    virtual void visitSparseDataRow(const std::map<size_t, double>& data, size_t totalColumns) = 0;
+    virtual void visitDenseDataRow(const std::vector<float>& data) = 0;
+    virtual void visitSparseDataRow(const std::map<size_t, float>& data, size_t totalColumns) = 0;
 };
 
 template <typename T>

@@ -68,7 +68,7 @@ static std::unique_ptr<SegmentedData> getSparseData() {
 TEST_CASE("Testing the get total send dense data method") {
     std::unique_ptr<SegmentedData> denseData(getDenseData());
 
-    std::vector<double> sendBuffer;
+    std::vector<float> sendBuffer;
     unsigned int totalSendData = BufferBuilder::buildSendBuffer(*denseData, *MOCK_SOLUTION.get(), sendBuffer);
     CHECK(totalSendData == (denseData->totalColumns() + 2) * MOCK_SOLUTION->size() + 1);
     CHECK(sendBuffer.size() == totalSendData);
@@ -77,7 +77,7 @@ TEST_CASE("Testing the get total send dense data method") {
 TEST_CASE("Testing the get total send sparse data method") {
     std::unique_ptr<SegmentedData> sparseData(getSparseData());
 
-    std::vector<double> sendBuffer;
+    std::vector<float> sendBuffer;
     unsigned int totalSendData = BufferBuilder::buildSendBuffer(*sparseData, *MOCK_SOLUTION.get(), sendBuffer);
     CHECK(totalSendData == (sparseData->totalColumns() + 1) * MOCK_SOLUTION->size() + 1);
     CHECK(sendBuffer.size() == totalSendData);
@@ -86,7 +86,7 @@ TEST_CASE("Testing the get total send sparse data method") {
 TEST_CASE("Test building send buffers for") {
     std::unique_ptr<SegmentedData> data(getDenseData());
 
-    std::vector<double> sendBuffer;
+    std::vector<float> sendBuffer;
     unsigned int totalSendData = BufferBuilder::buildSendBuffer(*data, *MOCK_SOLUTION.get(), sendBuffer);
 
     CHECK(sendBuffer.size() == totalSendData);
@@ -102,7 +102,7 @@ TEST_CASE("Test building send buffers for") {
 TEST_CASE("Getting solution from a buffer") {
     std::unique_ptr<SegmentedData> denseData(getDenseData());
 
-    std::vector<double> sendBuffer;
+    std::vector<float> sendBuffer;
     unsigned int totalSendData = BufferBuilder::buildSendBuffer(*denseData, *MOCK_SOLUTION.get(), sendBuffer);
     
     std::vector<int> displacements;
