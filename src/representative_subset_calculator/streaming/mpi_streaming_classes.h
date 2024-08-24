@@ -96,14 +96,19 @@ class MpiRankBuffer : public RankBuffer {
     }
 
     CandidateSeed* extractSeedFromBuffer() {
-        auto endOfData = this->buffer.end() - 1;
-        while (*endOfData != CommunicationConstants::endOfSendTag()) {
+        auto endOfData = this->buffer.end();
+        while (*endOfData != CommunicationConstants::endOfSendTag() && endOfData != this->buffer.begin()) {
             endOfData--;
+        }
+
+        if (endOfData == this->buffer.begin()) {
+            std::cout << "Received empty send buffer. This is most likely incorrect" << std::endl;
         }
 
         // Remove the stop tag. This will allow the next send to be received.
         *endOfData = 0;
 
+        // TODO: This byte cast might be wrong now that we're sending floats. You need to double check this.
         const size_t globalRowIndex = static_cast<size_t>(*(endOfData - 1));
         const float localMarginalGain = *(endOfData - 2);
         std::vector<float> data(this->buffer.begin(), endOfData - 2);

@@ -454,7 +454,6 @@ class SparseDataRowFactory : public DataRowFactory {
         }
 
         return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));
-
     }
 
     void resetState() {
