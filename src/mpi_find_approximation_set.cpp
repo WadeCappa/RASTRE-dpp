@@ -210,6 +210,7 @@ int main(int argc, char** argv) {
         std::ifstream inputFile;
         inputFile.open(appData.loadInput.inputFile);
         std::unique_ptr<LineFactory> getter(std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile)));
+        data = Orchestrator::buildMpiData(appData, *getter.get(), rowToRank);
         inputFile.close();
     } else if (appData.generateInput.seed != DEFAULT_VALUE) {
         std::unique_ptr<GeneratedLineFactory> getter(Orchestrator::getLineGenerator(appData));
