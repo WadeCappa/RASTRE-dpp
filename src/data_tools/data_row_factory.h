@@ -294,7 +294,6 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
         // Since we subtracted the current column from the count earlier we know that
         //  we are starting from the 0th column of this new row.
         this->currentColumn = 0;
-
     }
 
     std::unique_ptr<GeneratedLineFactory> copy() {
@@ -308,6 +307,12 @@ class DataRowFactory {
     virtual std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<double> binary) const = 0;
     virtual std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const = 0;
     virtual void skipNext(LineFactory &source) = 0;
+    
+    // Pretty horrific method to expose, but I need to expose this for 
+    //  sparse generation since the sparse generator will always create
+    //  a row for the currentRow+1 edge even when its supposed to be 
+    //  skipped.
+    virtual void resetState() = 0;
 };
 
 class DenseDataRowFactory : public DataRowFactory {
@@ -339,9 +344,12 @@ class DenseDataRowFactory : public DataRowFactory {
     std::unique_ptr<DataRow> getFromBinary(std::vector<double> binary) const {
         return this->getFromNaiveBinary(move(binary));
     }
+
+    void resetState() {
+        // no-op, no state
+    }
 };
 
-// TODO: This should be a static constructor in the sparse data row? 
 class SparseDataRowFactory : public DataRowFactory {
     private:
     const static size_t EXPECTED_ELEMENTS_PER_LINE = 3;
@@ -447,5 +455,9 @@ class SparseDataRowFactory : public DataRowFactory {
 
         return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));
 
+    }
+
+    void resetState() {
+        this->hasData = false;
     }
 };

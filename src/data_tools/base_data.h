@@ -150,6 +150,7 @@ class SegmentedData : public BaseData {
         #pragma omp parallel for 
         for (size_t i = 0; i < localRowToGlobalRow.size(); i++) {
             GeneratedLineFactory &localGetter(*gettersForRanks[omp_get_thread_num()]);
+            factory.resetState();
             localGetter.jumpToLine(localRowToGlobalRow[i]);
             std::unique_ptr<DataRow> nextRow(factory.maybeGet(localGetter));
             if (nextRow == nullptr) {
