@@ -74,10 +74,6 @@ class NaiveCandidateConsumer : public CandidateConsumer {
     private:
     void tryToGetFirstMarginals(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
-<<<<<<< HEAD
-=======
-        std::vector<std::pair<unsigned int, float>> rowToMarginal(pulledFromQueue.size(), std::make_pair(0,0));
->>>>>>> 185a2a3 (Refactors doubles to use floats instead (#46))
         
         size_t maxElementsToConsider = 1;
         if (just_streaming == 0) maxElementsToConsider = pulledFromQueue.size();
@@ -119,14 +115,10 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
     }
 
-<<<<<<< HEAD
     void tryToGetFirstMarginals(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, size_t just_streaming) {}
 
 
     double getDeltaZero() {
-=======
-    float getDeltaZero() {
->>>>>>> 185a2a3 (Refactors doubles to use floats instead (#46))
         return bestMarginal;
     }
 };
