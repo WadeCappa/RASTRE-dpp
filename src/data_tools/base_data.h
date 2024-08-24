@@ -44,7 +44,7 @@ class BaseData {
 
             Diagnostics get() {
                 return Diagnostics{
-                    std::accumulate(sparsity.begin(), sparsity.end(), 0.0) / sparsity.size(),
+                    std::accumulate(sparsity.begin(), sparsity.end(), (float)0.0) / sparsity.size(),
                     totalNonEmptyCells
                 };
             }
