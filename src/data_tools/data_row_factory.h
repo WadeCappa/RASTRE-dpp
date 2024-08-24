@@ -167,7 +167,7 @@ class GeneratedDenseLineFactory : public GeneratedLineFactory {
     }
     
     void skipNext() {
-        this->rng->skipNextElements(this->numColumns);
+        this->jumpToLine(this->numColumns + 1);
     }
 
     std::optional<std::string> maybeGet() {
@@ -250,7 +250,7 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
     }
 
     void skipNext() {
-        this->skipLines(this->currentRow + 1);
+        this->jumpToLine(this->currentRow + 1);
     }
 
     std::optional<std::string> maybeGet() {
@@ -286,23 +286,19 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
     }
 
     void jumpToLine(const size_t line) {
-        this->skipLines(line);
-    }
-
-    std::unique_ptr<GeneratedLineFactory> copy() {
-        return create(this->numRows, this->numColumns, this->sparsity, this->edgeValueRng->copy(), this->includeEdgeRng->copy(), this->currentRow, this->currentColumn);
-    }
-
-    private:
-    void skipLines(const size_t lineToSkipTo) {
-        const size_t elementsToSkip = ((lineToSkipTo - this->currentRow) * this->numColumns) - this->currentColumn;
+        const size_t elementsToSkip = ((line - this->currentRow) * this->numColumns) - this->currentColumn;
         this->includeEdgeRng->skipNextElements(elementsToSkip);
         this->edgeValueRng->skipNextElements(elementsToSkip);
-        this->currentRow = lineToSkipTo;
+        this->currentRow = line;
 
         // Since we subtracted the current column from the count earlier we know that
         //  we are starting from the 0th column of this new row.
         this->currentColumn = 0;
+
+    }
+
+    std::unique_ptr<GeneratedLineFactory> copy() {
+        return create(this->numRows, this->numColumns, this->sparsity, this->edgeValueRng->copy(), this->includeEdgeRng->copy(), this->currentRow, this->currentColumn);
     }
 };
 
