@@ -149,7 +149,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
     const double epsilon;
     const unsigned int numThreads;
     const unsigned int k;
-
+    double deltaZero;
     std::vector<ThresholdBucket> buckets;
     std::vector<std::unique_ptr<CandidateSeed>> seedStorage;
 
@@ -161,10 +161,55 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
     ) :  
         numThreads(numThreads),
         epsilon(epsilon),
-        k(k)
+        k(k),
+        deltaZero(-1)
     {}
 
-    void processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {}
+    void processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+
+
+        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+        double currentMaxThreshold = this->buckets[this->buckets.size() - 1].getThreshold();
+
+        for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
+                
+                
+                const size_t numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
+                
+
+                std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
+                double singletonValue = 2 * std::log(std::sqrt(seed->getData().dotProduct(seed->getData()))); 
+
+                if (singletonValue > this->deltaZero) {
+                    this->deltaZero = singletonValue;
+
+
+                    for (int bucket = 0; bucket < numBuckets; bucket++)
+                    {
+                        int i = bucket + std::ceil( std::log(this->deltaZero) / std::log(1 + this->epsilon));
+                        double threshold = (double)std::pow(1 + this->epsilon, i);
+                        if (threshold > currentMaxThreshold) {
+                            this->buckets.push_back(ThresholdBucket(threshold, k));
+                            currentMaxThreshold = threshold;
+                        }
+                            
+                    }
+
+                }
+
+                #pragma omp parallel for num_threads(this->numThreads)
+                for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
+                    
+                    this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
+
+                }
+        }
+
+
+        for (size_t i = 0; i < pulledFromQueue.size(); i++) {
+            this->seedStorage.push_back(move(pulledFromQueue[i]));
+        }
+    }
 
     void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
@@ -202,7 +247,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
 
     void initBuckets(const double deltaZero) {
         const size_t numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
-
+        this->deltaZero = deltaZero;
         std::cout << "number of buckets " << numBuckets << " with deltaZero of " << deltaZero << std::endl;
 
         for (int bucket = 0; bucket < numBuckets; bucket++)

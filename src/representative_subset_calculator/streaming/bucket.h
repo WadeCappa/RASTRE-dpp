@@ -52,6 +52,10 @@ class ThresholdBucket
         );
     }
 
+    double getThreshold() {
+        return this->threshold ;
+    }
+
     size_t getUtility() {
         return this->solution->getScore();
     }
