@@ -14,12 +14,9 @@ class NaiveCandidateConsumer : public CandidateConsumer {
 
     std::unordered_set<unsigned int> seenFirstElement;
     std::unordered_set<unsigned int> firstGlobalRows;
-<<<<<<< HEAD
-    double bestMarginal;
+
     size_t just_streaming;
-=======
     float bestMarginal;
->>>>>>> 185a2a3 (Refactors doubles to use floats instead (#46))
 
     public: 
     static std::unique_ptr<NaiveCandidateConsumer> from(
@@ -78,7 +75,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         size_t maxElementsToConsider = 1;
         if (just_streaming == 0) maxElementsToConsider = pulledFromQueue.size();
 
-        std::vector<std::pair<unsigned int, double>> rowToMarginal(maxElementsToConsider, std::make_pair(0,0));
+        std::vector<std::pair<unsigned int, float>> rowToMarginal(maxElementsToConsider, std::make_pair(0,0));
 
         #pragma omp parallel for
         for (size_t i = 0; i < maxElementsToConsider; i++) {
@@ -115,10 +112,8 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
     }
 
-    void tryToGetFirstMarginals(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, size_t just_streaming) {}
 
-
-    double getDeltaZero() {
+    float getDeltaZero() {
         return bestMarginal;
     }
 };
