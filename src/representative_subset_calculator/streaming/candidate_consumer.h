@@ -15,7 +15,6 @@ class NaiveCandidateConsumer : public CandidateConsumer {
     std::unordered_set<unsigned int> seenFirstElement;
     std::unordered_set<unsigned int> firstGlobalRows;
 
-    size_t just_streaming;
     float bestMarginal;
 
     public: 
@@ -35,14 +34,12 @@ class NaiveCandidateConsumer : public CandidateConsumer {
     NaiveCandidateConsumer(
         std::unique_ptr<BucketTitrator> titrator,
         const unsigned int numberOfSenders,
-        std::unique_ptr<RelevanceCalculatorFactory> calcFactory,
-        size_t just_streaming = 0
+        std::unique_ptr<RelevanceCalculatorFactory> calcFactory
     ) : 
         titrator(move(titrator)),
         numberOfSenders(numberOfSenders),
         bestMarginal(0),
-        calcFactory(move(calcFactory)),
-        just_streaming(just_streaming)
+        calcFactory(move(calcFactory))
     {}
 
     std::unique_ptr<Subset> getBestSolutionDestroyConsumer() {
@@ -58,27 +55,22 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         
         if (this->titrator->bucketsInitialized()) {
             timers.insertSeedsTimer.startTimer();
-            if (just_streaming == 0) {
-                this->titrator->processQueue(seedQueue);
-            } else {
-                this->titrator->processQueueDynamicBuckets(seedQueue);
-            }
+           
+            this->titrator->processQueue(seedQueue);
+
                 
             timers.insertSeedsTimer.stopTimer();
         }
     }
 
     private:
+    private:
     void tryToGetFirstMarginals(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+        std::vector<std::pair<unsigned int, float>> rowToMarginal(pulledFromQueue.size(), std::make_pair(0,0));
         
-        size_t maxElementsToConsider = 1;
-        if (just_streaming == 0) maxElementsToConsider = pulledFromQueue.size();
-
-        std::vector<std::pair<unsigned int, float>> rowToMarginal(maxElementsToConsider, std::make_pair(0,0));
-
         #pragma omp parallel for
-        for (size_t i = 0; i < maxElementsToConsider; i++) {
+        for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[i]);
             
             // TODO: Only process the first seed from each sender
@@ -98,7 +90,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
             }
         }
 
-        for (size_t i = 0; i < maxElementsToConsider; i++) {
+        for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[i]);
             if (this->seenFirstElement.find(seed->getOriginRank()) == this->seenFirstElement.end()) {
                 this->seenFirstElement.insert(seed->getOriginRank());
@@ -109,6 +101,81 @@ class NaiveCandidateConsumer : public CandidateConsumer {
             this->titrator->initBuckets(this->getDeltaZero());
         }
 
+        seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
+    }
+
+
+    float getDeltaZero() {
+        return bestMarginal;
+    }
+};
+
+class StreamingCandidateConsumer : public CandidateConsumer {
+    private:
+    const unsigned int numberOfSenders;
+    const std::unique_ptr<BucketTitrator> titrator;
+    std::unique_ptr<RelevanceCalculatorFactory> calcFactory;
+
+    std::unordered_set<unsigned int> seenFirstElement;
+    std::unordered_set<unsigned int> firstGlobalRows;
+
+    float bestMarginal;
+
+    public: 
+    static std::unique_ptr<StreamingCandidateConsumer> from(
+        std::unique_ptr<BucketTitrator> titrator,
+        const unsigned int numberOfSenders
+    ) {
+        return std::unique_ptr<StreamingCandidateConsumer>(
+            new StreamingCandidateConsumer(
+                move(titrator), 
+                numberOfSenders, 
+                std::unique_ptr<RelevanceCalculatorFactory>(new NaiveRelevanceCalculatorFactory())
+            )
+        );
+    }
+
+    StreamingCandidateConsumer(
+        std::unique_ptr<BucketTitrator> titrator,
+        const unsigned int numberOfSenders,
+        std::unique_ptr<RelevanceCalculatorFactory> calcFactory
+    ) : 
+        titrator(move(titrator)),
+        numberOfSenders(numberOfSenders),
+        bestMarginal(0),
+        calcFactory(move(calcFactory))
+    {}
+
+    std::unique_ptr<Subset> getBestSolutionDestroyConsumer() {
+        return this->titrator->getBestSolutionDestroyTitrator();
+    }
+
+    void accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) {
+        if (!this->titrator->bucketsInitialized()) {
+            timers.initBucketsTimer.startTimer();
+            this->tryToGetFirstMarginals(seedQueue);
+            timers.initBucketsTimer.stopTimer();
+        } 
+        
+        if (this->titrator->bucketsInitialized()) {
+            timers.insertSeedsTimer.startTimer();
+           
+            this->titrator->processQueueDynamicBuckets(seedQueue);
+
+                
+            timers.insertSeedsTimer.stopTimer();
+        }
+    }
+
+    private:
+    void tryToGetFirstMarginals(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+    
+        std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[0]);
+        const DataRow & row(seed->getData());
+        bestMarginal = std::log(std::sqrt(PerRowRelevanceCalculator::getScore(row, *calcFactory))) * 2;
+
+        this->titrator->initBuckets(bestMarginal);
         seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
     }
 

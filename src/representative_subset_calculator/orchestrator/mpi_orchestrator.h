@@ -99,20 +99,20 @@ class MpiOrchestrator : public Orchestrator {
         }
 
         if(appData.algorithm == 4) {
-            return std::unique_ptr<NaiveCandidateConsumer>(
-            new NaiveCandidateConsumer(
+            return std::unique_ptr<StreamingCandidateConsumer>(
+            new StreamingCandidateConsumer(
                 std::unique_ptr<BucketTitrator>(titrator),
                 numSenders,
-                std::unique_ptr<RelevanceCalculatorFactory>(new NaiveRelevanceCalculatorFactory()),
-                1)
+                std::unique_ptr<RelevanceCalculatorFactory>(new NaiveRelevanceCalculatorFactory())
+                )
             );
         } else {
             return std::unique_ptr<NaiveCandidateConsumer>(
             new NaiveCandidateConsumer(
                 std::unique_ptr<BucketTitrator>(titrator),
                 numSenders,
-                std::unique_ptr<RelevanceCalculatorFactory>(new NaiveRelevanceCalculatorFactory()),
-                0)
+                std::unique_ptr<RelevanceCalculatorFactory>(new NaiveRelevanceCalculatorFactory())
+                )
             );
         }
         
