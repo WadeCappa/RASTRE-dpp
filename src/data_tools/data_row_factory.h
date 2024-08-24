@@ -296,9 +296,6 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
     private:
     void skipLines(const size_t lineToSkipTo) {
         const size_t elementsToSkip = ((lineToSkipTo - this->currentRow) * this->numColumns) - this->currentColumn;
-        if (elementsToSkip < 0) {
-            throw std::invalid_argument("Attempted to skip negative elements.");
-        }
         this->includeEdgeRng->skipNextElements(elementsToSkip);
         this->edgeValueRng->skipNextElements(elementsToSkip);
         this->currentRow++;
