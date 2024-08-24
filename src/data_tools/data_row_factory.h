@@ -124,8 +124,6 @@ class FromFileLineFactory : public LineFactory {
 
 class GeneratedLineFactory : public LineFactory {
     public:
-
-    // Designed for parallel loads. This is an optimization and might be dangerous.
     virtual void jumpToLine(const size_t line) = 0;
     virtual std::unique_ptr<GeneratedLineFactory> copy() = 0;
 };
@@ -252,8 +250,7 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
     }
 
     void skipNext() {
-        this->includeEdgeRng->skipNextElements(this->numColumns);
-        this->edgeValueRng->skipNextElements(this->numColumns);
+        this->skipLines(this->currentRow + 1);
     }
 
     std::optional<std::string> maybeGet() {
@@ -289,17 +286,26 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
     }
 
     void jumpToLine(const size_t line) {
-        const size_t elementsToSkip = (line - this->currentRow) * this->numColumns;
-        this->edgeValueRng->skipNextElements(elementsToSkip);
-        this->includeEdgeRng->skipNextElements(elementsToSkip);
-        this->currentRow = line;
-        
-        // This might be a bug, have to double check.
-        this->currentColumn = 0;
+        this->skipLines(line);
     }
 
     std::unique_ptr<GeneratedLineFactory> copy() {
         return create(this->numRows, this->numColumns, this->sparsity, this->edgeValueRng->copy(), this->includeEdgeRng->copy(), this->currentRow, this->currentColumn);
+    }
+
+    private:
+    void skipLines(const size_t lineToSkipTo) {
+        const size_t elementsToSkip = ((lineToSkipTo - this->currentRow) * this->numColumns) - this->currentColumn;
+        if (elementsToSkip < 0) {
+            throw std::invalid_argument("Attempted to skip negative elements.");
+        }
+        this->includeEdgeRng->skipNextElements(elementsToSkip);
+        this->edgeValueRng->skipNextElements(elementsToSkip);
+        this->currentRow++;
+
+        // Since we subtracted the current column from the count earlier we know that
+        //  we are starting from the 0th column of this new row.
+        this->currentColumn = 0;
     }
 };
 
