@@ -298,7 +298,7 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
         const size_t elementsToSkip = ((lineToSkipTo - this->currentRow) * this->numColumns) - this->currentColumn;
         this->includeEdgeRng->skipNextElements(elementsToSkip);
         this->edgeValueRng->skipNextElements(elementsToSkip);
-        this->currentRow++;
+        this->currentRow = lineToSkipTo;
 
         // Since we subtracted the current column from the count earlier we know that
         //  we are starting from the 0th column of this new row.
