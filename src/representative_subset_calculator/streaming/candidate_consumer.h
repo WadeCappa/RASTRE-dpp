@@ -2,7 +2,8 @@
 
 class CandidateConsumer {
     public:
-    virtual void accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) = 0;
+    // returns `true` when the consumer is still accepting seeds. `false` otherwise.
+    virtual bool accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) = 0;
     virtual std::unique_ptr<Subset> getBestSolutionDestroyConsumer() = 0;
 };
 
@@ -45,7 +46,8 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         return this->titrator->getBestSolutionDestroyTitrator();
     }
 
-    void accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) {
+    bool accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) {
+        bool stillAcceptingSeeds = true;
         if (!this->titrator->bucketsInitialized()) {
             timers.initBucketsTimer.startTimer();
             this->tryToGetFirstMarginals(seedQueue);
@@ -54,9 +56,11 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         
         if (this->titrator->bucketsInitialized()) {
             timers.insertSeedsTimer.startTimer();
-            this->titrator->processQueue(seedQueue);
+            stillAcceptingSeeds = this->titrator->processQueue(seedQueue);
             timers.insertSeedsTimer.stopTimer();
         }
+
+        return stillAcceptingSeeds;
     }
 
     private:
