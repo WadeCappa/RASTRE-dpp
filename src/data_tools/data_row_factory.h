@@ -187,6 +187,9 @@ class GeneratedDenseLineFactory : public GeneratedLineFactory {
     }
 
     void jumpToLine(const size_t line) {
+        if (line <= this->currentRow) {
+            return;
+        }
         const size_t elementsToSkip = (line - this->currentRow) * this->numColumns;
         this->rng->skipNextElements(elementsToSkip);
         this->currentRow = line;
@@ -229,7 +232,7 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
     static std::unique_ptr<GeneratedSparseLineFactory> create(
         const size_t numRows,
         const size_t numColumns,
-        const double sparsity,
+        const float sparsity,
         std::unique_ptr<RandomNumberGenerator> edgeValueRng,
         std::unique_ptr<RandomNumberGenerator> includeEdgeRng,
         const size_t currentRow,
@@ -243,7 +246,7 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
     static std::unique_ptr<GeneratedSparseLineFactory> create(
         const size_t numRows,
         const size_t numColumns,
-        const double sparsity,
+        const float sparsity,
         std::unique_ptr<RandomNumberGenerator> edgeValueRng,
         std::unique_ptr<RandomNumberGenerator> includeEdgeRng) {
         return create(numRows, numColumns, sparsity, move(edgeValueRng), move(includeEdgeRng), 0, 0);
@@ -265,11 +268,16 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
 
             // generate another value to make sure skips by row are accurate.
             edgeValue = this->edgeValueRng->getNumber();
+
+            // Can do this in a post-loop while loop for speed
+            if (this->currentColumn >= this->numColumns) {
+                this->currentRow++;
+                this->currentColumn %= this->numColumns;
+            }
         }
 
-        if (this->currentColumn >= this->numColumns) {
-            this->currentRow++;
-            this->currentColumn %= this->numColumns;
+        if (this->currentRow >= this->numRows) {
+            return std::nullopt;
         }
 
         std::stringstream res;
@@ -286,6 +294,10 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
     }
 
     void jumpToLine(const size_t line) {
+        if (line <= this->currentRow) {
+            return;
+        }
+
         const size_t elementsToSkip = ((line - this->currentRow) * this->numColumns) - this->currentColumn;
         this->includeEdgeRng->skipNextElements(elementsToSkip);
         this->edgeValueRng->skipNextElements(elementsToSkip);
@@ -312,7 +324,10 @@ class DataRowFactory {
     //  sparse generation since the sparse generator will always create
     //  a row for the currentRow+1 edge even when its supposed to be 
     //  skipped.
-    virtual void resetState() = 0;
+    virtual void jumpToLine(const size_t line) = 0;
+    
+    // Also pretty bad that I need this method
+    virtual std::unique_ptr<DataRowFactory> copy() = 0;
 };
 
 class DenseDataRowFactory : public DataRowFactory {
@@ -345,8 +360,12 @@ class DenseDataRowFactory : public DataRowFactory {
         return this->getFromNaiveBinary(move(binary));
     }
 
-    void resetState() {
+    void jumpToLine(const size_t _line) {
         // no-op, no state
+    }
+
+    std::unique_ptr<DataRowFactory> copy() {
+        return std::unique_ptr<DataRowFactory>(new DenseDataRowFactory());
     }
 };
 
@@ -376,19 +395,19 @@ class SparseDataRowFactory : public DataRowFactory {
     std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
         std::map<size_t, float> result;
 
-        while (true) {
-            if (this->hasData) {
-                if (this->currentRow == this->expectedRow) {
-                    result.insert({to, value});
-                } else {
-                    this->expectedRow++;
-                    return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
-                }
+        if (this->hasData) {
+            if (this->currentRow == this->expectedRow) {
+                result.insert({to, value});
+            } else {
+                this->expectedRow++;
+                return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
             }
+        }
 
+        while (true) {
             std::optional<std::string> line(source.maybeGet());
             if (!line.has_value()) {
-                if (this->hasData) {
+                if (result.size() > 0) {
                     this->hasData = false;
                     return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
                 } else {
@@ -422,10 +441,13 @@ class SparseDataRowFactory : public DataRowFactory {
             
             if (currentRow == this->expectedRow) {
                 result.insert({to, value});
-            } else {
+            } else if (currentRow > this->expectedRow) {
                 this->expectedRow++;
                 this->hasData = true;
                 return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
+            } else {
+                std::cout << "ERROR: had current row of " << currentRow << " and expected row of " << this->expectedRow << std::endl;
+                throw std::invalid_argument("ERROR: cannot backtrack");
             }
         } 
     }
@@ -456,7 +478,15 @@ class SparseDataRowFactory : public DataRowFactory {
         return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));
     }
 
-    void resetState() {
+    void jumpToLine(const size_t line) {
+        if (line <= this->expectedRow) {
+            return;
+        }
         this->hasData = false;
+        this->expectedRow = line;
+    }
+
+    std::unique_ptr<DataRowFactory> copy() {
+        return std::unique_ptr<DataRowFactory>(new SparseDataRowFactory(this->totalColumns));
     }
 };

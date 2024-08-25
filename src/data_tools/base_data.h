@@ -142,17 +142,22 @@ class SegmentedData : public BaseData {
         std::vector<std::unique_ptr<DataRow>> data(localRowToGlobalRow.size());
 
         std::vector<std::unique_ptr<GeneratedLineFactory>> gettersForRanks;
+        std::vector<std::unique_ptr<DataRowFactory>> factoriesForRanks;
         int maxThreads = omp_get_max_threads();
         for (int i = 0; i < maxThreads; i++) {
             gettersForRanks.push_back(getter.copy());
+            factoriesForRanks.push_back(factory.copy());
         }
 
         #pragma omp parallel for 
         for (size_t i = 0; i < localRowToGlobalRow.size(); i++) {
-            GeneratedLineFactory &localGetter(*gettersForRanks[omp_get_thread_num()]);
-            factory.resetState();
+            const int threadRank = omp_get_thread_num();
+            GeneratedLineFactory &localGetter(*gettersForRanks[threadRank]);
+            DataRowFactory &localFactory(*factoriesForRanks[threadRank]);
+
             localGetter.jumpToLine(localRowToGlobalRow[i]);
-            std::unique_ptr<DataRow> nextRow(factory.maybeGet(localGetter));
+            localFactory.jumpToLine(localRowToGlobalRow[i]);
+            std::unique_ptr<DataRow> nextRow(localFactory.maybeGet(localGetter));
             if (nextRow == nullptr) {
                 throw std::invalid_argument("Retrieved nullptr which is unexpected in a parellel load. The number of rows you have provided was incorrect.");
             }
