@@ -56,7 +56,6 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
             if (bucket->attemptInsert(seed->getRow(), seed->getData())) {
                 this->t = 0; 
             } else if (bucket->isFull() || this->currentBucketIndex >= this->totalBuckets) {
-                std::cout << "Three Sieve titrator can not accept any more seeds" << std::endl;
                 stillAcceptingSeeds = false;
             } else {
                 this->t += 1; 
@@ -148,9 +147,6 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
             stillAccepting = stillAccepting || bucketAccepted;
         }
 
-        if (stillAccepting == false) {
-            std::cout << "Sieve Streaming titrator can not accept any more seeds" << std::endl;
-        }
         return stillAccepting;
     }
 

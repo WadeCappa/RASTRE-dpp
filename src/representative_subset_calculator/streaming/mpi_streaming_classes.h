@@ -8,26 +8,25 @@ class MpiSendRequest {
     const std::vector<float> rowToSend;
     MPI_Request request;
 
+    bool isCanceled;
+
     public:
     MpiSendRequest(std::vector<float> rowToSend) 
-    : rowToSend(move(rowToSend)) {}
+    : rowToSend(move(rowToSend)), isCanceled(false) {}
 
     void isend(const unsigned int tag) {
+        if (isCanceled) {
+            return;
+        }
         MPI_Isend(rowToSend.data(), rowToSend.size(), MPI_FLOAT, 0, tag, MPI_COMM_WORLD, &request);
     }
 
     void waitForISend() {
+        if (isCanceled) {
+            return;
+        }
         MPI_Status status;
         MPI_Wait(&request, &status);
-    }
-
-    void cancelIfNotSent() {
-        MPI_Test(&read)
-        int flag;
-        MPI_Status status;
-        if (flag != 1) {
-            MPI_Cancel(&request, &flag, &status);
-        }
     }
 };
 
