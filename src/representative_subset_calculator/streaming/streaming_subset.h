@@ -13,16 +13,20 @@ class StreamingSubset : public MutableSubset {
 
     const unsigned int desiredSeeds;
 
+    std::atomic_bool &foundSolution;
+
     public:
     StreamingSubset(
         const SegmentedData& data, 
         const unsigned int desiredSeeds,
-        Timers &timers
+        Timers &timers,
+        std::atomic_bool &foundSolution
     ) : 
         data(data), 
         base(NaiveMutableSubset::makeNew()),
         desiredSeeds(desiredSeeds),
-        timers(timers)
+        timers(timers),
+        foundSolution(foundSolution)
     {
         timers.firstSeedTime.startTimer();
     }
@@ -68,6 +72,10 @@ class StreamingSubset : public MutableSubset {
 
     void addRow(const size_t row, const float marginalGain) {
         this->base->addRow(row, marginalGain);
+        if (this->foundSolution.load()) {
+            this->cancelAllNotSent();
+            return;
+        }
 
         ToBinaryVisitor visitor;
         std::vector<float> rowToSend(move(this->data.getRow(row).visit(visitor)));
@@ -94,6 +102,13 @@ class StreamingSubset : public MutableSubset {
             //  does not send the last seed until finalize is called
             const int tag = CommunicationConstants::getContinueTag();
             sends[this->sends.size() - 2]->isend(tag);
+        }
+    }
+
+    private:
+    void cancelAllNotSent() {
+        for (size_t i = 0; i < sends.size(); i++) {
+            sends[i]->cancelIfNotSent();
         }
     }
 };

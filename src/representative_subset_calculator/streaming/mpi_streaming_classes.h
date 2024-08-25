@@ -20,6 +20,15 @@ class MpiSendRequest {
         MPI_Status status;
         MPI_Wait(&request, &status);
     }
+
+    void cancelIfNotSent() {
+        MPI_Test(&read)
+        int flag;
+        MPI_Status status;
+        if (flag != 1) {
+            MPI_Cancel(&request, &flag, &status);
+        }
+    }
 };
 
 class MpiRankBuffer : public RankBuffer {
