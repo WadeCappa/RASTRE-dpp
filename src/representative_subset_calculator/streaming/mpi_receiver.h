@@ -36,3 +36,21 @@ class MpiReceiver : public Receiver {
         return move(res);
     }
 };
+
+class ZeroMarginalReceiver: public Receiver {
+    private:
+    std::unique_ptr<Receiver> delegate;
+
+    public:
+    ZeroMarginalReceiver(std::unique_ptr<Receiver> delegate) 
+    : delegate(move(delegate)) {}
+
+    std::unique_ptr<CandidateSeed> receiveNextSeed(std::atomic_bool &stillReceiving) {
+        return delegate->receiveNextSeed(stillReceiving);
+    }
+
+    std::unique_ptr<Subset> getBestReceivedSolution() {
+        delegate->getBestReceivedSolution();
+        return Subset::empty();
+    }
+};

@@ -67,10 +67,12 @@ void streaming(
         std::unique_ptr<Receiver> receiver(
             MpiReceiver::buildReceiver(appData.worldSize, rowSize, *factory)
         );
+        std::unique_ptr<Receiver> zeroReceiver(new ZeroMarginalReceiver(move(receiver)));
+
         std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(
             appData, omp_get_num_threads() - 1, appData.worldSize - 1)
         );
-        GenericGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers);
+        SeiveGreedyStreamer streamer(*zeroReceiver.get(), *consumer.get(), timers);
 
         std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
         std::unique_ptr<Subset> solution(streamer.resolveStream());

@@ -141,7 +141,7 @@ class StreamingCandidateConsumer : public CandidateConsumer {
     ) : 
         titrator(move(titrator)),
         numberOfSenders(numberOfSenders),
-        bestMarginal(0),
+        bestMarginal(-1),
         calcFactory(move(calcFactory))
     {}
 
@@ -152,7 +152,7 @@ class StreamingCandidateConsumer : public CandidateConsumer {
     void accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) {
         if (!this->titrator->bucketsInitialized()) {
             timers.initBucketsTimer.startTimer();
-            this->tryToGetFirstMarginals(seedQueue);
+            this->getFirstMarginalAndInitBuckets(seedQueue);
             timers.initBucketsTimer.stopTimer();
         } 
         
@@ -167,13 +167,17 @@ class StreamingCandidateConsumer : public CandidateConsumer {
     }
 
     private:
-    void tryToGetFirstMarginals(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+    void getFirstMarginalAndInitBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
     
-        std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[0]);
-        const DataRow & row(seed->getData());
-        bestMarginal = std::log(std::sqrt(PerRowRelevanceCalculator::getScore(row, *calcFactory))) * 2;
+        for (size_t i = 0; i < pulledFromQueue.size(); i++) {
 
+            std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[0]);
+            const DataRow & row(seed->getData());
+            bestMarginal = std::max(bestMarginal,std::log(std::sqrt(PerRowRelevanceCalculator::getScore(row, *calcFactory))) * 2);
+
+        }
+        
         this->titrator->initBuckets(bestMarginal);
         seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
     }

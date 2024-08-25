@@ -167,43 +167,36 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
 
     void processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
 
-
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
         float currentMaxThreshold = this->buckets[this->buckets.size() - 1].getThreshold();
+        const size_t numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
 
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
-                
-                
-                const size_t numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
-                
 
-                std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
-                float singletonValue = 2 * std::log(std::sqrt(seed->getData().dotProduct(seed->getData()))); 
-
-                if (singletonValue > this->deltaZero) {
-                    this->deltaZero = singletonValue;
-
-
-                    for (int bucket = 0; bucket < numBuckets; bucket++)
-                    {
-                        int i = bucket + std::ceil( std::log(this->deltaZero) / std::log(1 + this->epsilon));
-                        float threshold = (float)std::pow(1 + this->epsilon, i);
-                        if (threshold > currentMaxThreshold) {
-                            this->buckets.push_back(ThresholdBucket(threshold, k));
-                            currentMaxThreshold = threshold;
-                        }
-                            
-                    }
-
-                }
-
-                #pragma omp parallel for num_threads(this->numThreads)
-                for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
-                    
-                    this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
-
-                }
+            std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
+            this->deltaZero = std::max(deltaZero, 2 * std::log(std::sqrt(seed->getData().dotProduct(seed->getData()))));
         }
+
+        for (size_t bucket = 0; bucket < numBuckets; bucket++) {
+                    
+            int i = bucket + std::ceil( std::log(this->deltaZero) / std::log(1 + this->epsilon));
+            float threshold = (float)std::pow(1 + this->epsilon, i);
+
+            if (threshold > currentMaxThreshold) {
+                this->buckets.push_back(ThresholdBucket(threshold, k));
+                currentMaxThreshold = threshold;
+            }            
+        }    
+
+        #pragma omp parallel for num_threads(this->numThreads)
+        for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
+            
+            for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
+                std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
+                this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
+            }            
+
+        }        
 
 
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
