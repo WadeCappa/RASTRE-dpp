@@ -38,10 +38,11 @@ class MpiRankBuffer : public RankBuffer {
         const size_t rowSize,
         const DataRowFactory &factory
     ) : 
-        // need space for the row's global index and the local rank's
-        //  marginal gain when adding this row to it's local solution.
-        //  Also, need space for the final stop tag.
-        buffer(rowSize + 3, 0),
+        // The buffer needs to hold an adjacency list of max size column size. this 
+        //  means thata the buffer needs to have at least rowSize * 2 spots to 
+        //  prevent an MPI_TRUNCATED_MESSAGE error. Additionally, we need 3 
+        //  more spots to contain metadata for this row.
+        buffer(rowSize * 2 + 3, 0),
         rank(rank),
         isStillReceiving(true),
         rankSolution(std::unique_ptr<MutableSubset>(NaiveMutableSubset::makeNew())),
@@ -96,14 +97,19 @@ class MpiRankBuffer : public RankBuffer {
     }
 
     CandidateSeed* extractSeedFromBuffer() {
-        auto endOfData = this->buffer.end() - 1;
-        while (*endOfData != CommunicationConstants::endOfSendTag()) {
+        auto endOfData = this->buffer.end();
+        while (*endOfData != CommunicationConstants::endOfSendTag() && endOfData != this->buffer.begin()) {
             endOfData--;
+        }
+
+        if (endOfData == this->buffer.begin()) {
+            std::cout << "Received empty send buffer. This is most likely incorrect" << std::endl;
         }
 
         // Remove the stop tag. This will allow the next send to be received.
         *endOfData = 0;
 
+        // TODO: This byte cast might be wrong now that we're sending floats. You need to double check this.
         const size_t globalRowIndex = static_cast<size_t>(*(endOfData - 1));
         const float localMarginalGain = *(endOfData - 2);
         std::vector<float> data(this->buffer.begin(), endOfData - 2);

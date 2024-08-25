@@ -1,5 +1,6 @@
 
 #include <vector>
+#include <omp.h>
 #include <cstddef>
 #include <optional>
 #include <cassert>
@@ -125,6 +126,49 @@ class SegmentedData : public BaseData {
     SegmentedData(const BaseData&);
 
     public:
+    static std::unique_ptr<SegmentedData> loadInParallel(
+        DataRowFactory &factory, 
+        GeneratedLineFactory &getter, 
+        const std::vector<unsigned int> &rankMapping, 
+        const unsigned int rank) {
+
+        std::vector<size_t> localRowToGlobalRow;
+        for (size_t globalRow = 0; globalRow < rankMapping.size(); globalRow++) {
+            if (rankMapping[globalRow] == rank) {
+                localRowToGlobalRow.push_back(globalRow);
+            }
+        }
+
+        std::vector<std::unique_ptr<DataRow>> data(localRowToGlobalRow.size());
+
+        std::vector<std::unique_ptr<GeneratedLineFactory>> gettersForRanks;
+        std::vector<std::unique_ptr<DataRowFactory>> factoriesForRanks;
+        int maxThreads = omp_get_max_threads();
+        for (int i = 0; i < maxThreads; i++) {
+            gettersForRanks.push_back(getter.copy());
+            factoriesForRanks.push_back(factory.copy());
+        }
+
+        #pragma omp parallel for 
+        for (size_t i = 0; i < localRowToGlobalRow.size(); i++) {
+            const int threadRank = omp_get_thread_num();
+            GeneratedLineFactory &localGetter(*gettersForRanks[threadRank]);
+            DataRowFactory &localFactory(*factoriesForRanks[threadRank]);
+
+            localGetter.jumpToLine(localRowToGlobalRow[i]);
+            localFactory.jumpToLine(localRowToGlobalRow[i]);
+            std::unique_ptr<DataRow> nextRow(localFactory.maybeGet(localGetter));
+            if (nextRow == nullptr) {
+                throw std::invalid_argument("Retrieved nullptr which is unexpected in a parellel load. The number of rows you have provided was incorrect.");
+            }
+
+            data[i] = move(nextRow);
+        }
+
+        const size_t columns = localRowToGlobalRow.size() > 0 ? data.back()->size() : 0;
+        return std::unique_ptr<SegmentedData>(new SegmentedData(move(data), move(localRowToGlobalRow), columns));
+    }
+
     static std::unique_ptr<SegmentedData> load(
         DataRowFactory &factory, 
         LineFactory &source, 
@@ -142,7 +186,7 @@ class SegmentedData : public BaseData {
                 std::unique_ptr<DataRow> nextRow(factory.maybeGet(source));
 
                 if (nextRow == nullptr) {
-                    break;
+                    throw std::invalid_argument("Retrieved nullptr which is unexpected during a multi-machine load. The number of rows you have provided was incorrect.");
                 }
 
                 if (columns == 0) {

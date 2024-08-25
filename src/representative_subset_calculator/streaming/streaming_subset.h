@@ -83,7 +83,6 @@ class StreamingSubset : public MutableSubset {
 
         if(this->base->size() == 1) {
             timers.firstSeedTime.stopTimer();
-            std::cout << "found first seed" << std::endl;
         }
 
         this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(move(rowToSend))));
