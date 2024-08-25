@@ -31,7 +31,7 @@ class SendAllSubsetCalculator : public SubsetCalculator {
             consumer->addRow(i, marginalGain);
         }
 
-        return Subset::empty();
+        return MutableSubset::upcast(move(consumer));
     }
 
 };
