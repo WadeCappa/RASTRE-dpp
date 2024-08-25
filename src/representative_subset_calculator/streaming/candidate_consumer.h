@@ -14,10 +14,6 @@ class NaiveCandidateConsumer : public CandidateConsumer {
 
     std::unordered_set<unsigned int> seenFirstElement;
     std::unordered_set<unsigned int> firstGlobalRows;
-<<<<<<< HEAD
-
-=======
->>>>>>> main
     float bestMarginal;
 
     public: 
