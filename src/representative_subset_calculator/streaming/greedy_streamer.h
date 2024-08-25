@@ -25,7 +25,6 @@ class SeiveGreedyStreamer : public GreedyStreamer {
         timers(timers)
     {}
 
-
     std::unique_ptr<Subset> resolveStream() {
         unsigned int dummyVal = 0;
         std::atomic_bool stillReceiving = true;

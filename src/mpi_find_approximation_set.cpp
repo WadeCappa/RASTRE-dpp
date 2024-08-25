@@ -179,6 +179,10 @@ int main(int argc, char** argv) {
     MpiOrchestrator::addMpiCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
+    if (appData.numberOfDataRows == 0) {
+        throw std::invalid_argument("Please set the number of rows (the numberOfDataRows arg)");
+    }
+
     MPI_Init(NULL, NULL);
     MPI_Comm_rank(MPI_COMM_WORLD, &appData.worldRank);
     MPI_Comm_size(MPI_COMM_WORLD, &appData.worldSize);
@@ -201,19 +205,17 @@ int main(int argc, char** argv) {
     // Put this somewhere more sane
     const unsigned int DEFAULT_VALUE = -1;
 
-    std::unique_ptr<LineFactory> getter;
-    std::ifstream inputFile;
+    std::unique_ptr<SegmentedData> data;
     if (appData.loadInput.inputFile != EMPTY_STRING) {
+        std::ifstream inputFile;
         inputFile.open(appData.loadInput.inputFile);
-        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
-    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
-        getter = Orchestrator::getLineGenerator(appData);
-    }
-
-    std::unique_ptr<SegmentedData> data(Orchestrator::buildMpiData(appData, *getter.get(), rowToRank));
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        std::unique_ptr<LineFactory> getter(std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile)));
+        data = Orchestrator::buildMpiData(appData, *getter.get(), rowToRank);
         inputFile.close();
-    } 
+    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
+        std::unique_ptr<GeneratedLineFactory> getter(Orchestrator::getLineGenerator(appData));
+        data = Orchestrator::buildMpiData(appData, *getter.get(), rowToRank);
+    }
 
     for (auto t: comparisonTimers)
         t.loadingDatasetTime.stopTimer();
