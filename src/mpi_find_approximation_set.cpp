@@ -34,6 +34,7 @@
 #include "representative_subset_calculator/streaming/streaming_subset.h"
 #include "representative_subset_calculator/streaming/mpi_receiver.h"
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
+#include <thread>
 
 void randGreedi(
     const AppData &appData, 
@@ -147,6 +148,8 @@ void streaming(
         timers.totalCalculationTime.stopTimer();
         std::cout << "rank 0 finished receiving" << std::endl;
 
+        MPI_Barrier(MPI_COMM_WORLD);
+
         nlohmann::json result = MpiOrchestrator::buildMpiOutput(
             appData, *solution.get(), data, timers, rowToRank
         );
@@ -158,12 +161,19 @@ void streaming(
     } else {
         std::cout << "rank " << appData.worldRank << " entered streaming function and know the total columns of " << data.totalColumns() << std::endl;
         timers.totalCalculationTime.startTimer();
+        
         std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, std::floor(appData.outputSetSize * appData.alpha), timers));
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         std::cout << "rank " << appData.worldRank << " ready to start streaming local seeds" << std::endl;
 
         timers.localCalculationTime.startTimer();
-        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), data, std::floor(appData.outputSetSize * appData.alpha)));
+        std::thread findAndSendSolution([&calculator, &subset, &data, &appData]() {
+            calculator->getApproximationSet(move(subset), data, std::floor(appData.outputSetSize * appData.alpha));
+        });
+
+        // Block until reciever is finished.
+        MPI_Barrier(MPI_COMM_WORLD);
+        findAndSendSolution.detach();
         std::cout << "rank " << appData.worldRank << " finished streaming local seeds" << std::endl;
         timers.localCalculationTime.stopTimer();
         timers.totalCalculationTime.stopTimer();

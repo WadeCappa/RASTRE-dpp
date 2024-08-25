@@ -2,7 +2,8 @@
 
 class BucketTitrator {
     public:
-    virtual void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
+    // Returns true when this titrator is still accepting seeds, false otherwise.
+    virtual bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
     virtual std::unique_ptr<Subset> getBestSolutionDestroyTitrator() = 0;
     virtual bool bucketsInitialized() const = 0;
     virtual void initBuckets(const float deltaZero) = 0;
@@ -47,32 +48,36 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         k(k)
     {}
 
-    void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+    bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+        bool stillAcceptingSeeds = true;
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
             std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
             if (bucket->attemptInsert(seed->getRow(), seed->getData())) {
                 this->t = 0; 
-            }
-            else {
+            } else if (bucket->isFull() || this->currentBucketIndex >= this->totalBuckets) {
+                stillAcceptingSeeds = false;
+            } else {
                 this->t += 1; 
                 if (this->t >= this->T && this->currentBucketIndex < this->totalBuckets) {
                     this->t = 0;
                     this->currentBucketIndex++;
 
                     const float deltaZero = this->deltaZero;
-                    int i = this->totalBuckets - 1 - this->currentBucketIndex + std::ceil( std::log(deltaZero) / std::log(1 + epsilon));
+                    int i = this->totalBuckets - 1 - this->currentBucketIndex + std::ceil(std::log(deltaZero) / std::log(1 + epsilon));
                     const float threshold = std::pow(1 + epsilon, i);
                     std::cout << "Bucket Threshold: " << threshold << std::endl;
                     //transfer current contents to next bucket
                     this->bucket = bucket->transferContents(threshold); //TODO:: change this to use the other constructor
-                }
+                } 
             }
         }
 
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             this->seedStorage.push_back(move(pulledFromQueue[i]));
         }
+
+        return stillAcceptingSeeds;
     }
 
     std::unique_ptr<Subset> getBestSolutionDestroyTitrator() {
@@ -118,20 +123,31 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         k(k)
     {}
 
-    void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+    bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+        std::vector<bool> bucketsStillAcceptingSeeds(this->buckets.size(), false);
 
         #pragma omp parallel for num_threads(this->numThreads)
         for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
             for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
                 std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
-                this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
+                bool accepted = this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
+                bucketsStillAcceptingSeeds[bucketIndex] = bucketsStillAcceptingSeeds[bucketIndex] || accepted;
             }
         }
 
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             this->seedStorage.push_back(move(pulledFromQueue[i]));
         }
+
+        // As long as one bucket is still accepting seeds this titrator should not 
+        //  return false.
+        bool stillAccepting = false;
+        for (bool bucketAccepted : bucketsStillAcceptingSeeds) {
+            stillAccepting = stillAccepting || bucketAccepted;
+        }
+
+        return stillAccepting;
     }
 
     std::unique_ptr<Subset> getBestSolutionDestroyTitrator() {
