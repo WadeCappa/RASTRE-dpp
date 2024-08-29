@@ -69,7 +69,7 @@ class ThresholdBucket
             return false;
         }
         
-        float d_i = std::sqrt(data.dotProduct(data));
+        float d_i = std::sqrt(data.dotProduct(data) + 1);
         std::unique_ptr<DenseDataRow> c_i(new DenseDataRow());
 
         for (size_t j = 0; j < this->solution->size(); j++) {
@@ -80,7 +80,7 @@ class ThresholdBucket
             c_i->push_back(e_i);
             d_i = std::sqrt(std::pow(d_i, 2) - std::pow(e_i, 2));
         }
-
+        
         const float marginal = std::log(std::pow(d_i, 2));
         if (this->passesThreshold(marginal)) {
             this->solution->addRow(rowIndex, marginal);

@@ -169,7 +169,12 @@ class StreamingCandidateConsumer : public CandidateConsumer {
     private:
     void getFirstMarginalAndInitBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
-    
+        
+        if (pulledFromQueue.size() == 0) {
+            seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
+            return;
+        }
+            
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
 
             std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[0]);

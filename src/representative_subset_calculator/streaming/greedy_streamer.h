@@ -49,7 +49,6 @@ class SeiveGreedyStreamer : public GreedyStreamer {
                         dummyVal++;
                     }
                     timers.waitingTime.stopTimer();
-
                     consumer.accept(this->queue, timers);
                 }
 

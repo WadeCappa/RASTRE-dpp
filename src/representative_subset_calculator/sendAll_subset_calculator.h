@@ -4,21 +4,31 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <optional>
+#include <random>
+#include <algorithm>
 
 
 class SendAllSubsetCalculator : public SubsetCalculator {
 
     private:
 
-
+    std::vector<size_t> randomOrder;    
 
     public: 
-    SendAllSubsetCalculator() {}
+    SendAllSubsetCalculator(size_t numberOfDataRows) {
+
+        for (size_t i = 0; i < numberOfDataRows; i++) 
+            randomOrder.push_back(i);
+
+        std::random_device rd; 
+        std::mt19937 g(rd()); 
+        std::shuffle(randomOrder.begin(), randomOrder.end(), g);
+    }
 
     std::unique_ptr<Subset> getApproximationSet(
         std::unique_ptr<MutableSubset> consumer, 
         const BaseData &data, 
-        size_t k
+        size_t numberOfDataRows
     ) {
 
         std::unique_ptr<LazyKernelMatrix> kernelMatrix(LazyKernelMatrix::from(data));
@@ -26,9 +36,9 @@ class SendAllSubsetCalculator : public SubsetCalculator {
         std::vector<float> diagonals = kernelMatrix->getDiagonals();
         
 
-        for (size_t i = 0; i < k; i++) {
+        for (size_t i = 0; i < numberOfDataRows; i++) {
             float marginalGain = std::log(diagonals[i]);
-            consumer->addRow(i, marginalGain);
+            consumer->addRow(randomOrder[i], marginalGain);
         }
 
         return MutableSubset::upcast(move(consumer));
