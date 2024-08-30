@@ -3,7 +3,7 @@
 class BucketTitrator {
     public:
     virtual void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
-    virtual void processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
+    virtual bool processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
     virtual std::unique_ptr<Subset> getBestSolutionDestroyTitrator() = 0;
     virtual bool bucketsInitialized() const = 0;
     virtual void initBuckets(const float deltaZero) = 0;
@@ -48,21 +48,22 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         k(k)
     {}
 
-    void processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
-        
+    bool processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+        if(this->bucket->bucketFull()) {
+            return false;
+        }
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
         float currentMaxThreshold = this->bucket->getThreshold();
 
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
             std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
-            this->deltaZero = std::max(deltaZero, 2 * std::log(std::sqrt(seed->getData().dotProduct(seed->getData()))));
+            this->deltaZero = std::max(deltaZero, 2 * std::log(std::sqrt(seed->getData().dotProduct(seed->getData()) + 1)));
         }
 
         if (this->deltaZero > currentMaxThreshold) {
                 
             int i = this->totalBuckets - 1 + std::ceil( std::log(this->deltaZero) / std::log(1 + epsilon));
             float threshold = std::pow(1 + epsilon, i);
-            std::cout << "New Max bucket Threshold: " << threshold << std::endl;
             this->bucket = std::make_unique<ThresholdBucket>(threshold, k);
             this->firstBucketBuilt = true;
 
@@ -92,7 +93,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             this->seedStorage.push_back(move(pulledFromQueue[i]));
         }   
-         
+        return true; 
     }
 
     void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
@@ -167,16 +168,24 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         deltaZero(-1)
     {}
 
-    void processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+    bool processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+
+        const size_t numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
+        bool allBucketsFull = true;
+        for (size_t bucket = 0; bucket < numBuckets; bucket++) {
+            allBucketsFull = allBucketsFull && this->buckets[bucket].bucketFull();
+        }
+        if (allBucketsFull) 
+            return false;
 
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
         float currentMaxThreshold = this->buckets[this->buckets.size() - 1].getThreshold();
-        const size_t numBuckets = this->getNumberOfBuckets(this->k, this->epsilon);
+        
 
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
 
             std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
-            this->deltaZero = std::max(deltaZero, 2 * std::log(std::sqrt(seed->getData().dotProduct(seed->getData()))));
+            this->deltaZero = std::max(deltaZero, 2 * std::log(std::sqrt(seed->getData().dotProduct(seed->getData()) + 1)));
         }
 
         for (size_t bucket = 0; bucket < numBuckets; bucket++) {
@@ -185,7 +194,6 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
             float threshold = (float)std::pow(1 + this->epsilon, i);
 
             if (threshold > currentMaxThreshold) {
-                std::cout << "New Max bucket Threshold: " << threshold << std::endl;
                 this->buckets.push_back(ThresholdBucket(threshold, k));
                 currentMaxThreshold = threshold;
             }            
@@ -205,6 +213,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             this->seedStorage.push_back(move(pulledFromQueue[i]));
         }
+        return true;
     }
 
     void processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {

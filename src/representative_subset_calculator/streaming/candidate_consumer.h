@@ -155,12 +155,12 @@ class StreamingCandidateConsumer : public CandidateConsumer {
             this->getFirstMarginalAndInitBuckets(seedQueue);
             timers.initBucketsTimer.stopTimer();
         } 
-        
-        if (this->titrator->bucketsInitialized()) {
+        bool keepReceiving = true;
+        if (this->titrator->bucketsInitialized() && keepReceiving) {
+    
             timers.insertSeedsTimer.startTimer();
            
-            this->titrator->processQueueDynamicBuckets(seedQueue);
-
+            keepReceiving = this->titrator->processQueueDynamicBuckets(seedQueue);
                 
             timers.insertSeedsTimer.stopTimer();
         }

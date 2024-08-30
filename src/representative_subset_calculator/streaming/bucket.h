@@ -60,6 +60,10 @@ class ThresholdBucket
         return this->solution->getScore();
     }
 
+    bool bucketFull() {
+        return (this->solution->size() >= this->k);
+    }
+
     std::unique_ptr<Subset> returnSolutionDestroyBucket() {
         return MutableSubset::upcast(move(this->solution));
     }
@@ -82,6 +86,7 @@ class ThresholdBucket
         }
         
         const float marginal = std::log(std::pow(d_i, 2));
+        
         if (this->passesThreshold(marginal)) {
             this->solution->addRow(rowIndex, marginal);
             this->solutionRows->push_back(&data);
