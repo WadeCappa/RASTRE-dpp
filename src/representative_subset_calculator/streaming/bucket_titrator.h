@@ -12,7 +12,7 @@ class BucketTitrator {
     static size_t getNumberOfBuckets(const unsigned int k, const float epsilon) {
         size_t numBuckets = (int)(0.5 + [](float val, float base) {
             return log2(val) / log2(base);
-        }((float)k, (1 + epsilon))) + 1;
+        }((float)(2 * k), (1 + epsilon))) + 1;
 
         return numBuckets;
     }
@@ -54,32 +54,34 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         }
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
         float currentMaxThreshold = this->bucket->getThreshold();
-
+        
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
             std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
-            this->deltaZero = std::max(deltaZero, 2 * std::log(std::sqrt(seed->getData().dotProduct(seed->getData()) + 1)));
+            this->deltaZero = std::max(this->deltaZero, 2 * std::log(std::sqrt(seed->getData().dotProduct(seed->getData()) + 1)));
         }
 
-        if (this->deltaZero > currentMaxThreshold) {
+        int i = this->totalBuckets - 1 + std::ceil( std::log(this->deltaZero) / std::log(1 + epsilon));
+        float threshold = std::pow(1 + epsilon, i);
+
+        if (threshold > currentMaxThreshold) {
                 
-            int i = this->totalBuckets - 1 + std::ceil( std::log(this->deltaZero) / std::log(1 + epsilon));
-            float threshold = std::pow(1 + epsilon, i);
+            std::cout << "Adding new buket with threshold: " << threshold << std::endl;
             this->bucket = std::make_unique<ThresholdBucket>(threshold, k);
             this->firstBucketBuilt = true;
-
+            this->t = 0; 
+            this->currentBucketIndex = 0;
         }
 
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
 
             std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
-            if (this->bucket->attemptInsert(seed->getRow(), seed->getData())) {
+            if (this->bucket->attemptInsert(seed->getRow(), seed->getData())) { 
                 this->t = 0; 
             } else {
                 this->t += 1; 
                 if (this->t >= this->T && this->currentBucketIndex < this->totalBuckets) {
                     this->t = 0;
                     this->currentBucketIndex++;
-
                     const float deltaZero = this->deltaZero;
                     int i = this->totalBuckets - 1 - this->currentBucketIndex + std::ceil( std::log(deltaZero) / std::log(1 + epsilon));
                     const float threshold = std::pow(1 + epsilon, i);
@@ -188,12 +190,28 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
             this->deltaZero = std::max(deltaZero, 2 * std::log(std::sqrt(seed->getData().dotProduct(seed->getData()) + 1)));
         }
 
+        int i = std::ceil( std::log(this->deltaZero) / std::log(1 + this->epsilon));
+        float min_threshold = (float)std::pow(1 + this->epsilon, i);
+        i += (numBuckets - 1);
+        float max_threshold = (float)std::pow(1 + this->epsilon, i);
+        size_t removeBucketIndexBelow = 0;
+        for (removeBucketIndexBelow = 0; removeBucketIndexBelow < numBuckets; removeBucketIndexBelow++) {
+                    
+            if (this->buckets[removeBucketIndexBelow].getThreshold() > min_threshold)
+                break;
+
+        }
+        // remove useless buckets
+        this->buckets.erase(this->buckets.begin(),this->buckets.begin() + removeBucketIndexBelow);
+
+        //TODO:: Start from last bucket
         for (size_t bucket = 0; bucket < numBuckets; bucket++) {
                     
             int i = bucket + std::ceil( std::log(this->deltaZero) / std::log(1 + this->epsilon));
             float threshold = (float)std::pow(1 + this->epsilon, i);
-
+            
             if (threshold > currentMaxThreshold) {
+                std::cout << "Adding new buket with threshold: " << threshold << std::endl;
                 this->buckets.push_back(ThresholdBucket(threshold, k));
                 currentMaxThreshold = threshold;
             }            
@@ -259,6 +277,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         {
             int i = bucket + std::ceil( std::log(deltaZero) / std::log(1 + epsilon));
             float threshold = (float)std::pow(1 + epsilon, i);
+            std::cout << "Bucket with threshold: " << threshold << std::endl;
             this->buckets.push_back(ThresholdBucket(threshold, k));
         }
     }
