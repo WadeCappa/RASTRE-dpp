@@ -64,10 +64,6 @@ class ThresholdBucket
         return this->solution->getScore();
     }
 
-    bool bucketFull() {
-        return (this->solution->size() >= this->k);
-    }
-
     std::unique_ptr<Subset> returnSolutionDestroyBucket() {
         return MutableSubset::upcast(move(this->solution));
     }

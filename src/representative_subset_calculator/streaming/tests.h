@@ -33,7 +33,7 @@ std::unique_ptr<CandidateSeed> buildSeed() {
 }
 
 std::unique_ptr<BucketTitrator> getTitrator(unsigned int numThreads, float eps, unsigned int k) {
-    return std::unique_ptr<BucketTitrator>(new SieveStreamingBucketTitrator(numThreads, eps, k));
+    return SieveStreamingBucketTitrator::create(numThreads, eps, k);
 }
 
 std::unique_ptr<NaiveCandidateConsumer> getConsumer(std::unique_ptr<BucketTitrator> titrator, size_t worldSize) {

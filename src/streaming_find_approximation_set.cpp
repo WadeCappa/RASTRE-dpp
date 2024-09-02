@@ -64,8 +64,8 @@ void streaming(
         );
         std::unique_ptr<Receiver> zeroReceiver(new ZeroMarginalReceiver(move(receiver)));
 
-        std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(
-            appData, omp_get_num_threads() - 1, appData.worldSize - 1)
+        std::unique_ptr<CandidateConsumer> consumer(new StreamingCandidateConsumer(
+            MpiOrchestrator::buildTitrator(appData, omp_get_num_threads() - 1))
         );
         
         // Stop early still not implemented.
