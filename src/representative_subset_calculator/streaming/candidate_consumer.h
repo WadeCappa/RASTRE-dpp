@@ -98,15 +98,10 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         }
 
         if (this->seenFirstElement.size() == numberOfSenders) {
-            this->titrator->initBuckets(this->getDeltaZero());
+            this->titrator->initBuckets(bestMarginal);
         }
 
         seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
-    }
-
-
-    float getDeltaZero() {
-        return bestMarginal;
     }
 };
 
@@ -185,10 +180,5 @@ class StreamingCandidateConsumer : public CandidateConsumer {
         
         this->titrator->initBuckets(bestMarginal);
         seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
-    }
-
-
-    float getDeltaZero() {
-        return bestMarginal;
     }
 };
