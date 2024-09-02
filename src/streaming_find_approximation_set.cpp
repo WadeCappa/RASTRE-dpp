@@ -43,16 +43,11 @@ void streaming(
     const std::vector<unsigned int> &rowToRank, 
     Timers &timers
 ) {
-
-
     unsigned int rowSize = data.totalColumns();
     std::vector<unsigned int> rowSizes(appData.worldSize);
     MPI_Gather(&rowSize, 1, MPI_INT, rowSizes.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-
-
-    if (appData.worldRank == 0)  { // receiver uses streaming mechanism to build solution
-
+    if (appData.worldRank == 0) {
         rowSize = rowSizes.back();
         std::cout << "rank 0 entered into the streaming function and knows the total columns of "<< rowSize << std::endl;
         timers.totalCalculationTime.startTimer();
@@ -79,7 +74,10 @@ void streaming(
         std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
         std::unique_ptr<Subset> solution(streamer.resolveStream());
         timers.totalCalculationTime.stopTimer();
+
         std::cout << "rank 0 finished receiving" << std::endl;
+        MPI_Barrier(MPI_COMM_WORLD);
+        std::cout << "receiver is through the barrier" << std::endl;
 
         nlohmann::json result = MpiOrchestrator::buildMpiOutput(
             appData, *solution.get(), data, timers, rowToRank
@@ -91,17 +89,26 @@ void streaming(
         std::cout << "rank 0 outout all information" << std::endl;
 
     } else {
-
+        // We can load/generate our datasets in parallel here. This will increase speed dramatically.
         std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, appData.numberOfDataRows, timers));
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
-        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), data, appData.numberOfDataRows));
 
+        std::thread findAndSendSolution([&calculator, &subset, &data, &appData]() {
+            calculator->getApproximationSet(move(subset), data, appData.numberOfDataRows);
+        });
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (appData.stopEarly) {
+            findAndSendSolution.detach();
+        } else {
+            findAndSendSolution.join();
+        }
+
+        std::cout << "rank " << appData.worldRank << " finished streaming local seeds" << std::endl;
         auto dummyResult = Subset::empty();
         MpiOrchestrator::buildMpiOutput(appData, *dummyResult.get(), data, timers, rowToRank);
     }
-
 }
-
 
 int main(int argc, char** argv) {
     CLI::App app{"Approximates the best possible approximation set for the input dataset using streaming."};
@@ -151,7 +158,6 @@ int main(int argc, char** argv) {
     timers.barrierTime.startTimer();
     MPI_Barrier(MPI_COMM_WORLD);
     timers.barrierTime.stopTimer();
-
     
     streaming(appData, *data, rowToRank, timers);
 
