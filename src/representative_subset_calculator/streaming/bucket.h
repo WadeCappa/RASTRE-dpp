@@ -39,6 +39,10 @@ class ThresholdBucket
         b(move(b))
     {}
 
+    bool isFull() const {
+        return this->solution->size() >= this->k;
+    }
+
     std::unique_ptr<ThresholdBucket> transferContents(const float newThreshold) {
         return std::unique_ptr<ThresholdBucket>(
             new ThresholdBucket(

@@ -57,7 +57,7 @@ class StreamingSubset : public MutableSubset {
             MpiSendRequest *send = this->sends[i].get();
             send->waitForISend();
         }
-        
+
         // Can only queue the last send after all other sends have been sent. Otherwise 
         //  this will cause a race condition causing senders to sometimes never finish 
         //  sending seeds.

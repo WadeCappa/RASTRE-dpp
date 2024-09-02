@@ -35,6 +35,7 @@ struct appData{
     float distributedEpsilon = 0.13;
     unsigned int threeSieveT;
     float alpha = 1;
+    bool stopEarly = false;
 
     int worldSize = 1;
     int worldRank = 0;
@@ -108,6 +109,7 @@ class Orchestrator {
         app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file. This is needed to distribute work and is required for multi-machine mode");
         app.add_flag("--loadBinary", appData.binaryInput, "Use this flag if you want to load a binary input file.");
         app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
+        app.add_flag("--stopEarly", appData.stopEarly, "Used excusevly during streaming to stop the execution of the program early. If you use this in conjuntion with randgreedi, you will lose your approximation guarantee");
     
         CLI::App *loadInput = app.add_subcommand("loadInput", "loads the requested input from the provided path");
         CLI::App *genInput = app.add_subcommand("generateInput", "generates synthetic data");

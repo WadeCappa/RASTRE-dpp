@@ -251,7 +251,7 @@ TEST_CASE("Testing streaming with fake receiver") {
     std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, DENSE_DATA.size()), worldSize));
 
     Timers timers;
-    SeiveGreedyStreamer streamer(receiver, *consumer, timers);
+    SeiveGreedyStreamer streamer(receiver, *consumer, timers, false);
     std::unique_ptr<Subset> solution(streamer.resolveStream());
     assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }
@@ -307,7 +307,7 @@ TEST_CASE("Testing end to end without MPI") {
     std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, DENSE_DATA.size()), worldSize));
 
     Timers timers;
-    SeiveGreedyStreamer streamer(receiver, *consumer, timers);
+    SeiveGreedyStreamer streamer(receiver, *consumer, timers, false);
     std::unique_ptr<Subset> solution(streamer.resolveStream());
     assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }
@@ -320,7 +320,7 @@ TEST_CASE("Testing end to end ThreeSieveStreaming without MPI") {
     std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(EPSILON, T, DENSE_DATA.size()), worldSize));
 
     Timers timers;
-    SeiveGreedyStreamer streamer(receiver, *consumer, timers);
+    SeiveGreedyStreamer streamer(receiver, *consumer, timers, false);
     std::unique_ptr<Subset> solution(streamer.resolveStream());
     assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }
