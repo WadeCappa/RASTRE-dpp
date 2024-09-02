@@ -217,10 +217,8 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
             this->deltaZero = std::max(this->deltaZero, std::log(std::sqrt(PerRowRelevanceCalculator::getScore(seed->getData(), *calcFactory))) * 2);
         }
 
-        int i = std::ceil(std::log(this->deltaZero) / std::log(1 + this->epsilon));
-        float min_threshold = (float)std::pow(1 + this->epsilon, i);
-        i += (this->totalBuckets - 1);
-        float max_threshold = (float)std::pow(1 + this->epsilon, i);
+        float min_threshold = this->getThresholdForBucket(0, deltaZero, epsilon);
+        float min_threshold = this->getThresholdForBucket(this->totalBuckets - 1, deltaZero, epsilon);
         size_t removeBucketIndexBelow = 0;
         for (removeBucketIndexBelow = 0; removeBucketIndexBelow < this->totalBuckets; removeBucketIndexBelow++) {
             if (this->buckets[removeBucketIndexBelow].getThreshold() > min_threshold)
