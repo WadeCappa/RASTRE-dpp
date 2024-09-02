@@ -141,7 +141,7 @@ void streaming(
         std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(
             appData, omp_get_num_threads() - 1, appData.worldSize - 1)
         );
-        SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers);
+        SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers, !appData.stopEarly);
 
         std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
         std::unique_ptr<Subset> solution(streamer.resolveStream());
@@ -149,6 +149,7 @@ void streaming(
         std::cout << "rank 0 finished receiving" << std::endl;
 
         MPI_Barrier(MPI_COMM_WORLD);
+        std::cout << "receiver is through the barrier" << std::endl;
 
         nlohmann::json result = MpiOrchestrator::buildMpiOutput(
             appData, *solution.get(), data, timers, rowToRank
@@ -157,7 +158,7 @@ void streaming(
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);
         outputFile.close();
-        std::cout << "rank 0 outout all information" << std::endl;
+        std::cout << "rank 0 output all information" << std::endl;
     } else {
         std::cout << "rank " << appData.worldRank << " entered streaming function and know the total columns of " << data.totalColumns() << std::endl;
         timers.totalCalculationTime.startTimer();
@@ -168,13 +169,20 @@ void streaming(
 
         timers.localCalculationTime.startTimer();
         std::thread findAndSendSolution([&calculator, &subset, &data, &appData]() {
-            calculator->getApproximationSet(move(subset), data, std::floor(appData.outputSetSize * appData.alpha));
+            return calculator->getApproximationSet(move(subset), data, std::floor(appData.outputSetSize * appData.alpha));
         });
 
         // Block until reciever is finished.
+        std::cout << "sender " << appData.worldRank << " has sent all seeds" << std::endl;
         MPI_Barrier(MPI_COMM_WORLD);
-        findAndSendSolution.detach();
+        if (appData.stopEarly) {
+            findAndSendSolution.detach();
+        } else {
+            // Don't kill any extra sends, we need them to compare local solutions to the global solution.
+            findAndSendSolution.join();
+        }
         std::cout << "rank " << appData.worldRank << " finished streaming local seeds" << std::endl;
+
         timers.localCalculationTime.stopTimer();
         timers.totalCalculationTime.stopTimer();
 

@@ -11,6 +11,7 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     Receiver &receiver;
     CandidateConsumer &consumer;
     Timers &timers;
+    const bool continueAcceptingSeedsAfterFillingBuckets;
 
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
 
@@ -18,11 +19,13 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     SeiveGreedyStreamer(
         Receiver &receiver, 
         CandidateConsumer &consumer,
-        Timers &timers
+        Timers &timers,
+        const bool continueAcceptingSeedsAfterFillingBuckets
     ) : 
         receiver(receiver),
         consumer(consumer),
-        timers(timers)
+        timers(timers),
+        continueAcceptingSeedsAfterFillingBuckets(continueAcceptingSeedsAfterFillingBuckets)
     {}
 
     std::unique_ptr<Subset> resolveStream() {
@@ -40,12 +43,12 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     }
 
     private:
-    // TODO: One more send then required is accepted after `foundSolution` is true. There
+    // TODO: One more send then required is accepted after `stillConsuming` is false. There
     //  should be a way to exit even earlier here.
     void resolveStreamInternal() {
         unsigned int dummyVal = 0;
         std::atomic_bool stillReceiving = true;
-        std::atomic_bool foundSolution = false;
+        std::atomic_bool stillConsuming = true;
         omp_set_dynamic(0);
         omp_set_nested(1);
         #pragma omp parallel num_threads(2)
@@ -54,21 +57,24 @@ class SeiveGreedyStreamer : public GreedyStreamer {
             if (threadId == 0) {
                 timers.communicationTime.startTimer();
 
-                while (stillReceiving.load() && !foundSolution.load()) {
+                while (stillReceiving.load() && stillConsuming.load()) {
                     std::unique_ptr<CandidateSeed> nextSeed(receiver.receiveNextSeed(stillReceiving));
                     this->queue.push(move(nextSeed));
                 }
 
                 timers.communicationTime.stopTimer();
             } else {
-                while (stillReceiving.load() && !foundSolution.load()) {
+                while (stillReceiving.load() && stillConsuming.load()) {
                     timers.waitingTime.startTimer();
                     while (this->queue.isEmpty())  {
                         dummyVal++;
                     }
                     timers.waitingTime.stopTimer();
 
-                    foundSolution.store(!(consumer.accept(this->queue, timers)));
+                    // If continueAcceptingSeedsAfterFillingBuckets is false, this should always be true so we don't stop
+                    // 	receiving seeds.
+                    bool consumerIsStillReceiving = consumer.accept(this->queue, timers);
+                    stillConsuming.store(consumerIsStillReceiving || continueAcceptingSeedsAfterFillingBuckets);
                 }
 
                 // Queue may still have elements after receiver signals to stop streaming
