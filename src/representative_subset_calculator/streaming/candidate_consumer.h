@@ -56,7 +56,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         
         if (this->titrator->bucketsInitialized()) {
             timers.insertSeedsTimer.startTimer();
-            stillAcceptingSeeds = this->titrator->processQueue(seedQueue);
+            stillAcceptingSeeds = this->titrator->processQueueDynamicBuckets(seedQueue);
             timers.insertSeedsTimer.stopTimer();
         }
 
@@ -150,7 +150,7 @@ class StreamingCandidateConsumer : public CandidateConsumer {
         return this->titrator->getBestSolutionDestroyTitrator();
     }
 
-    void accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) {
+    bool accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) {
         if (!this->titrator->bucketsInitialized()) {
             timers.initBucketsTimer.startTimer();
             this->getFirstMarginalAndInitBuckets(seedQueue);
@@ -158,13 +158,12 @@ class StreamingCandidateConsumer : public CandidateConsumer {
         } 
         bool keepReceiving = true;
         if (this->titrator->bucketsInitialized() && keepReceiving) {
-    
             timers.insertSeedsTimer.startTimer();
-           
             keepReceiving = this->titrator->processQueueDynamicBuckets(seedQueue);
-                
             timers.insertSeedsTimer.stopTimer();
         }
+
+        return keepReceiving;
     }
 
     private:
