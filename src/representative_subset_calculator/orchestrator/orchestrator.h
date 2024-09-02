@@ -141,8 +141,6 @@ class Orchestrator {
                 return dynamic_cast<SubsetCalculator*>(new FastSubsetCalculator(appData.epsilon));
             case 3: 
                 return dynamic_cast<SubsetCalculator*>(new LazyFastSubsetCalculator(appData.epsilon));
-            case 4:
-                return dynamic_cast<SubsetCalculator*>(new SendAllSubsetCalculator(appData.numberOfDataRows));
             default:
                 throw new std::invalid_argument("Could not find algorithm");
         }

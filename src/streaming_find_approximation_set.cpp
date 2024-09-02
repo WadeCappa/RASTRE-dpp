@@ -39,16 +39,16 @@
 
 void streaming(
     const AppData &appData, 
-    const SegmentedData &data, 
+    LineFactory &source, 
     const std::vector<unsigned int> &rowToRank, 
     Timers &timers
 ) {
-    unsigned int rowSize = data.totalColumns();
-    std::vector<unsigned int> rowSizes(appData.worldSize);
-    MPI_Gather(&rowSize, 1, MPI_INT, rowSizes.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+    if (appData.adjacencyListColumnCount <= 0) {
+        throw std::invalid_argument("Even with dense datasets, the number of columns is reqruied. This is because standalone streaming loads the dataset at runtime.");
+    }
+    unsigned int rowSize = appData.adjacencyListColumnCount;
 
     if (appData.worldRank == 0) {
-        rowSize = rowSizes.back();
         std::cout << "rank 0 entered into the streaming function and knows the total columns of "<< rowSize << std::endl;
         timers.totalCalculationTime.startTimer();
 
@@ -56,7 +56,7 @@ void streaming(
         //  be double the size of dense data in worst case. Senders will not send more data than they
         //  have, but you need to be prepared for worst case in the receiver (allocation is cheaper
         //  than sends anyway).
-        rowSize = appData.adjacencyListColumnCount > 0 ? rowSizes.back() : rowSizes.back() * 2;
+        rowSize *= 2;
 
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
         std::unique_ptr<Receiver> receiver(
@@ -79,8 +79,11 @@ void streaming(
         MPI_Barrier(MPI_COMM_WORLD);
         std::cout << "receiver is through the barrier" << std::endl;
 
+        // This is used only so that we have something to provide the mpi output.
+        auto dummyData(FullyLoadedData::load(std::vector<std::vector<float>>()));
+
         nlohmann::json result = MpiOrchestrator::buildMpiOutput(
-            appData, *solution.get(), data, timers, rowToRank
+            appData, *solution.get(), *dummyData, timers, rowToRank
         );
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
@@ -90,11 +93,44 @@ void streaming(
 
     } else {
         // We can load/generate our datasets in parallel here. This will increase speed dramatically.
-        std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, appData.numberOfDataRows, timers));
-        std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
+        std::thread findAndSendSolution([&source, &appData]() {
+            std::vector<std::unique_ptr<MpiSendRequest>> sends;
+            size_t currentRow = 0;
+            std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
+            while (true) {
+                std::unique_ptr<DataRow> nextRow(factory->maybeGet(source));
+                if (nextRow == nullptr) {
+                    std::cout << "reached end of data" << std::endl;
+                    break;
+                }
 
-        std::thread findAndSendSolution([&calculator, &subset, &data, &appData]() {
-            calculator->getApproximationSet(move(subset), data, appData.numberOfDataRows);
+                ToBinaryVisitor visitor;
+                std::vector<float> rowToSend(move(nextRow->visit(visitor)));
+
+                // second to last value should be the marginal gain of this element for the local solution.
+                rowToSend.push_back(0.0);
+
+                // last value should be the global row index
+                rowToSend.push_back(currentRow++);
+
+                // Mark the end of the send buffer
+                rowToSend.push_back(CommunicationConstants::endOfSendTag());
+
+                sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(move(rowToSend))));
+
+                // Keep at least one seed until finalize is called. Otherwise there is no garuntee of
+                //  how many seeds there are left to find.
+                if (sends.size() > 1) {
+                    // Tag should be -1 iff this is the last seed to be sent. This code purposefully
+                    //  does not send the last seed until finalize is called
+                    const int tag = CommunicationConstants::getContinueTag();
+                    sends[sends.size() - 2]->isend(tag);
+                }
+            }
+
+            for (size_t i = 0; i < sends.size(); i++) {
+                sends[i]->waitForISend();
+            }
         });
 
         MPI_Barrier(MPI_COMM_WORLD);
@@ -106,7 +142,8 @@ void streaming(
 
         std::cout << "rank " << appData.worldRank << " finished streaming local seeds" << std::endl;
         auto dummyResult = Subset::empty();
-        MpiOrchestrator::buildMpiOutput(appData, *dummyResult.get(), data, timers, rowToRank);
+        auto dummyData(FullyLoadedData::load(std::vector<std::vector<float>>()));
+        MpiOrchestrator::buildMpiOutput(appData, *dummyResult.get(), *dummyData, timers, rowToRank);
     }
 }
 
@@ -133,8 +170,6 @@ int main(int argc, char** argv) {
     std::vector<unsigned int> rowToRank(appData.numberOfDataRows, 1); 
 
     Timers timers;
-    
-    timers.loadingDatasetTime.startTimer();
 
     // Put this somewhere more sane
     const unsigned int DEFAULT_VALUE = -1;
@@ -147,19 +182,13 @@ int main(int argc, char** argv) {
     } else if (appData.generateInput.seed != DEFAULT_VALUE) {
         getter = Orchestrator::getLineGenerator(appData);
     }
+    
+    // Data is loaded/generated during this method
+    streaming(appData, *getter.get(), rowToRank, timers);
 
-    std::unique_ptr<SegmentedData> data(Orchestrator::buildMpiData(appData, *getter.get(), rowToRank));
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         inputFile.close();
     } 
-
-    timers.loadingDatasetTime.stopTimer();
-
-    timers.barrierTime.startTimer();
-    MPI_Barrier(MPI_COMM_WORLD);
-    timers.barrierTime.stopTimer();
-    
-    streaming(appData, *data, rowToRank, timers);
 
     MPI_Finalize();
     return EXIT_SUCCESS;

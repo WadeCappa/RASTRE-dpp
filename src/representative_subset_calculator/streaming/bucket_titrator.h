@@ -81,7 +81,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
     }
 
     bool processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
-        if(this->bucket->isFull()) {
+        if(this->isFull()) {
             return false;
         }
         bool stillAcceptingSeeds = true;
@@ -100,7 +100,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         }
         if (newD0 > this->deltaZero) {
             std::cout << "new d0 is larger, " << newD0 << " > " << this->deltaZero << std::endl;
-            double threshold = getThresholdForBucket(this->totalBuckets - 1, deltaZero, epsilon);
+            double threshold = getThresholdForBucket(this->totalBuckets - 1, newD0, epsilon);
             std::cout << "Adding new buket with threshold: " << threshold << " since the previous max threshold was " << currentMaxThreshold << std::endl;
             this->bucket = std::make_unique<ThresholdBucket>(threshold, k);
             this->t = 0; 
@@ -112,7 +112,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
             std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
             if (this->bucket->attemptInsert(seed->getRow(), seed->getData())) { 
                 this->t = 0; 
-            } else if(bucket->isFull() || this->currentBucketIndex >= this->totalBuckets) {
+            } else if(this->isFull()) {
                 stillAcceptingSeeds = false;
                 std::cout << "can no longer accept seeds, full" << std::endl;
             } else {
@@ -123,9 +123,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
                     double threshold = getThresholdForBucket(this->totalBuckets - 1 - this->currentBucketIndex, deltaZero, epsilon);
                     std::cout << "Bucket Threshold: " << threshold << std::endl;
                     this->bucket = bucket->transferContents(threshold);
-                } else {
-                    std::cout << "cannot create new bucket" << std::endl;
-                }
+                } 
             }
         }
 
@@ -140,7 +138,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
     }
 
     bool isFull() const {
-        return this->bucket->isFull();
+        return bucket->isFull() || this->currentBucketIndex >= this->totalBuckets;
     }
 };
 
