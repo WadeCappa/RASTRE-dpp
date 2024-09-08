@@ -85,7 +85,7 @@ std::unique_ptr<Subset> getStreamingSolution(
     auto baseline = getPeakRSS();
 
     std::unique_ptr<CandidateConsumer> candidateConsumer(new StreamingCandidateConsumer(
-        MpiOrchestrator::buildTitrator(appData, omp_get_num_threads() - 1, firstDeltaZero))
+        MpiOrchestrator::buildTitrator(appData, omp_get_num_threads() - 1, firstDeltaZero, true))
     );
 
     candidateConsumer->accept(queue, timers);

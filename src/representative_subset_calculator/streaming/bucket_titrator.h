@@ -9,9 +9,10 @@ class BucketTitrator {
 
     protected:
     static size_t getNumberOfBuckets(const unsigned int k, const float epsilon) {
+        
         size_t numBuckets = (int)(0.5 + [](float val, float base) {
             return log2(val) / log2(base);
-        }((float)(2 * k), (1 + epsilon))) + 1;
+        }((float)(k), (1 + epsilon))) + 1;
 
         return numBuckets;
     }
@@ -61,12 +62,14 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         const float epsilon,
         const unsigned int T,
         const unsigned int k,
-        const float firstDeltaZero = 0.0) {
+        const float firstDeltaZero = 0.0, 
+        bool standalone = false) {
 
         std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
-        size_t totalBuckets = getNumberOfBuckets(k, epsilon);
+        size_t totalBuckets = standalone ? getNumberOfBuckets(2 * k, epsilon) : getNumberOfBuckets(k, epsilon);
         float threshold = getThresholdForBucket(totalBuckets - 1, firstDeltaZero, epsilon);
         std::unique_ptr<ThresholdBucket>bucket = std::make_unique<ThresholdBucket>(threshold, k);
+        // std::cout << "number of buckets " << totalBuckets << " with deltaZero of " << firstDeltaZero << std::endl;
         return std::unique_ptr<ThreeSieveBucketTitrator>(
             new ThreeSieveBucketTitrator(
                 epsilon, 
@@ -117,8 +120,9 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
                 if (this->t >= this->T && this->currentBucketIndex < this->totalBuckets) {
                     this->t = 0;
                     this->currentBucketIndex++;
-                    float threshold = getThresholdForBucket(this->totalBuckets - 1 - this->currentBucketIndex, deltaZero, epsilon);
-                    std::cout << "Bucket Threshold: " << threshold << std::endl;
+                    float threshold = getThresholdForBucket(this->totalBuckets - 1 - this->currentBucketIndex, this->deltaZero, epsilon);
+                    // std::cout << "Bucket Threshold: " << threshold << std::endl;
+                    // std::cout << "Utility: " << this->bucket->getUtility() << std::endl;
                     this->bucket = bucket->transferContents(threshold);
                 } 
             }
@@ -175,14 +179,16 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         const unsigned int numThreads,
         const float epsilon,
         const unsigned int k,
-        const float firstDeltaZero = 0.0) {
+        const float firstDeltaZero = 0.0,
+        bool standalone = false) {
 
 
         std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
-        size_t totalBuckets = getNumberOfBuckets(k, epsilon);
+        size_t totalBuckets = standalone ? getNumberOfBuckets(2 * k, epsilon) : getNumberOfBuckets(k, epsilon);
         float threshold = getThresholdForBucket(totalBuckets - 1, firstDeltaZero, epsilon);
         std::unique_ptr<ThresholdBucket>bucket = std::make_unique<ThresholdBucket>(threshold, k);
-        std::vector<ThresholdBucket> buckets(move(initBuckets(firstDeltaZero, epsilon, k)));
+        int upperBound = standalone ? (2 * k) : (k);
+        std::vector<ThresholdBucket> buckets(move(initBuckets(firstDeltaZero, epsilon, upperBound)));
         return std::unique_ptr<SieveStreamingBucketTitrator>(
             new SieveStreamingBucketTitrator(
                 numThreads, 
@@ -279,7 +285,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         std::vector<ThresholdBucket> res;
         const size_t numBuckets = getNumberOfBuckets(k, epsilon);
         // std::cout << "number of buckets " << numBuckets << " with deltaZero of " << deltaZero << std::endl;
-
+ 
         for (int bucket = 0; bucket < numBuckets; bucket++) {
             float threshold = getThresholdForBucket(bucket, deltaZero, epsilon);
             res.push_back(ThresholdBucket(threshold, k));
