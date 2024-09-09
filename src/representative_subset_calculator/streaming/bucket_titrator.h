@@ -201,9 +201,6 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
     }
 
     bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
-        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
-        std::vector<bool> bucketsStillAcceptingSeeds(this->buckets.size(), false);
-
         if (this->isFull()) {
             return false;
         }
@@ -242,11 +239,9 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         
         #pragma omp parallel for num_threads(this->numThreads)
         for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
-            
             for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
                 std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
-                bool accepted = this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
-                bucketsStillAcceptingSeeds[bucketIndex] = bucketsStillAcceptingSeeds[bucketIndex] || accepted;
+                this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
             }
         }
 
