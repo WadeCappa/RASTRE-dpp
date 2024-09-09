@@ -39,7 +39,6 @@ class NaiveCandidateConsumer : public CandidateConsumer {
     bool accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) {
         bool stillAcceptingSeeds = true;
         if (this->seenFirstElement.size() < numberOfSenders) {
-        if (!this->titrator->bucketsInitialized()) {
             timers.initBucketsTimer.startTimer();
             this->findFirstSeedsFromSenders(seedQueue);
             timers.initBucketsTimer.stopTimer();
@@ -88,7 +87,7 @@ class StreamingCandidateConsumer : public CandidateConsumer {
             return this->titrator->isFull();
         }
         timers.insertSeedsTimer.startTimer();
-        this->titrator->processQueueDynamicBuckets(seedQueue);
+        this->titrator->processQueue(seedQueue);
         timers.insertSeedsTimer.stopTimer();
         return this->titrator->isFull();
     }
