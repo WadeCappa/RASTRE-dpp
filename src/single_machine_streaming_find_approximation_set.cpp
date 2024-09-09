@@ -26,11 +26,8 @@
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
-#include <mpi.h>
 #include <random>
 #include <algorithm>
-
-
 
 std::unique_ptr<Subset> getStreamingSolution(
     const AppData& appData, 
