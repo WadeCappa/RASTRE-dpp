@@ -35,6 +35,7 @@
 #include "representative_subset_calculator/streaming/streaming_subset.h"
 #include "representative_subset_calculator/streaming/mpi_receiver.h"
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
+#include <thread>
 
 void randGreedi(
     const AppData &appData, 
@@ -141,12 +142,15 @@ void streaming(
         std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(
             appData, omp_get_num_threads() - 1, appData.worldSize - 1)
         );
-        SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers);
+        SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers, !appData.stopEarly);
 
         std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
         std::unique_ptr<Subset> solution(streamer.resolveStream());
         timers.totalCalculationTime.stopTimer();
         std::cout << "rank 0 finished receiving" << std::endl;
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        std::cout << "receiver is through the barrier" << std::endl;
 
         nlohmann::json result = MpiOrchestrator::buildMpiOutput(
             appData, *solution.get(), data, timers, rowToRank
@@ -155,17 +159,30 @@ void streaming(
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);
         outputFile.close();
-        std::cout << "rank 0 outout all information" << std::endl;
+        std::cout << "rank 0 output all information" << std::endl;
     } else {
         std::cout << "rank " << appData.worldRank << " entered streaming function and know the total columns of " << data.totalColumns() << std::endl;
         timers.totalCalculationTime.startTimer();
+        
         std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, std::floor(appData.outputSetSize * appData.alpha), timers));
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         std::cout << "rank " << appData.worldRank << " ready to start streaming local seeds" << std::endl;
 
         timers.localCalculationTime.startTimer();
-        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), data, std::floor(appData.outputSetSize * appData.alpha)));
+        std::thread findAndSendSolution([&calculator, &subset, &data, &appData]() {
+            return calculator->getApproximationSet(move(subset), data, std::floor(appData.outputSetSize * appData.alpha));
+        });
+
+        // Block until reciever is finished.
+        MPI_Barrier(MPI_COMM_WORLD);
+        if (appData.stopEarly) {
+            findAndSendSolution.detach();
+        } else {
+            // Don't kill any extra sends, we need them to compare local solutions to the global solution.
+            findAndSendSolution.join();
+        }
         std::cout << "rank " << appData.worldRank << " finished streaming local seeds" << std::endl;
+
         timers.localCalculationTime.stopTimer();
         timers.totalCalculationTime.stopTimer();
 
