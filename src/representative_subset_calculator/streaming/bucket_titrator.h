@@ -57,7 +57,36 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         calcFactory(move(calcFactory))
     {}
 
+    public:
+    static std::unique_ptr<ThreeSieveBucketTitrator> create(
+        const float epsilon,
+        const unsigned int T,
+        const unsigned int k,
+        const float firstDeltaZero = 0.0, 
+        bool standalone = false) {
+
+        std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
+        size_t totalBuckets = standalone ? getNumberOfBuckets(2 * k, epsilon) : getNumberOfBuckets(k, epsilon);
+        float threshold = getThresholdForBucket(totalBuckets - 1, firstDeltaZero, epsilon);
+        std::unique_ptr<ThresholdBucket>bucket = std::make_unique<ThresholdBucket>(threshold, k);
+        // std::cout << "number of buckets " << totalBuckets << " with deltaZero of " << firstDeltaZero << std::endl;
+        return std::unique_ptr<ThreeSieveBucketTitrator>(
+            new ThreeSieveBucketTitrator(
+                epsilon, 
+                T, 
+                k, 
+                move(calcFactory), 
+                totalBuckets, 
+                firstDeltaZero, 
+                move(bucket)
+            )
+        );
+    }
+
     bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+        if(this->isFull()) {
+            return false;
+        }
         bool stillAcceptingSeeds = true;
         std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
         float newD0 = this->deltaZero;
@@ -75,6 +104,12 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
                 float threshold = getThresholdForBucket(this->totalBuckets - 1, newD0, epsilon);
                 // std::cout << "Adding new buket with threshold: " << threshold << " since the previous max threshold was " << newD0 << std::endl;
                 this->bucket = std::make_unique<ThresholdBucket>(threshold, k);
+                this->t = 0; 
+                this->currentBucketIndex = 0;
+                this->deltaZero = newD0;
+            }
+
+            if (this->bucket->attemptInsert(seed->getRow(), seed->getData())) { 
                 this->t = 0; 
             } else if (bucket->isFull() || this->currentBucketIndex >= this->totalBuckets) {
                 stillAcceptingSeeds = false;
