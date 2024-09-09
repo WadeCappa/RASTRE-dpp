@@ -45,7 +45,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         } 
         if (this->seenFirstElement.size() == numberOfSenders) {
             timers.insertSeedsTimer.startTimer();
-            stillAcceptingSeeds = this->titrator->processQueueDynamicBuckets(seedQueue);
+            stillAcceptingSeeds = this->titrator->processQueue(seedQueue);
             timers.insertSeedsTimer.stopTimer();
         }
 
@@ -87,7 +87,7 @@ class StreamingCandidateConsumer : public CandidateConsumer {
             return this->titrator->isFull();
         }
         timers.insertSeedsTimer.startTimer();
-        this->titrator->processQueueDynamicBuckets(seedQueue);
+        this->titrator->processQueue(seedQueue);
         timers.insertSeedsTimer.stopTimer();
         return this->titrator->isFull();
     }

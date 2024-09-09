@@ -3,7 +3,7 @@
 class BucketTitrator {
     public:
     // Returns true when this titrator is still accepting seeds, false otherwise.
-    virtual bool processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
+    virtual bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
     virtual std::unique_ptr<Subset> getBestSolutionDestroyTitrator() = 0;
     virtual bool isFull() const = 0;
 
@@ -83,7 +83,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         );
     }
 
-    bool processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+    bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         if(this->isFull()) {
             return false;
         }
@@ -109,20 +109,17 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
                 this->deltaZero = newD0;
             }
 
-        
             if (this->bucket->attemptInsert(seed->getRow(), seed->getData())) { 
                 this->t = 0; 
-            } else if(this->isFull()) {
+            } else if (this->isFull()) {
                 stillAcceptingSeeds = false;
-                
             } else {
                 this->t += 1; 
                 if (this->t >= this->T && this->currentBucketIndex < this->totalBuckets) {
                     this->t = 0;
                     this->currentBucketIndex++;
+                    
                     float threshold = getThresholdForBucket(this->totalBuckets - 1 - this->currentBucketIndex, this->deltaZero, epsilon);
-                    // std::cout << "Bucket Threshold: " << threshold << std::endl;
-                    // std::cout << "Utility: " << this->bucket->getUtility() << std::endl;
                     this->bucket = bucket->transferContents(threshold);
                 } 
             }
@@ -130,8 +127,9 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
 
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             this->seedStorage.push_back(move(pulledFromQueue[i]));
-        }   
-        return stillAcceptingSeeds; 
+        }
+
+        return stillAcceptingSeeds;
     }
 
     std::unique_ptr<Subset> getBestSolutionDestroyTitrator() {
@@ -182,7 +180,6 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         const float firstDeltaZero = 0.0,
         bool standalone = false) {
 
-
         std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
         size_t totalBuckets = standalone ? getNumberOfBuckets(2 * k, epsilon) : getNumberOfBuckets(k, epsilon);
         float threshold = getThresholdForBucket(totalBuckets - 1, firstDeltaZero, epsilon);
@@ -203,7 +200,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         );
     }
 
-    bool processQueueDynamicBuckets(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+    bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         if (this->isFull()) {
             return false;
         }
@@ -242,17 +239,16 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         
         #pragma omp parallel for num_threads(this->numThreads)
         for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
-            
             for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
                 std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
                 this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
-            }            
-        }   
+            }
+        }
 
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             this->seedStorage.push_back(move(pulledFromQueue[i]));
         }
-        
+
         return this->isFull();
     }
 
