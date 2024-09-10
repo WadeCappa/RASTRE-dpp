@@ -73,6 +73,7 @@ class ThresholdBucket
             return false;
         }
         
+        // TODO: Verify the correctness of the +1 here. This might not be right.
         float d_i = std::sqrt(data.dotProduct(data) + 1);
         std::unique_ptr<DenseDataRow> c_i(new DenseDataRow());
 
