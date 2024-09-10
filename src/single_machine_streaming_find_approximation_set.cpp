@@ -29,13 +29,25 @@
 #include <random>
 #include <algorithm>
 
-std::unique_ptr<Subset> getStreamingSolution(
-    const AppData& appData, 
-    LineFactory &getter, 
-    size_t k, 
-    Timers &timers,
-    const std::vector<unsigned int> &rowToRank,
-    size_t &memUsage) {
+int main(int argc, char** argv) {
+    CLI::App app{"Approximates the best possible approximation set for the input dataset using streaming."};
+    AppData appData;
+    MpiOrchestrator::addMpiCmdOptions(app, appData);
+    CLI11_PARSE(app, argc, argv);
+
+    Timers timers;
+    size_t memUsage;
+    // Put this somewhere more sane
+    const unsigned int DEFAULT_VALUE = -1;
+
+    std::unique_ptr<LineFactory> getter;
+    std::ifstream inputFile;
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.open(appData.loadInput.inputFile);
+        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
+    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
+        getter = Orchestrator::getLineGenerator(appData);
+    }
 
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     std::vector<std::unique_ptr<CandidateSeed>> elements;
@@ -43,29 +55,20 @@ std::unique_ptr<Subset> getStreamingSolution(
     std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
 
     timers.loadingDatasetTime.startTimer();
-    size_t columns = 0;
-    
-    for (size_t globalRow = 0; globalRow < rowToRank.size(); globalRow++) {
-        
-        if (rowToRank[globalRow] != appData.worldRank) {
-            factory->skipNext(getter); // probably should never reach here
-        } else {
-            std::unique_ptr<DataRow> nextRow(factory->maybeGet(getter));
+    size_t globalRow = 0;
 
-            if (nextRow == nullptr) {
-                throw std::invalid_argument("Retrieved nullptr which is unexpected during a multi-machine load. The number of rows you have provided was incorrect.");
-            }
+    while (true) {
+        std::unique_ptr<DataRow> nextRow(factory->maybeGet(*getter));
 
-            if (columns == 0) {
-                columns = nextRow->size();
-            }
-            if (firstDeltaZero == -1) { //for initBuckets
-                firstDeltaZero = 2 * std::log(std::sqrt(nextRow->dotProduct(*nextRow) + 1));
-            }
-            auto element = std::unique_ptr<CandidateSeed>(new CandidateSeed(globalRow, move(nextRow), 1));
-            elements.push_back(move(element));
-            
+        if (nextRow == nullptr) {
+            break;
         }
+
+        if (firstDeltaZero == -1) { //for initBuckets
+            firstDeltaZero = 2 * std::log(std::sqrt(nextRow->dotProduct(*nextRow) + 1));
+        }
+        auto element = std::unique_ptr<CandidateSeed>(new CandidateSeed(globalRow++, move(nextRow), 1));
+        elements.push_back(move(element));
     }
     timers.loadingDatasetTime.stopTimer();
 
@@ -91,44 +94,7 @@ std::unique_ptr<Subset> getStreamingSolution(
     
     timers.totalCalculationTime.stopTimer();
 
-    std::unique_ptr<Subset> streamingSolution(candidateConsumer->getBestSolutionDestroyConsumer());
-    return move(streamingSolution);
-
-}
-
-
-int main(int argc, char** argv) {
-    CLI::App app{"Approximates the best possible approximation set for the input dataset using streaming."};
-    AppData appData;
-    MpiOrchestrator::addMpiCmdOptions(app, appData);
-    CLI11_PARSE(app, argc, argv);
-    appData.worldRank = 0;
-    appData.worldSize = 1;
-
-    std::vector<unsigned int> rowToRank(appData.numberOfDataRows, 0); 
-
-    Timers timers;
-    size_t memUsage;
-    // Put this somewhere more sane
-    const unsigned int DEFAULT_VALUE = -1;
-
-    std::unique_ptr<LineFactory> getter;
-    std::ifstream inputFile;
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
-        inputFile.open(appData.loadInput.inputFile);
-        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
-    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
-        getter = Orchestrator::getLineGenerator(appData);
-    }
-
-    std::unique_ptr<Subset> solution = getStreamingSolution(
-        appData, 
-        *getter.get(), 
-        appData.outputSetSize, 
-        timers,
-        rowToRank,
-        memUsage
-        );
+    std::unique_ptr<Subset> solution(candidateConsumer->getBestSolutionDestroyConsumer());
     
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         inputFile.close();
@@ -139,7 +105,6 @@ int main(int argc, char** argv) {
     size_t dummyColumns = 0;  // A placeholder for columns, set to 0 or any valid number.
 
     SegmentedData dummySegmentedData(std::move(dummyData), std::move(dummyRowMapping), dummyColumns);
-
 
     nlohmann::json result = Orchestrator::buildOutput(appData, *solution.get(), dummySegmentedData, timers);
     result.push_back({"Memory (KiB)", memUsage});
