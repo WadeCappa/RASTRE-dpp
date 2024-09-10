@@ -7,7 +7,6 @@
 #include "lazy_representative_subset_calculator.h"
 #include "fast_representative_subset_calculator.h"
 #include "lazy_fast_representative_subset_calculator.h"
-#include "sendAll_subset_calculator.h"
 #include "similarity_matrix/tests.h"
 
 #include "kernel_matrix/tests.h"

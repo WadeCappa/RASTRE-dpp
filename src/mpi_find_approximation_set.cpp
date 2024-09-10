@@ -14,7 +14,6 @@
 #include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/sendAll_subset_calculator.h"
 
 #include "representative_subset_calculator/buffers/buffer_builder.h"
 
