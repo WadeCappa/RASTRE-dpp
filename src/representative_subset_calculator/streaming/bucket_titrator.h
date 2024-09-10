@@ -241,8 +241,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
             for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
                 std::unique_ptr<CandidateSeed>& seed = pulledFromQueue[seedIndex];
-                bool accepted = this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
-                bucketsStillAcceptingSeeds[bucketIndex] = bucketsStillAcceptingSeeds[bucketIndex] || accepted;
+                this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
             }
         }
 
