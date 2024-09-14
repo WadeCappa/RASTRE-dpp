@@ -212,6 +212,9 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
                 this->seedStorage.push_back(move(seed));
             } else if (this->isFull()) {
                 stillAcceptingSeeds = false;
+                
+                // Exit early if you can no longer accept any more seeds
+                return false;
             } else {
                 this->t += 1; 
                 if (this->t >= this->T && this->currentBucketIndex < this->totalBuckets) {
@@ -222,9 +225,6 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
                     this->bucket = bucket->transferContents(threshold);
                 } 
             }
-        }
-
-        for (size_t i = 0; i < pulledFromQueue.size(); i++) {
         }
 
         return stillAcceptingSeeds;
@@ -395,12 +395,17 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
             }
 
             // attempt insert seed in buckets
-            #pragma omp parallel for num_threads(this->numThreads)
+            bool stillAccepting = false;
+            #pragma omp parallel for num_threads(this->numThreads) reduction(||:stillAccepting)
             for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
-                this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
+                stillAccepting = stillAccepting || this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
             }
 
-            this->seedStorage.push_back(move(seed));
+            if (!stillAccepting) {
+                return false;
+            } else {
+                this->seedStorage.push_back(move(seed));
+            }
         }
 
         return this->isFull();
