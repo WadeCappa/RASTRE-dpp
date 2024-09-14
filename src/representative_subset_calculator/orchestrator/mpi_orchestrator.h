@@ -89,12 +89,12 @@ class MpiOrchestrator : public Orchestrator {
         return output;
     }
 
-    static std::unique_ptr<BucketTitrator> buildTitrator(const AppData &appData, const unsigned int threads, float firstDeltaZero = 0.0, bool standalone = false) {
+    static std::unique_ptr<BucketTitrator> buildTitrator(const AppData &appData, const unsigned int threads) {
         if (appData.distributedAlgorithm == 1) {
-            return SieveStreamingBucketTitrator::create(threads, appData.distributedEpsilon, appData.outputSetSize, firstDeltaZero, standalone);
+            return SieveStreamingBucketTitrator::createWithDynamicBuckets(threads, appData.distributedEpsilon, appData.outputSetSize);
         }
         else if (appData.distributedAlgorithm == 2) {
-            return ThreeSieveBucketTitrator::create(appData.distributedEpsilon, appData.threeSieveT, appData.outputSetSize, firstDeltaZero, standalone);
+            return ThreeSieveBucketTitrator::createWithDynamicBuckets(appData.distributedEpsilon, appData.threeSieveT, appData.outputSetSize);
         } else {
             throw std::invalid_argument("ERROR: bad input");
         }

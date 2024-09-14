@@ -51,7 +51,6 @@ int main(int argc, char** argv) {
 
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     std::vector<std::unique_ptr<CandidateSeed>> elements;
-    float firstDeltaZero = -1;    
     std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
 
     timers.loadingDatasetTime.startTimer();
@@ -64,9 +63,6 @@ int main(int argc, char** argv) {
             break;
         }
 
-        if (firstDeltaZero == -1) { //for initBuckets
-            firstDeltaZero = 2 * std::log(std::sqrt(nextRow->dotProduct(*nextRow) + 1));
-        }
         auto element = std::unique_ptr<CandidateSeed>(new CandidateSeed(globalRow++, move(nextRow), 1));
         elements.push_back(move(element));
     }
@@ -85,7 +81,7 @@ int main(int argc, char** argv) {
     auto baseline = getPeakRSS();
 
     std::unique_ptr<CandidateConsumer> candidateConsumer(new StreamingCandidateConsumer(
-        MpiOrchestrator::buildTitrator(appData, omp_get_num_threads() - 1, firstDeltaZero, true))
+        MpiOrchestrator::buildTitrator(appData, omp_get_num_threads() - 1))
     );
 
     candidateConsumer->accept(queue, timers);
