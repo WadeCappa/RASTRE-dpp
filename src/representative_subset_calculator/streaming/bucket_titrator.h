@@ -67,6 +67,7 @@ class LazyInitializingBucketTitrator : public BucketTitrator {
     bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         if (!this->delegate.has_value()) {
             this->delegate = factory->createWithKnownDeltaZero(getDeltaZero(seedQueue));
+            std::cout << "created titrator from queue of size " << seedQueue.size() << std::endl;
         } 
 
         return this->delegate.value()->processQueue(seedQueue);
