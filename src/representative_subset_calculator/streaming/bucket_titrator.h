@@ -403,16 +403,17 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
             }
 
             // attempt insert seed in buckets
-            bool stillAccepting = false;
-            #pragma omp parallel for num_threads(this->numThreads) reduction(||:stillAccepting)
+            bool seedInserted = false;
+            #pragma omp parallel for num_threads(this->numThreads) reduction(||:seedInserted)
             for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
-                stillAccepting = stillAccepting || this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
+                seedInserted = seedInserted || this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
             }
 
-            if (!stillAccepting) {
-                return false;
-            } else {
+            if (seedInserted) {
                 this->seedStorage.push_back(move(seed));
+            } else if (this->isFull()) {
+                // If all buckets are full, exit early
+                return false;
             }
         }
 
