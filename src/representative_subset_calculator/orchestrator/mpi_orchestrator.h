@@ -89,19 +89,20 @@ class MpiOrchestrator : public Orchestrator {
         return output;
     }
 
-    static std::unique_ptr<BucketTitrator> buildTitrator(const AppData &appData, const unsigned int threads) {
+    static std::unique_ptr<BucketTitratorFactory> buildTitratorFactory(const AppData &appData, const unsigned int threads) {
         if (appData.distributedAlgorithm == 1) {
-            return SieveStreamingBucketTitrator::createWithDynamicBuckets(threads, appData.distributedEpsilon, appData.outputSetSize);
+            return std::unique_ptr<BucketTitratorFactory>(new SieveStreamingBucketTitratorFactory(threads, appData.distributedEpsilon, appData.outputSetSize));
         }
         else if (appData.distributedAlgorithm == 2) {
-            return ThreeSieveBucketTitrator::createWithDynamicBuckets(appData.distributedEpsilon, appData.threeSieveT, appData.outputSetSize);
+            return std::unique_ptr<BucketTitratorFactory>(new ThreeSeiveBucketTitratorFactory(appData.distributedEpsilon, appData.threeSieveT, appData.outputSetSize));
         } else {
             throw std::invalid_argument("ERROR: bad input");
         }
     }
 
     static std::unique_ptr<CandidateConsumer> buildConsumer(const AppData &appData, const unsigned int threads, const unsigned int numSenders) {
-        std::unique_ptr<BucketTitrator> titrator(buildTitrator(appData, threads));
-        return std::unique_ptr<NaiveCandidateConsumer>(new NaiveCandidateConsumer(move(titrator), numSenders));
+        std::unique_ptr<BucketTitratorFactory> titratorFactory(buildTitratorFactory(appData, threads));
+        std::unique_ptr<BucketTitrator> lazyTitrator(new LazyInitializingBucketTitrator(move(titratorFactory)));
+        return std::unique_ptr<NaiveCandidateConsumer>(new NaiveCandidateConsumer(move(lazyTitrator), numSenders));
     }
 };

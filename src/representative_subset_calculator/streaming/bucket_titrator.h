@@ -34,7 +34,8 @@ class BucketTitrator {
 
 class BucketTitratorFactory {
     public:
-    virtual std::unique_ptr<BucketTitrator> createWithKnownDeltaZero(const float deltaZero) = 0;
+    virtual std::unique_ptr<BucketTitrator> createWithKnownDeltaZero(const float deltaZero) const = 0;
+    virtual std::unique_ptr<BucketTitrator> createWithDynamicBuckets() const = 0;
 };
 
 class LazyInitializingBucketTitrator : public BucketTitrator {
@@ -43,16 +44,32 @@ class LazyInitializingBucketTitrator : public BucketTitrator {
     std::unique_ptr<BucketTitratorFactory> factory;
 
     static float getDeltaZero(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+        
+        // TODO: Keep this in one place. If we ever end up fixing the dependency on the candidate consumer 
+        //  then calling this constructor repeadily is wasted work (also in theory this class should be 
+        //  in change of determining when to build the titrator, not the consumer).
+        std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
 
+        float deltaZero = 0.0;
+        for (size_t i = 0; i < pulledFromQueue.size(); i++) {
+            std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[i]);
+            deltaZero = std::max(deltaZero, std::log(std::sqrt(PerRowRelevanceCalculator::getScore(seed->getData(), *calcFactory))) * 2);
+        }
+
+        seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
+        return deltaZero;
     }
 
     public:
+    LazyInitializingBucketTitrator(std::unique_ptr<BucketTitratorFactory> factory) : factory(move(factory)) {}
+
     bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         if (!this->delegate.has_value()) {
             this->delegate = factory->createWithKnownDeltaZero(getDeltaZero(seedQueue));
         } 
 
-        this->delegate.value()->processQueue(seedQueue);
+        return this->delegate.value()->processQueue(seedQueue);
     }
 
     std::unique_ptr<Subset> getBestSolutionDestroyTitrator() {
@@ -234,8 +251,12 @@ class ThreeSeiveBucketTitratorFactory : public BucketTitratorFactory {
         const unsigned int k
     ) : epsilon(epsilon), T(T), k(k) {}
 
-    std::unique_ptr<BucketTitrator> createWithKnownDeltaZero(const float deltaZero) {
+    std::unique_ptr<BucketTitrator> createWithKnownDeltaZero(const float deltaZero) const {
         return ThreeSieveBucketTitrator::createWithKnownDeltaZero(epsilon, T, k, deltaZero);
+    }
+
+    std::unique_ptr<BucketTitrator> createWithDynamicBuckets() const {
+        return ThreeSieveBucketTitrator::createWithDynamicBuckets(epsilon, T, k);
     }
 };
 
@@ -422,7 +443,11 @@ class SieveStreamingBucketTitratorFactory : public BucketTitratorFactory {
         const unsigned int k
     ) : numThreads(numThreads), epsilon(epsilon), k(k) {}
 
-    std::unique_ptr<BucketTitrator> createWithKnownDeltaZero(const float deltaZero) {
+    std::unique_ptr<BucketTitrator> createWithKnownDeltaZero(const float deltaZero) const {
         return SieveStreamingBucketTitrator::createWithKnownDeltaZero(numThreads, epsilon, k, deltaZero);
+    }
+
+    std::unique_ptr<BucketTitrator> createWithDynamicBuckets() const {
+        return SieveStreamingBucketTitrator::createWithDynamicBuckets(numThreads, epsilon, k);
     }
 };

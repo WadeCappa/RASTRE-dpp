@@ -80,7 +80,9 @@ int main(int argc, char** argv) {
 
     auto baseline = getPeakRSS();
 
-    std::unique_ptr<BucketTitrator> titrator(MpiOrchestrator::buildTitrator(appData, omp_get_num_threads() - 1));
+    std::unique_ptr<BucketTitrator> titrator(
+        MpiOrchestrator::buildTitratorFactory(appData, omp_get_num_threads() - 1)->createWithDynamicBuckets()
+    );
 
     timers.insertSeedsTimer.startTimer();
     titrator->processQueue(queue);
