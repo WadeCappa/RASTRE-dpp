@@ -350,7 +350,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         const float epsilon,
         const unsigned int k) {
     
-        return create(numThreads, epsilon, k * 2, 0.0, false);
+        return create(numThreads, epsilon, k, 0.0, false);
     }
 
     static std::unique_ptr<SieveStreamingBucketTitrator> createWithKnownDeltaZero(
@@ -359,7 +359,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         const unsigned int k,
         const float deltaZero) {
     
-        return create(numThreads, epsilon, k * 2, deltaZero, true);
+        return create(numThreads, epsilon, k, deltaZero, true);
     }
 
     bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
