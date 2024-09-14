@@ -25,10 +25,16 @@ class BucketTitrator {
         return std::pow(1 + epsilon, i);
     }
 
-    static float getDeltaFromSeed(const CandidateSeed& seed, const RelevanceCalculatorFactory& calcFactory) {
-        float delta = std::log(std::sqrt(PerRowRelevanceCalculator::getScore(seed.getData(), calcFactory))) * 2;
-        // std::cout << "found delta of " << delta << " for seed " << seed.getRow() << std::endl;
-        return delta;
+    static float getDeltaFromSeed(const CandidateSeed& seed, const RelevanceCalculatorFactory& calcFactory, bool knowDeltaZero) {
+
+        // Returning 0.0 here is safe since it is expected that the current deltaZero is always 
+        //  greater than or equal to 0.0. All if statements that compare deltaZero to newD0 will
+        //  not pass if we return 0.0 here.
+        if (knowDeltaZero) {
+            return 0.0;
+        }
+
+        return std::log(std::sqrt(PerRowRelevanceCalculator::getScore(seed.getData(), calcFactory))) * 2;
     }
 };
 
@@ -196,9 +202,10 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
 
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
             std::unique_ptr<CandidateSeed> seed = move(pulledFromQueue[seedIndex]);
-            float newD0 = getDeltaFromSeed(*seed, *calcFactory);
+            
+            float newD0 = getDeltaFromSeed(*seed, *calcFactory, knownD0);
         
-            if (!this->knownD0 && newD0 > this->deltaZero) {
+            if (newD0 > this->deltaZero) {
                 // std::cout << "new d0 is larger, " << newD0 << " > " << this->deltaZero << std::endl;
                 float threshold = getThresholdForBucket(this->totalBuckets - 1, newD0, epsilon);
                 this->bucket = std::make_unique<ThresholdBucket>(threshold, k);
@@ -369,9 +376,10 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         float currentMaxThreshold = this->buckets[this->buckets.size() - 1].getThreshold();
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) { 
             std::unique_ptr<CandidateSeed> seed = move(pulledFromQueue[seedIndex]);
-            float newD0 = getDeltaFromSeed(*seed, *calcFactory);
+            
+            float newD0 = getDeltaFromSeed(*seed, *calcFactory, knownD0);
 
-            if (!this->knownD0 && newD0 > this->deltaZero) {
+            if (newD0 > this->deltaZero) {
                 this->deltaZero = newD0;
                 float min_threshold = this->getThresholdForBucket(0, deltaZero, epsilon);
                 size_t removeBucketIndexBelow = 0;
