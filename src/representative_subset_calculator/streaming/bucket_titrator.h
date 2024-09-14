@@ -75,7 +75,10 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
      * Only used for standalone streaming. This method will create a titrator that *does not* know delta zero, and 
      * will dynamicaly adjust buckets using input seeds.
      */
-    static std::unique_ptr<ThreeSieveBucketTitrator> createWithDynamicBuckets(const float epsilon, const unsigned int T, const unsigned int k) {
+    static std::unique_ptr<ThreeSieveBucketTitrator> createWithDynamicBuckets(
+        const float epsilon, 
+        const unsigned int T, 
+        const unsigned int k) {
 
         float firstDeltaZero = 0.0;
         std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
@@ -207,7 +210,14 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
         size_t totalBuckets = getNumberOfBuckets(2 * k, epsilon);
         int upperBound = 2 * k;
-        std::vector<ThresholdBucket> buckets(move(initBuckets(firstDeltaZero, epsilon, upperBound, totalBuckets)));
+        std::vector<ThresholdBucket> buckets;
+        std::cout << "number of buckets " << totalBuckets << " with deltaZero of " << firstDeltaZero << std::endl;
+ 
+        for (int bucket = 0; bucket < totalBuckets; bucket++) {
+            float threshold = getThresholdForBucket(bucket, firstDeltaZero, epsilon);
+            buckets.push_back(ThresholdBucket(threshold, k));
+        }
+
         return std::unique_ptr<SieveStreamingBucketTitrator>(
             new SieveStreamingBucketTitrator(
                 numThreads, 
@@ -296,18 +306,5 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         }
         
         return stillAccepting;
-    }
-
-    private:
-    static std::vector<ThresholdBucket> initBuckets(const float deltaZero, const float epsilon, const unsigned int k, const size_t numBuckets) {
-        std::vector<ThresholdBucket> res;
-        std::cout << "number of buckets " << numBuckets << " with deltaZero of " << deltaZero << std::endl;
- 
-        for (int bucket = 0; bucket < numBuckets; bucket++) {
-            float threshold = getThresholdForBucket(bucket, deltaZero, epsilon);
-            res.push_back(ThresholdBucket(threshold, k));
-        }
-
-        return move(res);
     }
 };

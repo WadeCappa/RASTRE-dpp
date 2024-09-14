@@ -80,17 +80,17 @@ int main(int argc, char** argv) {
 
     auto baseline = getPeakRSS();
 
-    std::unique_ptr<CandidateConsumer> candidateConsumer(new StreamingCandidateConsumer(
-        MpiOrchestrator::buildTitrator(appData, omp_get_num_threads() - 1))
-    );
+    std::unique_ptr<BucketTitrator> titrator(MpiOrchestrator::buildTitrator(appData, omp_get_num_threads() - 1));
 
-    candidateConsumer->accept(queue, timers);
+    timers.insertSeedsTimer.startTimer();
+    titrator->processQueue(queue);
+    timers.insertSeedsTimer.stopTimer();
     
     memUsage = getPeakRSS()- baseline;
     
     timers.totalCalculationTime.stopTimer();
 
-    std::unique_ptr<Subset> solution(candidateConsumer->getBestSolutionDestroyConsumer());
+    std::unique_ptr<Subset> solution(titrator->getBestSolutionDestroyTitrator());
     
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         inputFile.close();

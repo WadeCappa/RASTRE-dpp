@@ -64,31 +64,3 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
     }
 };
-
-class StreamingCandidateConsumer : public CandidateConsumer {
-    private:
-    const std::unique_ptr<BucketTitrator> titrator;
-
-    public: 
-    static std::unique_ptr<StreamingCandidateConsumer> from(std::unique_ptr<BucketTitrator> titrator) {
-        return std::unique_ptr<StreamingCandidateConsumer>(new StreamingCandidateConsumer(move(titrator)));
-    }
-
-    StreamingCandidateConsumer(
-        std::unique_ptr<BucketTitrator> titrator
-    ) : titrator(move(titrator)) {}
-
-    std::unique_ptr<Subset> getBestSolutionDestroyConsumer() {
-        return this->titrator->getBestSolutionDestroyTitrator();
-    }
-
-    bool accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) {
-        if (seedQueue.isEmpty()) {
-            return this->titrator->isFull();
-        }
-        timers.insertSeedsTimer.startTimer();
-        this->titrator->processQueue(seedQueue);
-        timers.insertSeedsTimer.stopTimer();
-        return this->titrator->isFull();
-    }
-};
