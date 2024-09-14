@@ -242,6 +242,11 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
     }
 
     bool isFull() const {
+        // When we don't know d0 ahead of time, this can never be true
+        if (!knownD0) {
+            return false;
+        }
+
         return bucket->isFull() || this->currentBucketIndex >= this->totalBuckets;
     }
 };
@@ -435,6 +440,11 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
     }
 
     bool isFull() const {
+        // When we don't know d0 ahead of time, this can never be true
+        if (!knownD0) {
+            return false;
+        }
+
         // As long as one bucket is still accepting seeds this titrator should not return false.
         bool stillAccepting = false;
         for (const ThresholdBucket& bucket : this->buckets) {
