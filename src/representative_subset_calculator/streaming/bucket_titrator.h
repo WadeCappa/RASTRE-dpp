@@ -24,7 +24,7 @@ class BucketTitrator {
 
     static float getDeltaFromSeed(const CandidateSeed& seed, const RelevanceCalculatorFactory& calcFactory) {
         float delta = std::log(std::sqrt(PerRowRelevanceCalculator::getScore(seed.getData(), calcFactory))) * 2;
-        std::cout << "found delta of " << delta << " for seed " << seed.getRow() << std::endl;
+        // std::cout << "found delta of " << delta << " for seed " << seed.getRow() << std::endl;
         return delta;
     }
 };
@@ -107,7 +107,6 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
             if (newD0 > this->deltaZero) {
                 // std::cout << "new d0 is larger, " << newD0 << " > " << this->deltaZero << std::endl;
                 float threshold = getThresholdForBucket(this->totalBuckets - 1, newD0, epsilon);
-                // std::cout << "Adding new buket with threshold: " << threshold << " since the previous max threshold was " << newD0 << std::endl;
                 this->bucket = std::make_unique<ThresholdBucket>(threshold, k);
                 this->t = 0; 
                 this->currentBucketIndex = 0;
@@ -235,7 +234,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                 for (size_t bucket = 0; bucket < this->totalBuckets; bucket++) {
                     float threshold = getThresholdForBucket(bucket, deltaZero, epsilon);
                     if (threshold > currentMaxThreshold) {
-                        std::cout << "Adding new buket with threshold: " << threshold << " since the previous max threshold was " << currentMaxThreshold << std::endl;
+                        // std::cout << "Adding new buket with threshold: " << threshold << " since the previous max threshold was " << currentMaxThreshold << std::endl;
                         this->buckets.push_back(ThresholdBucket(threshold, k));
                         currentMaxThreshold = threshold;
                     }            
