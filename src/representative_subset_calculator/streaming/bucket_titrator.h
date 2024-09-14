@@ -1,5 +1,4 @@
 
-
 class BucketTitrator {
     public:
     // Returns true when this titrator is still accepting seeds, false otherwise.
@@ -7,7 +6,11 @@ class BucketTitrator {
     virtual std::unique_ptr<Subset> getBestSolutionDestroyTitrator() = 0;
     virtual bool isFull() const = 0;
 
-    protected:
+    public:
+    static size_t getNumberOfBuckets(const unsigned int k, const float epsilon, bool optimisticBounds) {
+        return getNumberOfBuckets(optimisticBounds ? k : k * 2, epsilon);
+    }
+
     static size_t getNumberOfBuckets(const unsigned int k, const float epsilon) {
         
         size_t numBuckets = (int)(0.5 + [](float val, float base) {
@@ -26,6 +29,46 @@ class BucketTitrator {
         float delta = std::log(std::sqrt(PerRowRelevanceCalculator::getScore(seed.getData(), calcFactory))) * 2;
         // std::cout << "found delta of " << delta << " for seed " << seed.getRow() << std::endl;
         return delta;
+    }
+};
+
+class BucketTitratorFactory {
+    public:
+    virtual std::unique_ptr<BucketTitrator> createWithKnownDeltaZero(const float deltaZero) = 0;
+};
+
+class LazyInitializingBucketTitrator : public BucketTitrator {
+    private:
+    std::optional<std::unique_ptr<BucketTitrator>> delegate;
+    std::unique_ptr<BucketTitratorFactory> factory;
+
+    static float getDeltaZero(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+
+    }
+
+    public:
+    bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
+        if (!this->delegate.has_value()) {
+            this->delegate = factory->createWithKnownDeltaZero(getDeltaZero(seedQueue));
+        } 
+
+        this->delegate.value()->processQueue(seedQueue);
+    }
+
+    std::unique_ptr<Subset> getBestSolutionDestroyTitrator() {
+        if (!this->delegate.has_value()) {
+            throw std::invalid_argument("delegate should have been initialized");
+        } 
+
+        return this->delegate.value()->getBestSolutionDestroyTitrator();
+    }
+
+    bool isFull() const {
+        if (!this->delegate.has_value()) {
+            return false;
+        } 
+
+        return this->delegate.value()->isFull();
     }
 };
 
@@ -70,6 +113,36 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         calcFactory(move(calcFactory))
     {}
 
+    static std::unique_ptr<ThreeSieveBucketTitrator> create(
+        const float epsilon, 
+        const unsigned int T, 
+        const unsigned int k,
+        const float maybeDeltaZero,
+
+        // If true, delta zero is known at this point. Otherwise this should be false.
+        const bool deltaZeroAlreadyKnown) {
+
+        std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
+        size_t totalBuckets = getNumberOfBuckets(k, epsilon, deltaZeroAlreadyKnown);
+        float threshold = getThresholdForBucket(totalBuckets - 1, maybeDeltaZero, epsilon);
+        
+        // TODO: verify that we should create this thresholdbucket with 'k' instead of 'k * 2' here
+        std::unique_ptr<ThresholdBucket>bucket = std::make_unique<ThresholdBucket>(threshold, k);
+        // std::cout << "number of buckets " << totalBuckets << " with deltaZero of " << maybeDeltaZero << std::endl;
+        return std::unique_ptr<ThreeSieveBucketTitrator>(
+            new ThreeSieveBucketTitrator(
+                epsilon, 
+                T, 
+                k, 
+                move(calcFactory), 
+                totalBuckets, 
+                false,
+                maybeDeltaZero, 
+                move(bucket)
+            )
+        );
+    }
+
     public:
     /**
      * Only used for standalone streaming. This method will create a titrator that *does not* know delta zero, and 
@@ -79,27 +152,17 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         const float epsilon, 
         const unsigned int T, 
         const unsigned int k) {
-
-        float firstDeltaZero = 0.0;
-        std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
-        size_t totalBuckets = getNumberOfBuckets(2 * k, epsilon);
-        float threshold = getThresholdForBucket(totalBuckets - 1, firstDeltaZero, epsilon);
         
-        // TODO: verify that we should create this thresholdbucket with 'k' instead of 'k * 2' here
-        std::unique_ptr<ThresholdBucket>bucket = std::make_unique<ThresholdBucket>(threshold, k);
-        // std::cout << "number of buckets " << totalBuckets << " with deltaZero of " << firstDeltaZero << std::endl;
-        return std::unique_ptr<ThreeSieveBucketTitrator>(
-            new ThreeSieveBucketTitrator(
-                epsilon, 
-                T, 
-                k, 
-                move(calcFactory), 
-                totalBuckets, 
-                false,
-                firstDeltaZero, 
-                move(bucket)
-            )
-        );
+        return ThreeSieveBucketTitrator::create(epsilon, T, k, 0.0, false);
+    }
+
+    static std::unique_ptr<ThreeSieveBucketTitrator> createWithKnownDeltaZero(
+        const float epsilon, 
+        const unsigned int T, 
+        const unsigned int k,
+        const float deltaZero) {
+        
+        return ThreeSieveBucketTitrator::create(epsilon, T, k, deltaZero, true);
     }
 
     bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
@@ -158,6 +221,24 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
     }
 };
 
+class ThreeSeiveBucketTitratorFactory : public BucketTitratorFactory {
+    private:
+    const float epsilon;
+    const unsigned int T;
+    const unsigned int k;
+
+    public:
+    ThreeSeiveBucketTitratorFactory(
+        const float epsilon,
+        const unsigned int T,
+        const unsigned int k
+    ) : epsilon(epsilon), T(T), k(k) {}
+
+    std::unique_ptr<BucketTitrator> createWithKnownDeltaZero(const float deltaZero) {
+        return ThreeSieveBucketTitrator::createWithKnownDeltaZero(epsilon, T, k, deltaZero);
+    }
+};
+
 class SieveStreamingBucketTitrator : public BucketTitrator {
     private:
     const float epsilon;
@@ -196,25 +277,22 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         calcFactory(move(calcFactory))
     {}
 
-    public:
-    /**
-     * Only used for standalone streaming. This method will create a titrator that *does not* know delta zero, and 
-     * will dynamicaly adjust buckets using input seeds.
-     */
-    static std::unique_ptr<SieveStreamingBucketTitrator> createWithDynamicBuckets(
+    static std::unique_ptr<SieveStreamingBucketTitrator> create(
         const unsigned int numThreads,
         const float epsilon,
-        const unsigned int k) {
+        const unsigned int k,
+        const float maybeDeltaZero,
+        
+        // If true, delta zero is known at this point. Otherwise this should be false.
+        const bool deltaZeroAlreadyKnown) {
 
-        float firstDeltaZero = 0.0;
         std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
-        size_t totalBuckets = getNumberOfBuckets(2 * k, epsilon);
-        int upperBound = 2 * k;
+        size_t totalBuckets = getNumberOfBuckets(k, epsilon, deltaZeroAlreadyKnown);
         std::vector<ThresholdBucket> buckets;
-        std::cout << "number of buckets " << totalBuckets << " with deltaZero of " << firstDeltaZero << std::endl;
+        std::cout << "number of buckets " << totalBuckets << " with maybeDeltaZero of " << maybeDeltaZero << std::endl;
  
         for (int bucket = 0; bucket < totalBuckets; bucket++) {
-            float threshold = getThresholdForBucket(bucket, firstDeltaZero, epsilon);
+            float threshold = getThresholdForBucket(bucket, maybeDeltaZero, epsilon);
             buckets.push_back(ThresholdBucket(threshold, k));
         }
 
@@ -224,13 +302,35 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                 epsilon, 
                 k, 
                 totalBuckets,
-                false,
-                firstDeltaZero, 
+                deltaZeroAlreadyKnown,
+                maybeDeltaZero, 
                 move(buckets), 
                 std::vector<std::unique_ptr<CandidateSeed>>(), 
                 move(calcFactory)
             )
         );
+    }
+
+    public:
+    /**
+     * Only used for standalone streaming. This method will create a titrator that *does not* know delta zero, and 
+     * will dynamicaly adjust buckets using input seeds.
+     */
+    static std::unique_ptr<SieveStreamingBucketTitrator> createWithDynamicBuckets(
+        const unsigned int numThreads,
+        const float epsilon,
+        const unsigned int k) {
+    
+        return create(numThreads, epsilon, k * 2, 0.0, false);
+    }
+
+    static std::unique_ptr<SieveStreamingBucketTitrator> createWithKnownDeltaZero(
+        const unsigned int numThreads,
+        const float epsilon,
+        const unsigned int k,
+        const float deltaZero) {
+    
+        return create(numThreads, epsilon, k * 2, deltaZero, true);
     }
 
     bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
@@ -306,5 +406,23 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         }
         
         return stillAccepting;
+    }
+};
+
+class SieveStreamingBucketTitratorFactory : public BucketTitratorFactory {
+    private:
+    const unsigned int numThreads;
+    const float epsilon;
+    const unsigned int k;
+
+    public:
+    SieveStreamingBucketTitratorFactory(
+        const unsigned int numThreads,
+        const float epsilon,
+        const unsigned int k
+    ) : numThreads(numThreads), epsilon(epsilon), k(k) {}
+
+    std::unique_ptr<BucketTitrator> createWithKnownDeltaZero(const float deltaZero) {
+        return SieveStreamingBucketTitrator::createWithKnownDeltaZero(numThreads, epsilon, k, deltaZero);
     }
 };
