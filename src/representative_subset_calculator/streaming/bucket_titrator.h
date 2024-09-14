@@ -217,11 +217,6 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
             if (this->bucket->attemptInsert(seed->getRow(), seed->getData())) { 
                 this->t = 0; 
                 this->seedStorage.push_back(move(seed));
-            } else if (this->isFull()) {
-                stillAcceptingSeeds = false;
-                
-                // Exit early if you can no longer accept any more seeds
-                return false;
             } else {
                 this->t += 1; 
                 if (this->t >= this->T && this->currentBucketIndex < this->totalBuckets) {
@@ -231,6 +226,12 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
                     float threshold = getThresholdForBucket(this->totalBuckets - 1 - this->currentBucketIndex, this->deltaZero, epsilon);
                     this->bucket = bucket->transferContents(threshold);
                 } 
+            }
+
+            if (this->isFull()) {
+                // Exit early if you can no longer accept any more seeds
+                std::cout << "Titrator can't accept any more seeds. Exiting early" << std::endl;
+                return false;
             }
         }
 
@@ -400,7 +401,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                 for (size_t bucket = 0; bucket < this->totalBuckets; bucket++) {
                     float threshold = getThresholdForBucket(bucket, deltaZero, epsilon);
                     if (threshold > currentMaxThreshold) {
-                        // std::cout << "Adding new buket with threshold: " << threshold << " since the previous max threshold was " << currentMaxThreshold << std::endl;
+                        std::cout << "Adding new buket with threshold: " << threshold << " since the previous max threshold was " << currentMaxThreshold << std::endl;
                         this->buckets.push_back(ThresholdBucket(threshold, k));
                         currentMaxThreshold = threshold;
                     }            
@@ -418,6 +419,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                 this->seedStorage.push_back(move(seed));
             } else if (this->isFull()) {
                 // If all buckets are full, exit early
+                std::cout << "Titrator can't accept any more seeds. Exiting early" << std::endl;
                 return false;
             }
         }
