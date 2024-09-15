@@ -401,7 +401,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                 for (size_t bucket = 0; bucket < this->totalBuckets; bucket++) {
                     float threshold = getThresholdForBucket(bucket, deltaZero, epsilon);
                     if (threshold > currentMaxThreshold) {
-                        std::cout << "Adding new buket with threshold: " << threshold << " since the previous max threshold was " << currentMaxThreshold << std::endl;
+                        // std::cout << "Adding new buket with threshold: " << threshold << " since the previous max threshold was " << currentMaxThreshold << std::endl;
                         this->buckets.push_back(ThresholdBucket(threshold, k));
                         currentMaxThreshold = threshold;
                     }            
@@ -410,7 +410,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
 
             // attempt insert seed in buckets
             bool seedInserted = false;
-            #pragma omp parallel for num_threads(this->numThreads) reduction(||:seedInserted)
+            // #pragma omp parallel for num_threads(this->numThreads) reduction(||:seedInserted)
             for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
                 seedInserted = seedInserted || this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
             }
