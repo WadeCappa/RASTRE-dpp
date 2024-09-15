@@ -23,7 +23,7 @@ class FastSubsetCalculator : public SubsetCalculator {
         }
 
         if (highestScore < 0) {
-            std::cout << "failed to find next highest score" << std::endl;
+            spdlog::error("failed to find next highest score");
         }
         
         return std::make_pair(bestRow, highestScore);
@@ -69,7 +69,7 @@ class FastSubsetCalculator : public SubsetCalculator {
 
             // To ensure "Numerical stability" ¯\_(ツ)_/¯
             if (bestScore.second <= this->epsilon) {
-                std::cout << "score of " << bestScore.second << " was less than " << this->epsilon << ". " << std::endl;
+                spdlog::info("score of {0:f} was less than {1:f}", bestScore.second, this->epsilon);
                 return MutableSubset::upcast(move(consumer));
             }
 

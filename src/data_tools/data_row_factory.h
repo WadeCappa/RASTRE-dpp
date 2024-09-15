@@ -446,7 +446,7 @@ class SparseDataRowFactory : public DataRowFactory {
                 this->hasData = true;
                 return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
             } else {
-                std::cout << "ERROR: had current row of " << currentRow << " and expected row of " << this->expectedRow << std::endl;
+                spdlog::error("had current row of {0:d} and expected row of {1:d}", currentRow, this->expectedRow);
                 throw std::invalid_argument("ERROR: cannot backtrack");
             }
         } 

@@ -1,3 +1,5 @@
+#include "log_macros.h"
+
 #include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/representative_subset.h"
 #include "data_tools/data_row_visitor.h"
@@ -42,7 +44,6 @@ void randGreedi(
     const std::vector<unsigned int> &rowToRank, 
     Timers &timers
 ) {
-    
     unsigned int sendDataSize = 0;
     std::vector<int> receivingDataSizesBuffer(appData.worldSize, 0);
     std::vector<float> sendBuffer;
@@ -125,7 +126,7 @@ void streaming(
 
     if (appData.worldRank == 0) {
         rowSize = rowSizes.back();
-        std::cout << "rank 0 entered into the streaming function and knows the total columns of "<< rowSize << std::endl;
+        spdlog::info("rank 0 entered into the streaming function and knows the total columns of {0:d}", rowSize);
         timers.totalCalculationTime.startTimer();
 
         // if you are using an adjacency list as input, double this. Sparse data could theoretically
@@ -143,13 +144,13 @@ void streaming(
         );
         SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers, !appData.stopEarly);
 
-        std::cout << "rank 0 built all objects, ready to start receiving" << std::endl;
+        spdlog::info("rank 0 built all objects, ready to start receiving");
         std::unique_ptr<Subset> solution(streamer.resolveStream());
         timers.totalCalculationTime.stopTimer();
-        std::cout << "rank 0 finished receiving" << std::endl;
+        spdlog::info("rank 0 finished receiving");
 
         MPI_Barrier(MPI_COMM_WORLD);
-        std::cout << "receiver is through the barrier" << std::endl;
+        spdlog::info("receiver is through the barrier");
 
         nlohmann::json result = MpiOrchestrator::buildMpiOutput(
             appData, *solution.get(), data, timers, rowToRank
@@ -158,14 +159,14 @@ void streaming(
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);
         outputFile.close();
-        std::cout << "rank 0 output all information" << std::endl;
+        spdlog::info("rank 0 output all information");
     } else {
-        std::cout << "rank " << appData.worldRank << " entered streaming function and know the total columns of " << data.totalColumns() << std::endl;
+        spdlog::info("rank {0:d} entered streaming function and know the total columns of {1:d}", appData.worldRank, data.totalColumns());
         timers.totalCalculationTime.startTimer();
         
         std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, std::floor(appData.outputSetSize * appData.alpha), timers));
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
-        std::cout << "rank " << appData.worldRank << " ready to start streaming local seeds" << std::endl;
+        spdlog::info("rank {0:d} is ready to start streaming local seeds", appData.worldRank);
 
         timers.localCalculationTime.startTimer();
         std::thread findAndSendSolution([&calculator, &subset, &data, &appData]() {
@@ -180,7 +181,7 @@ void streaming(
             // Don't kill any extra sends, we need them to compare local solutions to the global solution.
             findAndSendSolution.join();
         }
-        std::cout << "rank " << appData.worldRank << " finished streaming local seeds" << std::endl;
+        spdlog::info("rank {0:d} finished streaming local seeds", appData.worldRank);
 
         timers.localCalculationTime.stopTimer();
         timers.totalCalculationTime.stopTimer();
@@ -191,6 +192,9 @@ void streaming(
 }
 
 int main(int argc, char** argv) {
+
+    LoggerHelper::setupLoggers();
+
     CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};
     AppData appData;
     MpiOrchestrator::addMpiCmdOptions(app, appData);
@@ -255,26 +259,27 @@ int main(int argc, char** argv) {
     } else if (appData.distributedAlgorithm == 3) {
 
         std::string output = appData.outputFile;
-        std::cout << "Commencing Baseline RandGreedI..." << std::endl; 
+        spdlog::info("Starting Baseline RandGreedI...");
         appData.distributedAlgorithm = 0;
         appData.outputFile = output + "_RandGreedI_Base.json";
         randGreedi(appData, *data, rowToRank, comparisonTimers[0]);
-        std::cout << "Finished Baseline RandGreedI..." << std::endl; 
 
-        std::cout << "Commencing RandGreedI + Streaming with Sieve Streaming..." << std::endl; 
+        spdlog::info("Done! Starting RandGreedI + Streaming with Sieve Streaming...");
+
         appData.distributedAlgorithm = 1;
         appData.outputFile = output + "_RandGreedI_Sieve.json";
         streaming(appData, *data, rowToRank, comparisonTimers[1]);
-        std::cout << "Finished RandGreedI + Streaming with Sieve Streaming..." << std::endl; 
 
-        std::cout << "Commencing RandGreedI + Streaming with Three-Sieves Streaming..." << std::endl; 
+        spdlog::info("Done! Starting RandGreedI + Streaming with Three-Sieves Streaming... ");
+
         appData.distributedAlgorithm = 2;
         appData.outputFile = output + "_RandGreedI_ThreeSieve.json";
         streaming(appData, *data, rowToRank, comparisonTimers[2]);
-        std::cout << "Finished RandGreedI + Streaming with Three-Sieves Streaming..." << std::endl; 
+        
+        spdlog::info("Done!");
 
     } else {
-        std::cout << "did not recognize distributed Algorithm of " << appData.distributedAlgorithm << std::endl;
+        spdlog::error("did not recognize distributed Algorithm of {0:d}", appData.distributedAlgorithm);
     }
 
     MPI_Finalize();

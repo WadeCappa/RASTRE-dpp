@@ -32,7 +32,7 @@ class NaiveReceiver : public Receiver {
                         bool stillReceivingAfterLastSeed = buffer->stillReceiving();
                         if (!stillReceivingAfterLastSeed) {
                             this->numberOfProcessorsStillReceiving--;
-                            std::cout << "another buffer of rank " << buffer->getRank() << " has stopped receiving, only " << numberOfProcessorsStillReceiving << " buffers left" << std::endl;
+                            spdlog::info("another buffer of rank {0:d} has stopped receiving, only {1:d} buffers left", buffer->getRank(), numberOfProcessorsStillReceiving);
                             stillReceiving.store(this->numberOfProcessorsStillReceiving != 0);
                         }
                         this->listeningToRank++;
@@ -50,7 +50,7 @@ class NaiveReceiver : public Receiver {
         size_t bestRank = -1;
         for (size_t i = 0; i < this->buffers.size(); i++) {
             const float rankScore = this->buffers[i]->getLocalSolutionScore();
-            std::cout << "rank " << i << " had score of " << rankScore << std::endl;
+            spdlog::info("rank {0:d} had score of {1:f}", i, rankScore);
             if (rankScore > bestSolution) {
                 bestRank = i;
                 bestSolution = rankScore;

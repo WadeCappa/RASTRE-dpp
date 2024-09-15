@@ -31,13 +31,13 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     std::unique_ptr<Subset> resolveStream() {
         resolveStreamInternal();
 
-        std::cout << "getting best consumer, destroying in process" << std::endl;
+        spdlog::info("getting best consumer, destroying in process");
         
         std::unique_ptr<Subset> bestLocalSolution(receiver.getBestReceivedSolution());
         std::unique_ptr<Subset> streamingSolution(consumer.getBestSolutionDestroyConsumer());
 
-        std::cout << "streaming solution has score of " << streamingSolution->getScore() << std::endl;
-        std::cout << "best local solution has score of " << bestLocalSolution->getScore() << std::endl;
+        spdlog::info("streaming solution has score of {0:f}", streamingSolution->getScore());
+        spdlog::info("best local solution has score of {0:f}", bestLocalSolution->getScore());
 
         return bestLocalSolution->getScore() > streamingSolution->getScore() ? move(bestLocalSolution) : move(streamingSolution);
     }

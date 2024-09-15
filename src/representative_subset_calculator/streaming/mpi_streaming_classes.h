@@ -60,10 +60,10 @@ class MpiRankBuffer : public RankBuffer {
             if (status.MPI_TAG == CommunicationConstants::getContinueTag()) {
                 readyForNextReceive();
             } else if (status.MPI_TAG == CommunicationConstants::getStopTag()) {
-                std::cout << "listening buffer for rank " << this->rank << " has finished listening" << std::endl;
+                spdlog::info("listening buffer for rank {0:d} has finished listening", this->rank);
                 isStillReceiving = false;
             } else {
-                std::cout << "unrecognized tag of " << status.MPI_TAG << " for rank " << this->rank << std::endl;
+                spdlog::error("unrecognized tag of {0:d} for rank {1:d}", status.MPI_TAG, this->rank);
             }
             return nextSeed;
         } else {
@@ -103,7 +103,7 @@ class MpiRankBuffer : public RankBuffer {
         }
 
         if (endOfData == this->buffer.begin()) {
-            std::cout << "Received empty send buffer. This is most likely incorrect" << std::endl;
+            spdlog::error("Received empty send buffer");
         }
 
         // Remove the stop tag. This will allow the next send to be received.

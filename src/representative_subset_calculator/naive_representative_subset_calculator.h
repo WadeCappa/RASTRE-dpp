@@ -49,7 +49,7 @@ class NaiveSubsetCalculator : public SubsetCalculator {
             }
 
             if (bestRow == -1) {
-                std::cout << "FAILED to add element to matrix that increased marginal" << std::endl;
+                spdlog::error("FAILED to add element to matrix that increased marginal");
                 return MutableSubset::upcast(move(consumer));
             }
 

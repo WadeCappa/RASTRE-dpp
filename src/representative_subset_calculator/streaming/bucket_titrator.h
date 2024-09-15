@@ -1,4 +1,3 @@
-
 class BucketTitrator {
     public:
     // Returns true when this titrator is still accepting seeds, false otherwise.
@@ -73,7 +72,7 @@ class LazyInitializingBucketTitrator : public BucketTitrator {
     bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
         if (!this->delegate.has_value()) {
             this->delegate = factory->createWithKnownDeltaZero(getDeltaZero(seedQueue));
-            std::cout << "created titrator from queue of size " << seedQueue.size() << std::endl;
+            spdlog::info("Created titrator using input queue of size {0:d}", seedQueue.size());
         } 
 
         return this->delegate.value()->processQueue(seedQueue);
@@ -150,9 +149,8 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         size_t totalBuckets = getNumberOfBuckets(k, epsilon, deltaZeroAlreadyKnown);
         float threshold = getThresholdForBucket(totalBuckets - 1, maybeDeltaZero, epsilon);
         
-        // TODO: verify that we should create this thresholdbucket with 'k' instead of 'k * 2' here
         std::unique_ptr<ThresholdBucket>bucket = std::make_unique<ThresholdBucket>(threshold, k);
-        // std::cout << "number of buckets " << totalBuckets << " with deltaZero of " << maybeDeltaZero << std::endl;
+        spdlog::info("number of buckets {0:d} with deltaZero of {1:f}", totalBuckets, maybeDeltaZero);
         return std::unique_ptr<ThreeSieveBucketTitrator>(
             new ThreeSieveBucketTitrator(
                 epsilon, 
@@ -206,7 +204,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
             float newD0 = getDeltaFromSeed(*seed, *calcFactory, knownD0);
         
             if (newD0 > this->deltaZero) {
-                // std::cout << "new d0 is larger, " << newD0 << " > " << this->deltaZero << std::endl;
+                SPDLOG_DEBUG("new d0 is larger, {0:f} > {1:f}", newD0, this->deltaZero);
                 float threshold = getThresholdForBucket(this->totalBuckets - 1, newD0, epsilon);
                 this->bucket = std::make_unique<ThresholdBucket>(threshold, k);
                 this->t = 0; 
@@ -230,7 +228,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
 
             if (this->isFull()) {
                 // Exit early if you can no longer accept any more seeds
-                std::cout << "Titrator can't accept any more seeds. Exiting early" << std::endl;
+                spdlog::info("Titrator can't accept any more seeds. Exiting early");
                 return false;
             }
         }
@@ -324,11 +322,12 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
         size_t totalBuckets = getNumberOfBuckets(k, epsilon, deltaZeroAlreadyKnown);
         std::vector<std::unique_ptr<ThresholdBucket>> buckets;
-        std::cout << "number of buckets " << totalBuckets << " with maybeDeltaZero of " << maybeDeltaZero << std::endl;
+
+        spdlog::info("number of buckets {0:d} with maybeDeltaZero of {1:f}", totalBuckets, maybeDeltaZero);
  
         for (int i = 0; i < totalBuckets; i++) {
             float threshold = getThresholdForBucket(i, maybeDeltaZero, epsilon);
-            // std::cout << "generated threshold of " << threshold << " for index of " << i << std::endl;
+            SPDLOG_DEBUG("generated threshold of {0:f} for index of {1:d}", threshold, i);
             buckets.push_back(std::unique_ptr<ThresholdBucket>(new ThresholdBucket(threshold, k)));
         }
 
@@ -391,7 +390,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                 float min_threshold = this->getThresholdForBucket(0, deltaZero, epsilon);
                 size_t removeBucketIndexBelow = 0;
                 for (removeBucketIndexBelow = 0; removeBucketIndexBelow < this->buckets.size(); removeBucketIndexBelow++) {
-                    // std::cout << "removing bucket " << removeBucketIndexBelow << " with threshold of " << this->buckets[removeBucketIndexBelow]->getThreshold() << std::endl;
+                    SPDLOG_TRACE("removing bucket {0:d} with threshold of {1:f}", removeBucketIndexBelow, this->buckets[removeBucketIndexBelow]->getThreshold());
                     if (this->buckets[removeBucketIndexBelow]->getThreshold() > min_threshold)
                         break;
                 }
@@ -403,7 +402,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                 for (size_t bucket = 0; bucket < this->totalBuckets; bucket++) {
                     float threshold = getThresholdForBucket(bucket, deltaZero, epsilon);
                     if (threshold > currentMaxThreshold) {
-                        // std::cout << "Adding new buket with threshold: " << threshold << " since the previous max threshold was " << currentMaxThreshold << std::endl;
+                        SPDLOG_TRACE("Adding new buket with threshold: {0:f} since the previous max threshold was {1:f}", threshold, currentMaxThreshold);
                         this->buckets.push_back(std::unique_ptr<ThresholdBucket>(new ThresholdBucket(threshold, k)));
                         currentMaxThreshold = threshold;
                     }            
@@ -414,6 +413,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
             bool seedInserted = false;
             // #pragma omp parallel for num_threads(this->numThreads) reduction(||:seedInserted)
             for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
+                SPDLOG_TRACE("looking at bucket {0:d} with threshold {1:f} and seed {2:d}", bucketIndex, this->buckets[bucketIndex]->getThreshold(), seed->getRow());
                 seedInserted = this->buckets[bucketIndex]->attemptInsert(seed->getRow(), seed->getData()) || seedInserted;
             }
 
@@ -421,7 +421,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                 this->seedStorage.push_back(move(seed));
             } else if (this->isFull()) {
                 // If all buckets are full, exit early
-                std::cout << "Titrator can't accept any more seeds. Exiting early" << std::endl;
+                spdlog::info("Titrator can't accept any more seeds. Exiting early");
                 return false;
             }
         }
