@@ -1,3 +1,5 @@
+#include "log_macros.h"
+
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 #include "representative_subset_calculator/streaming/communication_constants.h"

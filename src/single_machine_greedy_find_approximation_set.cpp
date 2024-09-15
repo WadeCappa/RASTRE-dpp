@@ -1,3 +1,5 @@
+#include "log_macros.h"
+
 #include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/representative_subset.h"
 #include "data_tools/data_row_visitor.h"
@@ -20,6 +22,7 @@
 #include <nlohmann/json.hpp>
 
 int main(int argc, char** argv) {
+    LoggerHelper::setupLoggers();
     CLI::App app{"Approximates the best possible approximation set for the input dataset."};
     AppData appData;
     Orchestrator::addCmdOptions(app, appData);

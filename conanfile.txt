@@ -1,9 +1,10 @@
 [requires]
 cli11/2.3.2
 doctest/2.4.11
-fmt/10.2.0
+fmt/10.2.1
 eigen/3.4.0
 nlohmann_json/3.11.3
+spdlog/1.14.1
 
 [generators]
 CMakeDeps

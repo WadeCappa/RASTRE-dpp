@@ -1,3 +1,5 @@
+#include "log_macros.h"
+
 #include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/representative_subset.h"
 #include "data_tools/data_row_visitor.h"
@@ -30,6 +32,7 @@
 #include <algorithm>
 
 int main(int argc, char** argv) {
+    LoggerHelper::setupLoggers();
     CLI::App app{"Approximates the best possible approximation set for the input dataset using streaming."};
     AppData appData;
     MpiOrchestrator::addMpiCmdOptions(app, appData);

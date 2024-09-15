@@ -91,13 +91,8 @@ static void verifyData(
     }
 }
 
-static void DEBUG_printData(const std::vector<std::vector<float>> &data) {
-    for (const auto & d : data) {
-        for (const auto & v : d) {
-            std::cout << v << ", ";
-        }
-        std::cout << std::endl;
-    }
+TEST_CASE("Activate logger") {
+    LoggerHelper::setupLoggers();
 }
 
 TEST_CASE("Testing loading dense data") {

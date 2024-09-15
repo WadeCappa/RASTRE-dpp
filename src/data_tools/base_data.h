@@ -199,7 +199,7 @@ class SegmentedData : public BaseData {
         }
 
         if (localRowToGlobalRow.size() != data.size()) {
-            std::cout << "sizes did not match, this is likely a serious error" << std::endl;
+            spdlog::error("sizes did not match, this is likely a serious error");
         }
 
         return std::unique_ptr<SegmentedData>(new SegmentedData(move(data), move(localRowToGlobalRow), columns));

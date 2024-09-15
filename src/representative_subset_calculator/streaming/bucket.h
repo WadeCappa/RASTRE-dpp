@@ -69,6 +69,7 @@ class ThresholdBucket
     }
 
     bool attemptInsert(size_t rowIndex, const DataRow &data) {
+        SPDLOG_TRACE("trying to insert seed {0:d} into bucket with threshold {1:f}", rowIndex, this->threshold);
         if (this->solution->size() >= this->k) {
             return false;
         }
@@ -89,7 +90,7 @@ class ThresholdBucket
         const float marginal = std::log(std::pow(d_i, 2));
         
         if (this->passesThreshold(marginal)) {
-            // std::cout << "seed " << rowIndex << " has marginal of " << marginal << " passed threshold of " << this->threshold << std::endl;
+            SPDLOG_DEBUG("seed {0:d} with mirginal of {1:f} passed threshold of {2:f}", rowIndex, marginal, this->threshold);
             this->solution->addRow(rowIndex, marginal);
             this->solutionRows->push_back(&data);
             this->d->push_back(d_i);

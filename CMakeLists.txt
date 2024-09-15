@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(run_tests)
+project(raster_dpp)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tools)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 find_package(CLI11 REQUIRED)
 find_package(doctest REQUIRED)
@@ -10,11 +11,30 @@ find_package(fmt REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(OpenMP REQUIRED)
+find_package(spdlog REQUIRED)
 find_package(MPI)
 
 add_executable(run_tests src/tests.cpp)
 add_executable(single_machine_greedy_find_approximation_set src/single_machine_greedy_find_approximation_set.cpp)
 add_executable(single_machine_streaming_find_approximation_set src/single_machine_streaming_find_approximation_set.cpp)
+
+IF(LOG_LEVEL MATCHES debug)
+    message("\n--------------------\n\nCOMPILING IN DEBUG MODE\n\n--------------------\n")
+    target_compile_options(run_tests PRIVATE -DLOG_DEBUG)
+    target_compile_options(single_machine_greedy_find_approximation_set PRIVATE -DLOG_DEBUG)
+    target_compile_options(single_machine_streaming_find_approximation_set PRIVATE -DLOG_DEBUG)
+ENDIF(LOG_LEVEL MATCHES debug)
+
+IF(LOG_LEVEL MATCHES trace)
+    message("\n--------------------\n\nCOMPILING IN TRACE MODE\n\n--------------------\n")
+    target_compile_options(run_tests PRIVATE -DLOG_TRACE)
+    target_compile_options(single_machine_greedy_find_approximation_set PRIVATE -DLOG_TRACE)
+    target_compile_options(single_machine_streaming_find_approximation_set PRIVATE -DLOG_TRACE)
+ENDIF(LOG_LEVEL MATCHES trace)
+
+target_link_libraries(single_machine_greedy_find_approximation_set spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>)
+target_link_libraries(single_machine_streaming_find_approximation_set spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>)
+target_link_libraries(run_tests spdlog::spdlog $<$<BOOL:${MINGW}>:ws2_32>)
 
 target_link_libraries(single_machine_greedy_find_approximation_set CLI11::CLI11)
 target_link_libraries(single_machine_streaming_find_approximation_set CLI11::CLI11)
@@ -40,6 +60,16 @@ target_link_libraries(single_machine_streaming_find_approximation_set OpenMP::Op
 
 if (MPI_FOUND)
     add_executable(mpi_find_approximation_set src/mpi_find_approximation_set.cpp)
+
+    IF(LOG_LEVEL MATCHES debug)
+        target_compile_options(mpi_find_approximation_set PRIVATE -DLOG_DEBUG)
+    ENDIF(LOG_LEVEL MATCHES debug)
+
+    IF(LOG_LEVEL MATCHES trace)
+        target_compile_options(mpi_find_approximation_set PRIVATE -DLOG_TRACE)
+    ENDIF(LOG_LEVEL MATCHES trace)
+
+    target_link_libraries(mpi_find_approximation_set spdlog::spdlog)
     target_link_libraries(mpi_find_approximation_set CLI11::CLI11)
     target_link_libraries(mpi_find_approximation_set fmt::fmt)
     target_link_libraries(mpi_find_approximation_set Eigen3::Eigen)

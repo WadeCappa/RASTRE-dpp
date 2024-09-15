@@ -204,7 +204,6 @@ TEST_CASE("Consumer can process seeds") {
     queue.push(move(seed));
     consumer->accept(queue, timers);
 
-    std::cout << "Getting best solution" << std::endl;
     std::unique_ptr<Subset> solution(consumer->getBestSolutionDestroyConsumer());
     
     CHECK(solution->getScore() > 0);
@@ -312,7 +311,6 @@ TEST_CASE("Testing end to end without MPI") {
     std::unique_ptr<Subset> solution(streamer.resolveStream());
     assertSolutionIsValid(move(solution), DENSE_DATA.size());
 }
-
 
 TEST_CASE("Testing end to end ThreeSieveStreaming without MPI") {
     const unsigned int worldSize = DENSE_DATA.size()/2;

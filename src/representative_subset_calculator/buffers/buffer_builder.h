@@ -102,7 +102,7 @@ class GlobalBufferLoader : public BufferLoader {
 
         std::unique_ptr<Subset> bestLocal = this->getBestLocalSolution();
 
-        std::cout << "best local solution had score of " << bestLocal->getScore() << ", while the global solution had a score of " << globalResult->getScore() << std::endl;
+        spdlog::info("best local solution had score of {0:f} while the global solution had a score of {1:f}", bestLocal->getScore(), globalResult->getScore());
         if (globalResult->getScore() > bestLocal->getScore()) {
             return globalResult; 
         } else {
@@ -177,7 +177,7 @@ class GlobalBufferLoader : public BufferLoader {
         for (size_t rank = 0; rank < worldSize; rank++) {
             const size_t scoreIndex = displacements[rank];
             const float localRankScore = binaryInput[scoreIndex];
-            std::cout << "rank " << rank << " had local solution of score " << localRankScore << std::endl;
+            spdlog::info("rank {0:d} had local solution of score {1:f}", rank, localRankScore);
 
             if (localRankScore >= bestRankScore) {
                 bestRankScore = localRankScore;
