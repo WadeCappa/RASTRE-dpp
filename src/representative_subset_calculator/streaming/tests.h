@@ -33,7 +33,7 @@ std::unique_ptr<CandidateSeed> buildSeed() {
 }
 
 std::unique_ptr<BucketTitrator> getTitrator(unsigned int numThreads, float eps, unsigned int k) {
-    return std::unique_ptr<BucketTitrator>(new SieveStreamingBucketTitrator(numThreads, eps, k));
+    return SieveStreamingBucketTitrator::createWithDynamicBuckets(numThreads, eps, k);
 }
 
 std::unique_ptr<NaiveCandidateConsumer> getConsumer(std::unique_ptr<BucketTitrator> titrator, size_t worldSize) {
@@ -204,6 +204,7 @@ TEST_CASE("Consumer can process seeds") {
     queue.push(move(seed));
     consumer->accept(queue, timers);
 
+    std::cout << "Getting best solution" << std::endl;
     std::unique_ptr<Subset> solution(consumer->getBestSolutionDestroyConsumer());
     
     CHECK(solution->getScore() > 0);

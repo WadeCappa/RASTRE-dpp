@@ -173,7 +173,6 @@ void streaming(
         });
 
         // Block until reciever is finished.
-        std::cout << "sender " << appData.worldRank << " has sent all seeds" << std::endl;
         MPI_Barrier(MPI_COMM_WORLD);
         if (appData.stopEarly) {
             findAndSendSolution.detach();

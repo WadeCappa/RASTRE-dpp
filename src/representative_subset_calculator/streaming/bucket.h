@@ -9,8 +9,8 @@ class ThresholdBucket
     std::unique_ptr<std::vector<float>> d; 
     std::unique_ptr<std::vector<std::unique_ptr<DenseDataRow>>> b; 
 
-    float threshold;
-    int k;
+    const float threshold;
+    const int k;
 
     public:
     ThresholdBucket(const float threshold, const int k) 
@@ -56,6 +56,10 @@ class ThresholdBucket
         );
     }
 
+    double getThreshold() {
+        return this->threshold ;
+    }
+
     size_t getUtility() {
         return this->solution->getScore();
     }
@@ -69,7 +73,8 @@ class ThresholdBucket
             return false;
         }
         
-        float d_i = std::sqrt(data.dotProduct(data));
+        // TODO: Verify the correctness of the +1 here. This might not be right.
+        float d_i = std::sqrt(data.dotProduct(data) + 1);
         std::unique_ptr<DenseDataRow> c_i(new DenseDataRow());
 
         for (size_t j = 0; j < this->solution->size(); j++) {
@@ -80,9 +85,11 @@ class ThresholdBucket
             c_i->push_back(e_i);
             d_i = std::sqrt(std::pow(d_i, 2) - std::pow(e_i, 2));
         }
-
+        
         const float marginal = std::log(std::pow(d_i, 2));
+        
         if (this->passesThreshold(marginal)) {
+            // std::cout << "seed " << rowIndex << " has marginal of " << marginal << " passed threshold of " << this->threshold << std::endl;
             this->solution->addRow(rowIndex, marginal);
             this->solutionRows->push_back(&data);
             this->d->push_back(d_i);

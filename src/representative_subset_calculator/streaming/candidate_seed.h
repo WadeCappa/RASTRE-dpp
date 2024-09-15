@@ -18,15 +18,15 @@ class CandidateSeed {
         originRank(rank)
     {}
 
-    const DataRow &getData() {
+    const DataRow &getData() const {
         return *(this->data.get());
     }
 
-    unsigned int getRow() {
+    unsigned int getRow() const {
         return this->globalRow;
     }
 
-    unsigned int getOriginRank() {
+    unsigned int getOriginRank() const {
         return this->originRank;
     }
 };

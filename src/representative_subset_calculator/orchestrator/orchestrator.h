@@ -57,6 +57,8 @@ class Orchestrator {
                 return "fast greedy";
             case 3:
                 return "lazy fast greedy";
+            case 4:
+                return "streaming";
             default:
                 throw new std::invalid_argument("Could not find algorithm");
         }

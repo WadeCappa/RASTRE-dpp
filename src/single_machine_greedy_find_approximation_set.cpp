@@ -15,7 +15,7 @@
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/orchestrator/orchestrator.h"
-
+#include "representative_subset_calculator/memoryProfiler/MemUsage.h"
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
 
@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
 
     Timers timers;
     
-
+    auto baseline = getPeakRSS();
     timers.loadingDatasetTime.startTimer();
 
     // Put this somewhere more sane
@@ -58,7 +58,9 @@ int main(int argc, char** argv) {
     std::unique_ptr<Subset> solution = calculator->getApproximationSet(*data.get(), appData.outputSetSize);
     
     timers.totalCalculationTime.stopTimer();
+    auto memUsage = getPeakRSS()- baseline;
     nlohmann::json result = Orchestrator::buildOutput(appData, *solution.get(), *data.get(), timers);
+    result.push_back({"Memory (KiB)", memUsage});
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
     outputFile << result.dump(2);
