@@ -286,7 +286,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
     const bool knownD0;
 
     float deltaZero;
-    std::vector<ThresholdBucket> buckets;
+    std::vector<std::unique_ptr<ThresholdBucket>> buckets;
     std::vector<std::unique_ptr<CandidateSeed>> seedStorage;
     std::unique_ptr<RelevanceCalculatorFactory> calcFactory;
 
@@ -297,7 +297,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         const size_t totalBuckets,
         const bool knownD0,
         float deltaZero,
-        std::vector<ThresholdBucket> buckets,
+        std::vector<std::unique_ptr<ThresholdBucket>> buckets,
         std::vector<std::unique_ptr<CandidateSeed>> seedStorage,
         std::unique_ptr<RelevanceCalculatorFactory> calcFactory
     ) :  
@@ -323,12 +323,13 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
 
         std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
         size_t totalBuckets = getNumberOfBuckets(k, epsilon, deltaZeroAlreadyKnown);
-        std::vector<ThresholdBucket> buckets;
+        std::vector<std::unique_ptr<ThresholdBucket>> buckets;
         std::cout << "number of buckets " << totalBuckets << " with maybeDeltaZero of " << maybeDeltaZero << std::endl;
  
-        for (int bucket = 0; bucket < totalBuckets; bucket++) {
-            float threshold = getThresholdForBucket(bucket, maybeDeltaZero, epsilon);
-            buckets.push_back(ThresholdBucket(threshold, k));
+        for (int i = 0; i < totalBuckets; i++) {
+            float threshold = getThresholdForBucket(i, maybeDeltaZero, epsilon);
+            // std::cout << "generated threshold of " << threshold << " for index of " << i << std::endl;
+            buckets.push_back(std::unique_ptr<ThresholdBucket>(new ThresholdBucket(threshold, k)));
         }
 
         return std::unique_ptr<SieveStreamingBucketTitrator>(
@@ -379,7 +380,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
             return true;
         }
 
-        float currentMaxThreshold = this->buckets[this->buckets.size() - 1].getThreshold();
+        float currentMaxThreshold = this->buckets[this->buckets.size() - 1]->getThreshold();
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) { 
             std::unique_ptr<CandidateSeed> seed = move(pulledFromQueue[seedIndex]);
             
@@ -390,7 +391,8 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                 float min_threshold = this->getThresholdForBucket(0, deltaZero, epsilon);
                 size_t removeBucketIndexBelow = 0;
                 for (removeBucketIndexBelow = 0; removeBucketIndexBelow < this->buckets.size(); removeBucketIndexBelow++) {
-                    if (this->buckets[removeBucketIndexBelow].getThreshold() > min_threshold)
+                    // std::cout << "removing bucket " << removeBucketIndexBelow << " with threshold of " << this->buckets[removeBucketIndexBelow]->getThreshold() << std::endl;
+                    if (this->buckets[removeBucketIndexBelow]->getThreshold() > min_threshold)
                         break;
                 }
 
@@ -402,7 +404,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                     float threshold = getThresholdForBucket(bucket, deltaZero, epsilon);
                     if (threshold > currentMaxThreshold) {
                         // std::cout << "Adding new buket with threshold: " << threshold << " since the previous max threshold was " << currentMaxThreshold << std::endl;
-                        this->buckets.push_back(ThresholdBucket(threshold, k));
+                        this->buckets.push_back(std::unique_ptr<ThresholdBucket>(new ThresholdBucket(threshold, k)));
                         currentMaxThreshold = threshold;
                     }            
                 }   
@@ -412,7 +414,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
             bool seedInserted = false;
             // #pragma omp parallel for num_threads(this->numThreads) reduction(||:seedInserted)
             for (size_t bucketIndex = 0; bucketIndex < this->buckets.size(); bucketIndex++) {
-                seedInserted = seedInserted || this->buckets[bucketIndex].attemptInsert(seed->getRow(), seed->getData());
+                seedInserted = this->buckets[bucketIndex]->attemptInsert(seed->getRow(), seed->getData()) || seedInserted;
             }
 
             if (seedInserted) {
@@ -431,14 +433,14 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         float bestBucketScore = 0;
         size_t bestBucketIndex = -1;
         for (size_t i = 0; i < this->buckets.size(); i++) {
-            float bucketScore = this->buckets[i].getUtility();
+            float bucketScore = this->buckets[i]->getUtility();
             if (bucketScore > bestBucketScore) {
                 bestBucketScore = bucketScore;
                 bestBucketIndex = i;
             }
         }
 
-        return this->buckets[bestBucketIndex].returnSolutionDestroyBucket();
+        return this->buckets[bestBucketIndex]->returnSolutionDestroyBucket();
     }
 
     bool isFull() const {
@@ -449,8 +451,8 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
 
         // As long as one bucket is still accepting seeds this titrator should not return false.
         bool stillAccepting = false;
-        for (const ThresholdBucket& bucket : this->buckets) {
-            stillAccepting = stillAccepting || bucket.isFull();
+        for (size_t i = 0; i < this->buckets.size(); i++) {
+            stillAccepting = buckets[i]->isFull() || stillAccepting;
         }
         
         return stillAccepting;

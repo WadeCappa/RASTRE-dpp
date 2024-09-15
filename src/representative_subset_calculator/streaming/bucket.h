@@ -9,8 +9,8 @@ class ThresholdBucket
     std::unique_ptr<std::vector<float>> d; 
     std::unique_ptr<std::vector<std::unique_ptr<DenseDataRow>>> b; 
 
-    float threshold;
-    int k;
+    const float threshold;
+    const int k;
 
     public:
     ThresholdBucket(const float threshold, const int k) 
@@ -89,6 +89,7 @@ class ThresholdBucket
         const float marginal = std::log(std::pow(d_i, 2));
         
         if (this->passesThreshold(marginal)) {
+            // std::cout << "seed " << rowIndex << " has marginal of " << marginal << " passed threshold of " << this->threshold << std::endl;
             this->solution->addRow(rowIndex, marginal);
             this->solutionRows->push_back(&data);
             this->d->push_back(d_i);
