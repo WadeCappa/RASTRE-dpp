@@ -31,8 +31,6 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     std::unique_ptr<Subset> resolveStream() {
         resolveStreamInternal();
 
-        spdlog::info("getting best consumer, destroying in process");
-        
         std::unique_ptr<Subset> bestLocalSolution(receiver.getBestReceivedSolution());
         std::unique_ptr<Subset> streamingSolution(consumer.getBestSolutionDestroyConsumer());
 
