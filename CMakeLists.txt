@@ -14,6 +14,7 @@ find_package(OpenMP REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(MPI)
 
+add_executable(dataset_generator scripts/dataset_generators/dataset_generator.cpp)
 add_executable(run_tests src/tests.cpp)
 add_executable(single_machine_greedy_find_approximation_set src/single_machine_greedy_find_approximation_set.cpp)
 add_executable(single_machine_streaming_find_approximation_set src/single_machine_streaming_find_approximation_set.cpp)
@@ -46,6 +47,7 @@ target_link_libraries(run_tests fmt::fmt)
 target_link_libraries(single_machine_streaming_find_approximation_set fmt::fmt)
 target_link_libraries(single_machine_greedy_find_approximation_set fmt::fmt)
 
+target_link_libraries(dataset_generator Eigen3::Eigen)
 target_link_libraries(run_tests Eigen3::Eigen)
 target_link_libraries(single_machine_streaming_find_approximation_set Eigen3::Eigen)
 target_link_libraries(single_machine_greedy_find_approximation_set Eigen3::Eigen)
@@ -54,6 +56,7 @@ target_link_libraries(single_machine_greedy_find_approximation_set nlohmann_json
 target_link_libraries(single_machine_streaming_find_approximation_set nlohmann_json::nlohmann_json)
 target_link_libraries(run_tests nlohmann_json::nlohmann_json)
 
+target_link_libraries(dataset_generator OpenMP::OpenMP_CXX)
 target_link_libraries(run_tests OpenMP::OpenMP_CXX)
 target_link_libraries(single_machine_greedy_find_approximation_set OpenMP::OpenMP_CXX)
 target_link_libraries(single_machine_streaming_find_approximation_set OpenMP::OpenMP_CXX)
