@@ -5,18 +5,30 @@
 #include <chrono>
 #include <unsupported/Eigen/SparseExtra>
 #include <fstream>
+#include <cstdlib>
+#include <string>
+#include <mpi.h>
 
 typedef Eigen::SparseMatrix<float, Eigen::RowMajor> SparseMatrix;
 typedef Eigen::MatrixXf DenseMatrix;
 
 int main(int argc, char* argv[]) {
 
-    auto begin = std::chrono::high_resolution_clock::now(); 
+    int worldRank, worldSize;
+
     const int rows = std::atoi(argv[1]);  // Number of rows
     const int cols = std::atoi(argv[2]); // Number of columns
     const double sparsity = 0.01;  // Fraction of non-zero elements
 
+    MPI_Init(NULL, NULL);
+    MPI_Comm_rank(MPI_COMM_WORLD, &worldRank);
+    MPI_Comm_size(MPI_COMM_WORLD, &worldSize);
+
+    
+    
+    auto begin = std::chrono::high_resolution_clock::now(); 
     // Step 1: Generate a dense random matrix
+    std::srand(worldRank + 1);
     DenseMatrix denseMatrix = DenseMatrix::Random(rows, cols);
 
     // Step 2: Thresholding for sparsity
@@ -43,14 +55,14 @@ int main(int argc, char* argv[]) {
 
 
     begin = std::chrono::high_resolution_clock::now();
-    std::ofstream outFile("sparse_matrix.csv");
+    std::ofstream outFile(std::to_string(worldRank) + "_sparse_matrix.csv");
     if (outFile.is_open()) {
         // Write non-zero values in row-major order
         // outFile << "row,col,value\n";  // Optional: header line for the CSV
 
         for (int k = 0; k < sparseMatrix.outerSize(); ++k) {
             for (SparseMatrix::InnerIterator it(sparseMatrix, k); it; ++it) {
-                outFile << it.row() << " " << it.col() << " " << it.value() << "\n";
+                outFile << it.row() + (worldRank * sparseMatrix.rows()) << " " << it.col() << " " << it.value() << "\n";
             }
         }
 
@@ -77,6 +89,7 @@ int main(int argc, char* argv[]) {
     // ms = std::chrono::duration_cast<std::chrono::milliseconds>(dur).count();
     // std::cout << "Time to write matrix to mtx file: " << ms << " milliseconds\n";
 
+    MPI_Finalize();
     return 0;
 }
 

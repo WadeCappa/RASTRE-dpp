@@ -82,4 +82,5 @@ if (MPI_FOUND)
     target_link_libraries(mpi_find_approximation_set MPI::MPI_CXX)
 
     target_link_libraries(single_machine_streaming_find_approximation_set MPI::MPI_CXX)
+    target_link_libraries(dataset_generator MPI::MPI_CXX)
 endif()
