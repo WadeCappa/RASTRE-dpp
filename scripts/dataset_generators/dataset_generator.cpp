@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
 
 
     begin = std::chrono::high_resolution_clock::now();
-    std::ofstream outFile(std::to_string(worldRank) + "_sparse_matrix.csv");
+    std::ofstream outFile("/pscratch/sd/r/reetb/SparseDPPDatasets/" + std::to_string(worldRank) + "_sparse_matrix.csv");
     if (outFile.is_open()) {
         // Write non-zero values in row-major order
         // outFile << "row,col,value\n";  // Optional: header line for the CSV
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
         }
 
         outFile.close();
-        std::cout << "Matrix saved to sparse_matrix.csv.\n";
+        std::cout << "Matrix saved to " + std::to_string(worldRank) + "_sparse_matrix.csv.\n";
     } else {
         std::cerr << "Error opening file for writing.\n";
     }
