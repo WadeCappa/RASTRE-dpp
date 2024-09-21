@@ -156,17 +156,12 @@ void assertSolutionIsValid(std::unique_ptr<Subset> solution, const size_t dataSi
     }
 }
 
-void assertSolutionsEqual(std::vector<std::unique_ptr<Subset>> solutions, const size_t dataSize) {
-    CHECK(solutions.size() > 0);
-    const size_t expectedSize = solutions.back()->size();
-    const size_t expectedScore = solutions.back()->getScore();
-
-    for (size_t i = 0; i < solutions.size(); i++) {
-        std::unique_ptr<Subset> s = move(solutions[i]);
-        CHECK(s->size() == expectedSize);
-        CHECK(s->getScore() == expectedScore);
-        assertSolutionIsValid(move(s), dataSize);
-    }
+void assertSolutionsEqual(std::unique_ptr<Subset> a, std::unique_ptr<Subset> b, const size_t dataSize) {
+    CHECK(a->size() == b->size());
+    CHECK(a->getScore() > b->getScore() - LARGEST_ACCEPTABLE_ERROR);
+    CHECK(a->getScore() < b->getScore() + LARGEST_ACCEPTABLE_ERROR);
+    assertSolutionIsValid(move(a), dataSize);
+    assertSolutionIsValid(move(b), dataSize);
 }
 
 std::vector<std::unique_ptr<RankBuffer>> buildFakeBuffers(const unsigned int worldSize) {
@@ -367,5 +362,5 @@ TEST_CASE("Comparing titrators") {
         std::unique_ptr<BucketTitrator> decorator(new LazyInitializingBucketTitrator(move(titrators[i])));
         solutions.push_back(getSolution(move(decorator), worldSize));
     }
-    assertSolutionsEqual(move(solutions), DENSE_DATA.size());
+    assertSolutionsEqual(move(solutions[0]), move(solutions[1]), DENSE_DATA.size());
 }
