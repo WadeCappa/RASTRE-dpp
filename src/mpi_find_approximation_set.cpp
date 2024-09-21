@@ -227,6 +227,20 @@ int main(int argc, char** argv) {
     const unsigned int DEFAULT_VALUE = -1;
 
     std::unique_ptr<SegmentedData> data;
+    if (appData.loadInput.multiFile) {
+        
+        size_t chunks = appData.worldSize / 32;
+        size_t fileIndex = std::floor(appData.worldRank / chunks);
+        size_t chunkIndex = appData.worldRank % chunks;
+        size_t rowStart = (1048576 / chunks) * chunkIndex + (1048576 * fileIndex);
+        size_t rowEnd = rowStart + (1048576 / chunks) - 1;
+        std::cout << "Rank " << appData.worldRank 
+                  << " loading file: " << appData.loadInput.directory + std::to_string(fileIndex) + "_sparse_matrix.csv" 
+                  << " with first Row index: " << rowStart 
+                  << " with last Row index: " << rowEnd
+                  << std::endl;
+    } 
+    
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         std::ifstream inputFile;
         inputFile.open(appData.loadInput.inputFile);
