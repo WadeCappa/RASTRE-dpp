@@ -230,10 +230,13 @@ int main(int argc, char** argv) {
     if (appData.loadInput.multiFile) {
         
         size_t chunks = appData.worldSize / 32;
-        size_t fileIndex = std::floor(appData.worldRank / chunks);
-        size_t chunkIndex = appData.worldRank % chunks;
+        size_t fileIndex = std::floor((appData.worldRank - 1) / chunks);
+        size_t chunkIndex = (appData.worldRank - 1) % chunks;
         size_t rowStart = (1048576 / chunks) * chunkIndex + (1048576 * fileIndex);
         size_t rowEnd = rowStart + (1048576 / chunks) - 1;
+        for (size_t i = rowStart; i <= rowEnd; i++) {
+            rowToRank[i] = appData.worldRank;
+        }
         std::cout << "Rank " << appData.worldRank 
                   << " loading file: " << appData.loadInput.directory + std::to_string(fileIndex) + "_sparse_matrix.csv" 
                   << " with first Row index: " << rowStart 
