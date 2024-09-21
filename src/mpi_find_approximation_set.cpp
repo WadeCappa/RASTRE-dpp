@@ -227,9 +227,9 @@ int main(int argc, char** argv) {
     const unsigned int DEFAULT_VALUE = -1;
 
     std::unique_ptr<SegmentedData> data;
-    if (appData.loadInput.multiFile) {
+    if (appData.loadInput.multiFile > 0) {
         
-        size_t chunks = appData.worldSize / 32;
+        size_t chunks = appData.worldSize / appData.loadInput.multiFile;
         size_t fileIndex = std::floor((appData.worldRank - 1) / chunks);
         size_t chunkIndex = (appData.worldRank - 1) % chunks;
         size_t rowStart = (1048576 / chunks) * chunkIndex + (1048576 * fileIndex);
@@ -237,14 +237,20 @@ int main(int argc, char** argv) {
         for (size_t i = rowStart; i <= rowEnd; i++) {
             rowToRank[i] = appData.worldRank;
         }
+        std::string filePath = appData.loadInput.directory + std::to_string(fileIndex) + appData.loadInput.inputFile;
         std::cout << "Rank " << appData.worldRank 
-                  << " loading file: " << appData.loadInput.directory + std::to_string(fileIndex) + "_sparse_matrix.csv" 
+                  << " loading file: " << filePath
                   << " with first Row index: " << rowStart 
                   << " with last Row index: " << rowEnd
                   << std::endl;
-    } 
-    
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+
+        std::ifstream inputFile;
+        inputFile.open(filePath);
+        std::unique_ptr<LineFactory> getter(std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile)));
+        data = Orchestrator::buildMpiData(appData, *getter.get(), rowToRank);
+        inputFile.close();
+        
+    } else if (appData.loadInput.inputFile != EMPTY_STRING) {
         std::ifstream inputFile;
         inputFile.open(appData.loadInput.inputFile);
         std::unique_ptr<LineFactory> getter(std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile)));
