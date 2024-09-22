@@ -61,4 +61,14 @@ static const float LARGEST_ACCEPTABLE_ERROR = 0.001;
 
 #include "data_tools/tests.h"
 
+void checkSolutionsAreEquivalent(const Subset &a, const Subset &b) {
+    CHECK(a.size() == b.size());
+    for (size_t i = 0; i < a.size() && i < b.size(); i++) {
+        CHECK(a.getRow(i) == b.getRow(i));
+    }
+
+    CHECK(a.getScore() > b.getScore() - LARGEST_ACCEPTABLE_ERROR);
+    CHECK(a.getScore() < b.getScore() + LARGEST_ACCEPTABLE_ERROR);
+}
+
 #include "representative_subset_calculator/tests.h"
