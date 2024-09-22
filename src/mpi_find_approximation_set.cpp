@@ -234,8 +234,13 @@ int main(int argc, char** argv) {
         size_t chunkIndex = (appData.worldRank - 1) % chunks;
         size_t rowStart = (1048576 / chunks) * chunkIndex + (1048576 * fileIndex);
         size_t rowEnd = rowStart + (1048576 / chunks) - 1;
-        for (size_t i = rowStart; i <= rowEnd; i++) {
-            rowToRank[i] = appData.worldRank;
+        if (appData.worldRank > 0) {
+            for (size_t i = 0; i < rowToRank.size(); i++) {
+                if (i >= rowStart && i <= rowEnd)
+                    rowToRank[i] = appData.worldRank;
+                else
+                    rowToRank[i] = -1;
+            }
         }
         std::string filePath = appData.loadInput.directory + std::to_string(fileIndex) + appData.loadInput.inputFile;
         std::cout << "Rank " << appData.worldRank 
@@ -243,7 +248,8 @@ int main(int argc, char** argv) {
                   << " with first Row index: " << rowStart 
                   << " with last Row index: " << rowEnd
                   << std::endl;
-
+        
+        
         std::ifstream inputFile;
         inputFile.open(filePath);
         std::unique_ptr<LineFactory> getter(std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile)));
