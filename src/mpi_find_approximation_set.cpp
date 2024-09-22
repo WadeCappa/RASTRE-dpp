@@ -230,7 +230,7 @@ int main(int argc, char** argv) {
     const unsigned int DEFAULT_VALUE = -1;
 
     size_t memUsagePreLoad = getPeakRSS() - baselinePreLoad;
-    spdlog::info("rank {0:d} used {1:d} KiB during the preload", appData.worldRank, memUsagePreLoad);
+    spdlog::debug("rank {0:d} allocated {1:d} KiB during the preload", appData.worldRank, memUsagePreLoad);
 
     size_t baseline = getPeakRSS();
 
@@ -248,7 +248,7 @@ int main(int argc, char** argv) {
 
     size_t memUsage = getPeakRSS() - baseline;
 
-    spdlog::info("rank {0:d} used {1:d} KiB during the load", appData.worldRank, memUsage);
+    spdlog::info("rank {0:d} allocated {1:d} KiB for the dataset", appData.worldRank, memUsage);
 
     for (auto t: comparisonTimers)
         t.loadingDatasetTime.stopTimer();
