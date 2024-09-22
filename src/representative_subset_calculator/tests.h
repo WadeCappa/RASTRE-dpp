@@ -51,16 +51,6 @@ TEST_CASE("Testing LAZYFAST set finder") {
     testCalculator(new LazyFastSubsetCalculator(epsilon));
 }
 
-void checkSolutionsAreEquivalent(const Subset &a, const Subset &b) {
-    CHECK(a.size() == b.size());
-    for (size_t i = 0; i < a.size() && i < b.size(); i++) {
-        CHECK(a.getRow(i) == b.getRow(i));
-    }
-
-    CHECK(a.getScore() > b.getScore() - LARGEST_ACCEPTABLE_ERROR);
-    CHECK(a.getScore() < b.getScore() + LARGEST_ACCEPTABLE_ERROR);
-}
-
 TEST_CASE("All calculators have the same result") {
     auto naiveRes = testCalculator(new NaiveSubsetCalculator());
     auto lazyRes = testCalculator(new LazySubsetCalculator());

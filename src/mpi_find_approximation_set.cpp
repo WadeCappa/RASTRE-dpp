@@ -36,6 +36,7 @@
 #include "representative_subset_calculator/streaming/streaming_subset.h"
 #include "representative_subset_calculator/streaming/mpi_receiver.h"
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
+#include "representative_subset_calculator/memoryProfiler/MemUsage.h"
 #include <thread>
 
 void randGreedi(
@@ -193,6 +194,8 @@ void streaming(
 
 int main(int argc, char** argv) {
 
+    size_t baselinePreLoad = getPeakRSS();
+
     LoggerHelper::setupLoggers();
 
     CLI::App app{"Approximates the best possible approximation set for the input dataset using MPI."};
@@ -226,6 +229,11 @@ int main(int argc, char** argv) {
     // Put this somewhere more sane
     const unsigned int DEFAULT_VALUE = -1;
 
+    size_t memUsagePreLoad = getPeakRSS() - baselinePreLoad;
+    spdlog::debug("rank {0:d} allocated {1:d} KiB during the preload", appData.worldRank, memUsagePreLoad);
+
+    size_t baseline = getPeakRSS();
+
     std::unique_ptr<SegmentedData> data;
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         std::ifstream inputFile;
@@ -237,6 +245,10 @@ int main(int argc, char** argv) {
         std::unique_ptr<GeneratedLineFactory> getter(Orchestrator::getLineGenerator(appData));
         data = Orchestrator::buildMpiData(appData, *getter.get(), rowToRank);
     }
+
+    size_t memUsage = getPeakRSS() - baseline;
+
+    spdlog::info("rank {0:d} allocated {1:d} KiB for the dataset", appData.worldRank, memUsage);
 
     for (auto t: comparisonTimers)
         t.loadingDatasetTime.stopTimer();

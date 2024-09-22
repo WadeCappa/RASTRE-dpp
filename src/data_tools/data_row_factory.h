@@ -389,67 +389,11 @@ class SparseDataRowFactory : public DataRowFactory {
     {}
 
     void skipNext(LineFactory &source) {
-        std::unique_ptr<DataRow> _line(maybeGet(source));
+        maybeGet(source, true);
     }
 
     std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
-        std::map<size_t, float> result;
-
-        if (this->hasData) {
-            if (this->currentRow == this->expectedRow) {
-                result.insert({to, value});
-            } else {
-                this->expectedRow++;
-                return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
-            }
-        }
-
-        while (true) {
-            std::optional<std::string> line(source.maybeGet());
-            if (!line.has_value()) {
-                if (result.size() > 0) {
-                    this->hasData = false;
-                    return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
-                } else {
-                    return nullptr;
-                }
-            }
-
-            this->hasData = false;
-
-            std::istringstream stream(line.value().data());
-            float number;
-            size_t totalSeen = 0;
-
-            // The expected format is a two ints a line, and 
-            //  maybe a third reprsenting value.
-            while(stream >> number && totalSeen < EXPECTED_ELEMENTS_PER_LINE) {
-                switch (totalSeen) {
-                    case 0:
-                        currentRow = std::floor(number);
-                    case 1:
-                        to = std::floor(number);
-                    case 2:
-                        value = number;
-                }
-
-                if (stream.peek() == ',')
-                    stream.ignore();
-
-                totalSeen++;
-            }
-            
-            if (currentRow == this->expectedRow) {
-                result.insert({to, value});
-            } else if (currentRow > this->expectedRow) {
-                this->expectedRow++;
-                this->hasData = true;
-                return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
-            } else {
-                spdlog::error("had current row of {0:d} and expected row of {1:d}", currentRow, this->expectedRow);
-                throw std::invalid_argument("ERROR: cannot backtrack");
-            }
-        } 
+        return maybeGet(source, false);
     }
 
     std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<float> binary) const {
@@ -488,5 +432,74 @@ class SparseDataRowFactory : public DataRowFactory {
 
     std::unique_ptr<DataRowFactory> copy() {
         return std::unique_ptr<DataRowFactory>(new SparseDataRowFactory(this->totalColumns));
+    }
+
+    private:
+    std::unique_ptr<DataRow> maybeGet(LineFactory &source, bool skip) {
+        std::map<size_t, float> result;
+
+        if (this->hasData) {
+            if (this->currentRow == this->expectedRow) {
+                result.insert({to, value});
+            } else {
+                this->expectedRow++;
+                return this->returnResult(move(result), skip);
+            }
+        }
+
+        while (true) {
+            std::optional<std::string> line(source.maybeGet());
+            if (!line.has_value()) {
+                if (result.size() > 0) {
+                    this->hasData = false;
+                    return this->returnResult(move(result), skip);
+                } else {
+                    return nullptr;
+                }
+            }
+
+            this->hasData = false;
+
+            std::istringstream stream(line.value().data());
+            float number;
+            size_t totalSeen = 0;
+
+            // The expected format is a two ints a line, and 
+            //  maybe a third reprsenting value.
+            while(stream >> number && totalSeen < EXPECTED_ELEMENTS_PER_LINE) {
+                switch (totalSeen) {
+                    case 0:
+                        currentRow = std::floor(number);
+                    case 1:
+                        to = std::floor(number);
+                    case 2:
+                        value = number;
+                }
+
+                if (stream.peek() == ',')
+                    stream.ignore();
+
+                totalSeen++;
+            }
+            
+            if (currentRow == this->expectedRow) {
+                result.insert({to, value});
+            } else if (currentRow > this->expectedRow) {
+                this->expectedRow++;
+                this->hasData = true;
+                return this->returnResult(move(result), skip);
+            } else {
+                spdlog::error("had current row of {0:d} and expected row of {1:d}", currentRow, this->expectedRow);
+                throw std::invalid_argument("ERROR: cannot backtrack");
+            }
+        } 
+    }
+
+    std::unique_ptr<DataRow> returnResult(std::map<size_t, float> result, bool skip) {
+        if (skip) {
+            return nullptr;
+        }
+
+        return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
     }
 };
