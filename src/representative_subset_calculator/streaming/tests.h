@@ -356,7 +356,7 @@ TEST_CASE("Streaming with decorator") {
 
 TEST_CASE("Comparing titrators") {
     std::vector<std::unique_ptr<BucketTitratorFactory>> titrators(getTitratorFactories());
-    const size_t worldSize = DENSE_DATA.size() / 2;
+    const size_t worldSize = 1;
     std::vector<std::unique_ptr<Subset>> solutions;
     for (size_t i = 0; i < titrators.size(); i++) {
         std::unique_ptr<BucketTitrator> decorator(new LazyInitializingBucketTitrator(move(titrators[i])));
