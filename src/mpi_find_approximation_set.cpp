@@ -34,6 +34,7 @@
 #include "representative_subset_calculator/streaming/greedy_streamer.h"
 #include "representative_subset_calculator/streaming/mpi_streaming_classes.h"
 #include "representative_subset_calculator/streaming/streaming_subset.h"
+#include "representative_subset_calculator/streaming/naive_receiver.h"
 #include "representative_subset_calculator/streaming/mpi_receiver.h"
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 #include <thread>

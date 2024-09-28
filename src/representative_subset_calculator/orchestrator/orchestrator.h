@@ -36,6 +36,7 @@ struct appData{
     unsigned int threeSieveT;
     float alpha = 1;
     bool stopEarly = false;
+    bool loadWhileStreaming = false;
 
     int worldSize = 1;
     int worldRank = 0;
