@@ -7,6 +7,7 @@
 #include "candidate_consumer.h"
 #include "rank_buffer.h"
 #include "receiver_interface.h"
+#include "naive_receiver.h"
 #include "greedy_streamer.h"
 
 static const float EVERYTHING_ALLOWED_THRESHOLD = 0.0000001;

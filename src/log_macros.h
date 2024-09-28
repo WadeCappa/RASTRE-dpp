@@ -12,7 +12,6 @@
 class LoggerHelper {
     public:
     static void setupLoggers() {
-        spdlog::info("ENABLING LOGGERS");
         #if defined(LOG_DEBUG)
             spdlog::set_level(spdlog::level::debug);
         #endif
