@@ -41,8 +41,10 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     }
 
     private:
-    // TODO: One more send then required is accepted after `stillConsuming` is false. There
-    //  should be a way to exit even earlier here.
+    /**
+     * N.B. Stop early has been disabled since it was causing segfaults and is technically incorrect. The code 
+     * for stop-early has not been entirly removed.
+     */
     void resolveStreamInternal() {
         unsigned int dummyVal = 0;
         std::atomic_bool stillReceiving = true;
