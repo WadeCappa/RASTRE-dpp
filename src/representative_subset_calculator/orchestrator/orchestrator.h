@@ -137,6 +137,7 @@ class Orchestrator {
 
     static std::unique_ptr<SubsetCalculator> getCalculator(const AppData &appData) {
         if (appData.sendAllToReceiver) {
+            spdlog::warn("rank {0:d} is going to send all seeds to receiver", appData.worldRank);
             return std::unique_ptr<SubsetCalculator>(new AddAllToSubsetCalculator());
         } 
 
