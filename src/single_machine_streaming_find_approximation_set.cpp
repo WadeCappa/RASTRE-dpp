@@ -114,7 +114,6 @@ int main(int argc, char** argv) {
     LoggerHelper::setupLoggers();
     CLI::App app{"Approximates the best possible approximation set for the input dataset using streaming."};
     AppData appData;
-    app.add_flag("--loadWhileStreaming", appData.loadWhileStreaming, "Only used during standalone streaming. Only set this to true if your input dataset has already been randomized");
     MpiOrchestrator::addMpiCmdOptions(app, appData);
     CLI11_PARSE(app, argc, argv);
 
@@ -152,7 +151,7 @@ int main(int argc, char** argv) {
     std::vector<size_t> dummyRowMapping;
     size_t dummyColumns = 0;  // A placeholder for columns, set to 0 or any valid number.
 
-    SegmentedData dummySegmentedData(std::move(dummyData), std::move(dummyRowMapping), dummyColumns);
+    LoadedSegmentedData dummySegmentedData(std::move(dummyData), std::move(dummyRowMapping), dummyColumns);
 
     nlohmann::json result = Orchestrator::buildOutput(appData, *solution.get(), dummySegmentedData, timers);
     result.push_back({"Memory (KiB)", memUsage});

@@ -132,6 +132,7 @@ class Orchestrator {
         app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
         app.add_option("--alpha", appData.alpha, "Only used for the truncated setting.");
         app.add_flag("--sendAllToReceiver", appData.sendAllToReceiver, "Enable this flag to skip the greedy calculation on the local nodes and to send all seeds directly to the receiver.");
+        app.add_flag("--loadWhileStreaming", appData.loadWhileStreaming, "Only used during standalone streaming (or in conjunction with sendAllToReceiver). Only set this to true if your input dataset has already been randomized");
     }
 
     static std::unique_ptr<SubsetCalculator> getCalculator(const AppData &appData) {
@@ -228,7 +229,7 @@ class Orchestrator {
         const std::vector<unsigned int> &rowToRank
     ) {
         std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
-        return SegmentedData::loadInParallel(*factory, getter, rowToRank, appData.worldRank);
+        return LoadedSegmentedData::loadInParallel(*factory, getter, rowToRank, appData.worldRank);
     }
 
     static std::unique_ptr<SegmentedData> buildMpiData(
@@ -237,7 +238,7 @@ class Orchestrator {
         const std::vector<unsigned int> &rowToRank
     ) {
         std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
-        return SegmentedData::load(*factory, getter, rowToRank, appData.worldRank);
+        return LoadedSegmentedData::load(*factory, getter, rowToRank, appData.worldRank);
     }
 
     static std::unique_ptr<BaseData> loadData(const AppData& appData, GeneratedLineFactory &getter) {
