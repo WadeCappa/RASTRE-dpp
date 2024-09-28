@@ -43,7 +43,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
             this->findFirstSeedsFromSenders(seedQueue);
             timers.initBucketsTimer.stopTimer();
         } 
-        if (this->seenFirstElement.size() == numberOfSenders) {
+        if (this->seenFirstElement.size() >= numberOfSenders) {
             timers.insertSeedsTimer.startTimer();
             stillAcceptingSeeds = this->titrator->processQueue(seedQueue);
             timers.insertSeedsTimer.stopTimer();

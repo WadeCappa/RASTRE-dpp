@@ -102,7 +102,18 @@ class MpiOrchestrator : public Orchestrator {
 
     static std::unique_ptr<CandidateConsumer> buildConsumer(const AppData &appData, const unsigned int threads, const unsigned int numSenders) {
         std::unique_ptr<BucketTitratorFactory> titratorFactory(buildTitratorFactory(appData, threads));
-        std::unique_ptr<BucketTitrator> lazyTitrator(new LazyInitializingBucketTitrator(move(titratorFactory)));
-        return std::unique_ptr<NaiveCandidateConsumer>(new NaiveCandidateConsumer(move(lazyTitrator), numSenders));
+        std::unique_ptr<BucketTitrator> titrator;
+        
+        // If we know that we're going to be sending all seeds, we do not know that the first m seeds from
+        //  our m senders will contain deltaZero. We must build with dynamic buckets in this case.
+        // 
+        // Also, we should set the number of senders for the consumer to be 0. Otherwise the consumer will expect to 
+        //  wait for seeds before starting inserts, which in this case is a de-optimization.
+        if (appData.sendAllToReceiver) {
+            titrator = std::unique_ptr<BucketTitrator>(titratorFactory->createWithDynamicBuckets());
+        } else {
+            titrator = std::unique_ptr<BucketTitrator>(new LazyInitializingBucketTitrator(move(titratorFactory)));
+        }
+        return std::unique_ptr<NaiveCandidateConsumer>(new NaiveCandidateConsumer(move(titrator), appData.sendAllToReceiver ? 0 : numSenders));
     }
 };

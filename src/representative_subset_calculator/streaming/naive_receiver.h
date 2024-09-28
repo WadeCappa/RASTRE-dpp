@@ -44,7 +44,7 @@ class NaiveReceiver : public Receiver {
         for (size_t i = 0; i < this->buffers.size(); i++) {
             const float rankScore = this->buffers[i]->getLocalSolutionScore();
             spdlog::info("rank {0:d} had score of {1:f}", i, rankScore);
-            if (rankScore > bestSolution) {
+            if (rankScore >= bestSolution) {
                 bestRank = i;
                 bestSolution = rankScore;
             }
