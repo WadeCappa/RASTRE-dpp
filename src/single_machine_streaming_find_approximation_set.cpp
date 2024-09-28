@@ -55,7 +55,7 @@ std::unique_ptr<Subset> loadWhileCalculating(
     
     timers.totalCalculationTime.stopTimer();
 
-    return titrator->getBestSolutionDestroyTitrator();
+    return move(solution);
 }
 
 std::unique_ptr<Subset> loadThenCalculate(
