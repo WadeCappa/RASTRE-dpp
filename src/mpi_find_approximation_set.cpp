@@ -151,9 +151,6 @@ void streaming(
         timers.totalCalculationTime.stopTimer();
         spdlog::info("rank 0 finished receiving");
 
-        MPI_Barrier(MPI_COMM_WORLD);
-        spdlog::info("receiver is through the barrier");
-
         nlohmann::json result = MpiOrchestrator::buildMpiOutput(
             appData, *solution.get(), data, timers, rowToRank
         );
@@ -171,19 +168,9 @@ void streaming(
         spdlog::info("rank {0:d} is ready to start streaming local seeds", appData.worldRank);
 
         timers.localCalculationTime.startTimer();
-        std::thread findAndSendSolution([&calculator, &subset, &data, &appData]() {
-            return calculator->getApproximationSet(move(subset), data, std::floor(appData.outputSetSize * appData.alpha));
-        });
+        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), data, std::floor(appData.outputSetSize * appData.alpha)));
 
-        // Block until reciever is finished.
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (appData.stopEarly) {
-            findAndSendSolution.detach();
-        } else {
-            // Don't kill any extra sends, we need them to compare local solutions to the global solution.
-            findAndSendSolution.join();
-        }
-        spdlog::info("rank {0:d} finished streaming local seeds", appData.worldRank);
+        spdlog::info("rank {0:d} finished streaming local seeds. Found {1:d} seeds of score {2:f}", appData.worldRank, localSolution->size(), localSolution->getScore());
 
         timers.localCalculationTime.stopTimer();
         timers.totalCalculationTime.stopTimer();
