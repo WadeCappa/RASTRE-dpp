@@ -199,6 +199,10 @@ int main(int argc, char** argv) {
     MPI_Comm_rank(MPI_COMM_WORLD, &appData.worldRank);
     MPI_Comm_size(MPI_COMM_WORLD, &appData.worldSize);
 
+    if (appData.sendAllToReceiver && appData.worldRank == 0) {
+        spdlog::warn("sendAllToReceiver is an experimental feature and has not been fully implemented. Use with caution. Most critically, this feature does not support loading while sending and will load the entire dataset in bulk before sending any seeds. Depending on your input, this might be very expensive.");
+    }
+
     unsigned int seed = (unsigned int)time(0);
     MPI_Bcast(&seed, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 
@@ -222,6 +226,7 @@ int main(int argc, char** argv) {
 
     size_t baseline = getPeakRSS();
 
+    spdlog::info("Starting load for rank {0:d}", appData.worldRank);
     std::unique_ptr<SegmentedData> data;
     if (appData.loadInput.multiFile > 0) {
         

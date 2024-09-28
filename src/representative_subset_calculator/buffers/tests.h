@@ -47,7 +47,7 @@ static std::unique_ptr<SegmentedData> getData(
     }
 
     return std::unique_ptr<SegmentedData>(
-        new SegmentedData(move(base), localRowToGlobalRow, columns)
+        new LoadedSegmentedData(move(base), localRowToGlobalRow, columns)
     );
 };
 

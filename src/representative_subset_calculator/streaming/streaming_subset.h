@@ -61,6 +61,7 @@ class StreamingSubset : public MutableSubset {
         // Can only queue the last send after all other sends have been sent. Otherwise 
         //  this will cause a race condition causing senders to sometimes never finish 
         //  sending seeds.
+        SPDLOG_DEBUG("sending last seed");
         this->sends.back()->isend(CommunicationConstants::getStopTag());
         this->sends.back()->waitForISend();
         this->timers.communicationTime.stopTimer();
