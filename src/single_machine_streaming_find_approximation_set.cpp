@@ -34,7 +34,7 @@
 #include <random>
 #include <algorithm>
 
-std::unique_ptr<Subset> loadWhileCalculating(
+std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
     const AppData& appData, std::unique_ptr<DataRowFactory> factory, std::unique_ptr<LineFactory> getter, Timers& timers
 ) { 
     timers.totalCalculationTime.startTimer();
@@ -55,10 +55,10 @@ std::unique_ptr<Subset> loadWhileCalculating(
     
     timers.totalCalculationTime.stopTimer();
 
-    return move(solution);
+    return std::make_pair(move(solution), memUsage);
 }
 
-std::unique_ptr<Subset> loadThenCalculate(
+std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
     const AppData& appData, std::unique_ptr<DataRowFactory> factory, std::unique_ptr<LineFactory> getter, Timers& timers
 ) {
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
@@ -107,7 +107,8 @@ std::unique_ptr<Subset> loadThenCalculate(
     
     timers.totalCalculationTime.stopTimer();
 
-    return titrator->getBestSolutionDestroyTitrator();
+    std::unique_ptr<Subset> solution(titrator->getBestSolutionDestroyTitrator());
+    return std::make_pair(move(solution), memUsage);
 }
 
 int main(int argc, char** argv) {
@@ -119,7 +120,6 @@ int main(int argc, char** argv) {
     CLI11_PARSE(app, argc, argv);
 
     Timers timers;
-    size_t memUsage;
     // Put this somewhere more sane
     const unsigned int DEFAULT_VALUE = -1;
 
@@ -136,13 +136,13 @@ int main(int argc, char** argv) {
 
     std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
 
-    std::unique_ptr<Subset> solution(
+    std::pair<std::unique_ptr<Subset>, size_t> solution(
         appData.loadWhileStreaming ? 
             loadWhileCalculating(appData, move(factory), move(getter), timers) : 
             loadThenCalculate(appData, move(factory), move(getter), timers)
     );
 
-    spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution->size(), solution->getScore());
+    spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution.first->size(), solution.first->getScore());
     
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         inputFile.close();
@@ -154,8 +154,8 @@ int main(int argc, char** argv) {
 
     SegmentedData dummySegmentedData(std::move(dummyData), std::move(dummyRowMapping), dummyColumns);
 
-    nlohmann::json result = Orchestrator::buildOutput(appData, *solution.get(), dummySegmentedData, timers);
-    result.push_back({"Memory (KiB)", memUsage});
+    nlohmann::json result = Orchestrator::buildOutput(appData, *solution.first.get(), dummySegmentedData, timers);
+    result.push_back({"Memory (KiB)", solution.second});
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
     outputFile << result.dump(2);

@@ -210,6 +210,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
                 this->t = 0; 
                 this->currentBucketIndex = 0;
                 this->deltaZero = newD0;
+                this->seedStorage.clear();
             }
 
             if (this->bucket->attemptInsert(seed->getRow(), seed->getData())) { 
