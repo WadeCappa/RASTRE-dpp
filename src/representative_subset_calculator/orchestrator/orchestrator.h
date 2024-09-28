@@ -37,6 +37,7 @@ struct appData{
     float alpha = 1;
     bool stopEarly = false;
     bool loadWhileStreaming = false;
+    bool sendAllToReceiver = false;
 
     int worldSize = 1;
     int worldRank = 0;
@@ -130,18 +131,23 @@ class Orchestrator {
         app.add_option("--distributedEpsilon", appData.distributedEpsilon, "Only used for streaming. Defaults to 0.13.");
         app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
         app.add_option("--alpha", appData.alpha, "Only used for the truncated setting.");
+        app.add_flag("--sendAllToReceiver", appData.sendAllToReceiver, "Enable this flag to skip the greedy calculation on the local nodes and to send all seeds directly to the receiver.");
     }
 
-    static SubsetCalculator* getCalculator(const AppData &appData) {
+    static std::unique_ptr<SubsetCalculator> getCalculator(const AppData &appData) {
+        if (appData.sendAllToReceiver) {
+            return std::unique_ptr<SubsetCalculator>(new AddAllToSubsetCalculator());
+        } 
+
         switch (appData.algorithm) {
             case 0:
-                return dynamic_cast<SubsetCalculator*>(new NaiveSubsetCalculator());
+                return std::unique_ptr<SubsetCalculator>(new NaiveSubsetCalculator());
             case 1:
-                return dynamic_cast<SubsetCalculator*>(new LazySubsetCalculator());
+                return std::unique_ptr<SubsetCalculator>(new LazySubsetCalculator());
             case 2:
-                return dynamic_cast<SubsetCalculator*>(new FastSubsetCalculator(appData.epsilon));
+                return std::unique_ptr<SubsetCalculator>(new FastSubsetCalculator(appData.epsilon));
             case 3: 
-                return dynamic_cast<SubsetCalculator*>(new LazyFastSubsetCalculator(appData.epsilon));
+                return std::unique_ptr<SubsetCalculator>(new LazyFastSubsetCalculator(appData.epsilon));
             default:
                 throw new std::invalid_argument("Could not find algorithm");
         }

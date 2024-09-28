@@ -235,6 +235,7 @@ int main(int argc, char** argv) {
 
     size_t baseline = getPeakRSS();
 
+    spdlog::info("Starting load for rank {0:d}", appData.worldRank);
     std::unique_ptr<SegmentedData> data;
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         std::ifstream inputFile;
