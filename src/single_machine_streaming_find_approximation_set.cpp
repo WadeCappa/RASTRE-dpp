@@ -22,43 +22,51 @@
 #include "representative_subset_calculator/streaming/bucket_titrator.h"
 #include "representative_subset_calculator/streaming/candidate_consumer.h"
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
-
 #include "representative_subset_calculator/buffers/buffer_builder.h"
 #include "representative_subset_calculator/memoryProfiler/MemUsage.h"
+#include "representative_subset_calculator/streaming/receiver_interface.h"
+#include "representative_subset_calculator/streaming/loading_receiver.h"
+#include "representative_subset_calculator/streaming/greedy_streamer.h"
+
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
 #include <random>
 #include <algorithm>
 
-int main(int argc, char** argv) {
-    LoggerHelper::setupLoggers();
-    CLI::App app{"Approximates the best possible approximation set for the input dataset using streaming."};
-    AppData appData;
-    MpiOrchestrator::addMpiCmdOptions(app, appData);
-    CLI11_PARSE(app, argc, argv);
+std::unique_ptr<Subset> loadWhileCalculating(
+    const AppData& appData, std::unique_ptr<DataRowFactory> factory, std::unique_ptr<LineFactory> getter, Timers& timers
+) { 
+    timers.totalCalculationTime.startTimer();
 
-    Timers timers;
-    size_t memUsage;
-    // Put this somewhere more sane
-    const unsigned int DEFAULT_VALUE = -1;
+    auto baseline = getPeakRSS();
 
-    std::unique_ptr<LineFactory> getter;
-    std::ifstream inputFile;
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
-        inputFile.open(appData.loadInput.inputFile);
-        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
-    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
-        getter = Orchestrator::getLineGenerator(appData);
-    }
+    std::unique_ptr<BucketTitrator> titrator(
+        MpiOrchestrator::buildTitratorFactory(appData, omp_get_num_threads() - 1)->createWithDynamicBuckets()
+    );
+    std::unique_ptr<NaiveCandidateConsumer> consumer(new NaiveCandidateConsumer(move(titrator), 1));
+    LoadingReceiver receiver(move(factory), move(getter));
+    SeiveGreedyStreamer streamer(receiver, *consumer.get(), timers, !appData.stopEarly);
 
+    spdlog::info("Starting to load and stream");
+    std::unique_ptr<Subset> solution(streamer.resolveStream());
+
+    size_t memUsage = getPeakRSS()- baseline;
+    
+    timers.totalCalculationTime.stopTimer();
+
+    return move(solution);
+}
+
+std::unique_ptr<Subset> loadThenCalculate(
+    const AppData& appData, std::unique_ptr<DataRowFactory> factory, std::unique_ptr<LineFactory> getter, Timers& timers
+) {
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     std::vector<std::unique_ptr<CandidateSeed>> elements;
-    std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
 
     timers.loadingDatasetTime.startTimer();
-    size_t globalRow = 0;
 
+    size_t globalRow = 0;
     while (true) {
         std::unique_ptr<DataRow> nextRow(factory->maybeGet(*getter));
 
@@ -71,6 +79,8 @@ int main(int argc, char** argv) {
     }
     timers.loadingDatasetTime.stopTimer();
 
+    spdlog::info("Finished loading dataset of size {0:d}...", elements.size());
+
     // Randomize Order
     std::random_device rd; 
     std::mt19937 g(rd()); 
@@ -78,6 +88,8 @@ int main(int argc, char** argv) {
     for (auto& element : elements) {
         queue.push(move(element)); // Move elements into the queue
     }        
+
+    spdlog::info("Randomized dataset...");
 
     timers.totalCalculationTime.startTimer();
 
@@ -91,11 +103,46 @@ int main(int argc, char** argv) {
     titrator->processQueue(queue);
     timers.insertSeedsTimer.stopTimer();
     
-    memUsage = getPeakRSS()- baseline;
+    size_t memUsage = getPeakRSS()- baseline;
     
     timers.totalCalculationTime.stopTimer();
 
-    std::unique_ptr<Subset> solution(titrator->getBestSolutionDestroyTitrator());
+    return titrator->getBestSolutionDestroyTitrator();
+}
+
+int main(int argc, char** argv) {
+    LoggerHelper::setupLoggers();
+    CLI::App app{"Approximates the best possible approximation set for the input dataset using streaming."};
+    AppData appData;
+    app.add_flag("--loadWhileStreaming", appData.loadWhileStreaming, "Only used during standalone streaming. Only set this to true if your input dataset has already been randomized");
+    MpiOrchestrator::addMpiCmdOptions(app, appData);
+    CLI11_PARSE(app, argc, argv);
+
+    Timers timers;
+    size_t memUsage;
+    // Put this somewhere more sane
+    const unsigned int DEFAULT_VALUE = -1;
+
+    spdlog::info("Starting standalone streaming...");
+
+    std::unique_ptr<LineFactory> getter;
+    std::ifstream inputFile;
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.open(appData.loadInput.inputFile);
+        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
+    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
+        getter = Orchestrator::getLineGenerator(appData);
+    }
+
+    std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
+
+    std::unique_ptr<Subset> solution(
+        appData.loadWhileStreaming ? 
+            loadWhileCalculating(appData, move(factory), move(getter), timers) : 
+            loadThenCalculate(appData, move(factory), move(getter), timers)
+    );
+
+    spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution->size(), solution->getScore());
     
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         inputFile.close();

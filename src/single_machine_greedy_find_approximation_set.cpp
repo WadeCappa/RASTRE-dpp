@@ -31,6 +31,8 @@ int main(int argc, char** argv) {
     appData.worldSize = 1;
 
     Timers timers;
+
+    spdlog::info("Starting standalone greedy...");
     
     auto baseline = getPeakRSS();
     timers.loadingDatasetTime.startTimer();
@@ -52,13 +54,17 @@ int main(int argc, char** argv) {
         inputFile.close();
     } 
 
+    spdlog::info("Finished loading dataset of size {0:d} ...", data->totalRows());
+
     timers.loadingDatasetTime.stopTimer();
 
     timers.totalCalculationTime.startTimer();
     
     std::unique_ptr<SubsetCalculator> calculator(Orchestrator::getCalculator(appData));
     
-    std::unique_ptr<Subset> solution = calculator->getApproximationSet(*data.get(), appData.outputSetSize);
+    std::unique_ptr<Subset> solution(calculator->getApproximationSet(*data.get(), appData.outputSetSize));
+
+    spdlog::info("Found solution of size {0:d} and score {1:f}", solution->size(), solution->getScore());
     
     timers.totalCalculationTime.stopTimer();
     auto memUsage = getPeakRSS()- baseline;
