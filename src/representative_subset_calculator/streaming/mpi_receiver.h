@@ -5,7 +5,6 @@
  */
 class MpiReceiver : public Receiver {
     public:
-    ~MpiReceiver() {}
     static std::unique_ptr<Receiver> buildReceiver(
         const unsigned int worldSize, 
         const size_t rowSize, 

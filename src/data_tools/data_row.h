@@ -26,7 +26,6 @@ class DenseDataRow : public DataRow {
     DenseDataRow(const DenseDataRow &);
 
     public:
-    ~DenseDataRow() {}
     DenseDataRow() {}
     
     DenseDataRow(std::vector<float> input) : data(move(input)) {}
@@ -65,8 +64,6 @@ class SparseDataRow : public DataRow {
         rowToValue(move(map)),
         totalColumns(totalColumns) 
     {}
-
-    ~SparseDataRow() {}
 
     size_t size() const {
         return this->totalColumns;

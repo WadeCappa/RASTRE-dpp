@@ -69,7 +69,6 @@ class LazyInitializingBucketTitrator : public BucketTitrator {
     }
 
     public:
-    ~LazyInitializingBucketTitrator() {}
     LazyInitializingBucketTitrator(std::unique_ptr<BucketTitratorFactory> factory) : factory(move(factory)) {}
 
     bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
@@ -169,8 +168,6 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
     }
 
     public:
-    ~ThreeSieveBucketTitrator() {}
-
     /**
      * Only used for standalone streaming. This method will create a titrator that *does not* know delta zero, and 
      * will dynamicaly adjust buckets using input seeds.
@@ -263,7 +260,6 @@ class ThreeSeiveBucketTitratorFactory : public BucketTitratorFactory {
     const unsigned int k;
 
     public:
-    ~ThreeSeiveBucketTitratorFactory() {}
     ThreeSeiveBucketTitratorFactory(
         const float epsilon,
         const unsigned int T,
@@ -354,8 +350,6 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
     }
 
     public:
-    ~SieveStreamingBucketTitrator() {}
-
     /**
      * Only used for standalone streaming. This method will create a titrator that *does not* know delta zero, and 
      * will dynamicaly adjust buckets using input seeds.
@@ -475,7 +469,6 @@ class SieveStreamingBucketTitratorFactory : public BucketTitratorFactory {
     const unsigned int k;
 
     public:
-    ~SieveStreamingBucketTitratorFactory() {}
     SieveStreamingBucketTitratorFactory(
         const unsigned int numThreads,
         const float epsilon,

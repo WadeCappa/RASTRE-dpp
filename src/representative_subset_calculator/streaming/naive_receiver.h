@@ -6,7 +6,6 @@ class NaiveReceiver : public Receiver {
     size_t listeningToRank;
 
     public:
-    ~NaiveReceiver() {}
     NaiveReceiver(
         std::vector<std::unique_ptr<RankBuffer>> buffers
     ) : 

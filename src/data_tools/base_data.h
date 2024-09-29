@@ -71,7 +71,6 @@ class FullyLoadedData : public BaseData {
     FullyLoadedData(const BaseData&);
 
     public:
-    ~FullyLoadedData() {}
     static std::unique_ptr<FullyLoadedData> load(DataRowFactory &factory, LineFactory &getter) {
         size_t columns = 0;
         std::vector<std::unique_ptr<DataRow>> data;
@@ -119,7 +118,6 @@ class FullyLoadedData : public BaseData {
 
 class SegmentedData : public BaseData {
     public:
-    virtual ~SegmentedData() {}
     virtual size_t getRemoteIndexForRow(const size_t localRowIndex) const = 0; 
 };
 
@@ -248,7 +246,6 @@ class ReceivedData : public BaseData {
     ReceivedData(const BaseData&);
 
     public:
-    ~ReceivedData () {}
     ReceivedData(
         std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> input
     ) : 

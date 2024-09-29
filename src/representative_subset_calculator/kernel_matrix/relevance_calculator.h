@@ -12,7 +12,6 @@ class NaiveRelevanceCalculator : public RelevanceCalculator {
     const BaseData &data;
 
     public:
-    ~NaiveRelevanceCalculator() {}
     NaiveRelevanceCalculator(const BaseData &data) : data(data) {}
 
     float get(const size_t a, const size_t b) const {

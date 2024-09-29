@@ -17,7 +17,6 @@ class RandomNumberGenerator {
 
 class AlwaysOneGenerator : public RandomNumberGenerator {
     public:
-    ~AlwaysOneGenerator() {}
     static std::unique_ptr<RandomNumberGenerator> create() {
         return std::unique_ptr<RandomNumberGenerator>(new AlwaysOneGenerator());
     }
@@ -41,7 +40,6 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
     std::normal_distribution<float> distribution;
 
     public:
-    ~NormalRandomNumberGenerator() {}
     NormalRandomNumberGenerator(
         std::default_random_engine eng, 
         std::normal_distribution<float> distribution
@@ -72,7 +70,6 @@ class UniformRandomNumberGenerator : public RandomNumberGenerator {
     std::uniform_real_distribution<float> distribution;
 
     public:
-    ~UniformRandomNumberGenerator() {}
     UniformRandomNumberGenerator(
         std::default_random_engine eng, 
         std::uniform_real_distribution<float> distribution
@@ -109,7 +106,6 @@ class FromFileLineFactory : public LineFactory {
     std::istream &source;
 
     public:
-    ~FromFileLineFactory() {}
     FromFileLineFactory(std::istream &source) : source(source) {}
 
     void skipNext() {

@@ -4,7 +4,6 @@ class ToBinaryVisitor : public ReturningDataRowVisitor<std::vector<float>> {
     std::vector<float> binary;
 
     public:
-    ~ToBinaryVisitor() {}
     void visitDenseDataRow(const std::vector<float>& data) {
         binary = data;
     }

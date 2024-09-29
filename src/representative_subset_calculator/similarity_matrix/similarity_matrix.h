@@ -17,7 +17,6 @@ class MutableSimilarityMatrix : public SimilarityMatrix {
     std::vector<std::vector<float>> transposeMatrix;
 
     public:
-    ~MutableSimilarityMatrix() {}
     MutableSimilarityMatrix() {}
 
     MutableSimilarityMatrix(const DataRow& firstRow) {

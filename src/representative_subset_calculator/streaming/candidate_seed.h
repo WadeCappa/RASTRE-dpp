@@ -18,8 +18,6 @@ class CandidateSeed {
         originRank(rank)
     {}
 
-    ~CandidateSeed() {}
-
     const DataRow &getData() const {
         return *(this->data.get());
     }

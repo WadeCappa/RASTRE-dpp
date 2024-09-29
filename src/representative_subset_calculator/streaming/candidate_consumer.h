@@ -17,7 +17,6 @@ class NaiveCandidateConsumer : public CandidateConsumer {
     std::unordered_set<unsigned int> seenFirstElement;
 
     public: 
-    ~NaiveCandidateConsumer() {}
     static std::unique_ptr<NaiveCandidateConsumer> from(
         std::unique_ptr<BucketTitrator> titrator,
         const unsigned int numberOfSenders

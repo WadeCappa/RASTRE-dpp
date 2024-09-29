@@ -11,6 +11,5 @@ class DataRowVisitor {
 template <typename T>
 class ReturningDataRowVisitor : public DataRowVisitor {
     public:
-    virtual ~ReturningDataRowVisitor() {}
     virtual T get() = 0;
 };

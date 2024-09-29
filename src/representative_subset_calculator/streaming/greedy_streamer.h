@@ -17,7 +17,6 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
 
     public:
-    ~SeiveGreedyStreamer() {}
     SeiveGreedyStreamer(
         Receiver &receiver, 
         CandidateConsumer &consumer,
