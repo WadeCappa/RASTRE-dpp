@@ -6,11 +6,13 @@ class Buffer {
     static const size_t FLOATS_FOR_ROW_INDEX_PER_COLUMN = 1;
 
     public:
+    virtual ~Buffer() {}
 };
 
 class BufferBuilder : public Buffer {
     private:
     public:
+    ~BufferBuilder () {}
     static unsigned int buildSendBuffer(
         const SegmentedData &data, 
         const Subset &localSolution, 
@@ -68,6 +70,7 @@ class BufferBuilder : public Buffer {
 
 class BufferLoader : public Buffer {
     public:
+    ~BufferLoader() {}
     virtual std::unique_ptr<Subset> getSolution(
         std::unique_ptr<SubsetCalculator> calculator,
         const size_t k,
@@ -84,6 +87,7 @@ class GlobalBufferLoader : public BufferLoader {
     const size_t worldSize;
 
     public:
+    ~GlobalBufferLoader () {}
     std::unique_ptr<Subset> getSolution(
         std::unique_ptr<SubsetCalculator> calculator, 
         const size_t k,

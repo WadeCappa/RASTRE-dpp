@@ -3,6 +3,7 @@
 
 class GreedyStreamer {
     public:
+    virtual ~GreedyStreamer() {}
     virtual std::unique_ptr<Subset> resolveStream() = 0;
 };
 
@@ -16,6 +17,7 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
 
     public:
+    ~SeiveGreedyStreamer() {}
     SeiveGreedyStreamer(
         Receiver &receiver, 
         CandidateConsumer &consumer,

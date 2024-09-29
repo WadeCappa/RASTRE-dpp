@@ -1,12 +1,12 @@
 
 class NaiveReceiver : public Receiver {
     private:
-    
     std::vector<std::unique_ptr<RankBuffer>> buffers;
     size_t numberOfProcessorsStillReceiving;
     size_t listeningToRank;
 
     public:
+    ~NaiveReceiver() {}
     NaiveReceiver(
         std::vector<std::unique_ptr<RankBuffer>> buffers
     ) : 

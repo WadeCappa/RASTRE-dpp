@@ -2,6 +2,7 @@
 
 class SubsetCalculator {
     public:
+    virtual ~SubsetCalculator() {}
     virtual std::unique_ptr<Subset> getApproximationSet(std::unique_ptr<MutableSubset> consumer, const BaseData &data, size_t k) = 0; 
 
     std::unique_ptr<Subset> getApproximationSet(const BaseData &data, size_t k) {

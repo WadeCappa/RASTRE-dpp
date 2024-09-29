@@ -9,6 +9,7 @@ class LoadingReceiver : public Receiver {
     size_t knownColumns;
 
     public:
+    ~LoadingReceiver() {}
     LoadingReceiver(
         std::unique_ptr<DataRowFactory> factory, 
         std::unique_ptr<LineFactory> getter

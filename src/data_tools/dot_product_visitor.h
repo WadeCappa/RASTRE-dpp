@@ -7,6 +7,7 @@ class DenseDotProductDataRowVisitor : public ReturningDataRowVisitor<float> {
     const std::vector<float>& base;
 
     public:
+    ~DenseDotProductDataRowVisitor () {}
     DenseDotProductDataRowVisitor(const std::vector<float>& input) 
     : base(input), result(std::nullopt) {}
 
@@ -39,6 +40,7 @@ class SparseDotProductDataRowVisitor : public ReturningDataRowVisitor<float> {
     const std::map<size_t, float>& base;
 
     public:
+    ~SparseDotProductDataRowVisitor() {}
     SparseDotProductDataRowVisitor(const std::map<size_t, float>& input) 
     : base(input), result(std::nullopt) {}
 

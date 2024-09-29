@@ -7,6 +7,7 @@
 
 class SimilarityMatrix {
     public:
+    virtual ~SimilarityMatrix() {}
     virtual float getCoverage() const = 0; 
 };
 
@@ -16,6 +17,7 @@ class MutableSimilarityMatrix : public SimilarityMatrix {
     std::vector<std::vector<float>> transposeMatrix;
 
     public:
+    ~MutableSimilarityMatrix() {}
     MutableSimilarityMatrix() {}
 
     MutableSimilarityMatrix(const DataRow& firstRow) {

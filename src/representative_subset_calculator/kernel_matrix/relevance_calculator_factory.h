@@ -1,11 +1,13 @@
 
 class RelevanceCalculatorFactory {
     public:
+    virtual ~RelevanceCalculatorFactory() {}
     virtual std::unique_ptr<RelevanceCalculator> build(const BaseData& d) const = 0;
 };
 
 class NaiveRelevanceCalculatorFactory : public RelevanceCalculatorFactory {
     public:
+    virtual ~NaiveRelevanceCalculatorFactory() {}
     std::unique_ptr<RelevanceCalculator> build(const BaseData& d) const {
         return std::unique_ptr<RelevanceCalculator>(new NaiveRelevanceCalculator(d));
     }

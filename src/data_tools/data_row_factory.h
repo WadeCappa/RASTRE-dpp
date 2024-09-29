@@ -9,6 +9,7 @@
 
 class RandomNumberGenerator {
     public:
+    virtual ~RandomNumberGenerator() {}
     virtual float getNumber() = 0;
     virtual void skipNextElements(size_t elementsToSkip) = 0;
     virtual std::unique_ptr<RandomNumberGenerator> copy() = 0;
@@ -16,6 +17,7 @@ class RandomNumberGenerator {
 
 class AlwaysOneGenerator : public RandomNumberGenerator {
     public:
+    ~AlwaysOneGenerator() {}
     static std::unique_ptr<RandomNumberGenerator> create() {
         return std::unique_ptr<RandomNumberGenerator>(new AlwaysOneGenerator());
     }
@@ -39,6 +41,7 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
     std::normal_distribution<float> distribution;
 
     public:
+    ~NormalRandomNumberGenerator() {}
     NormalRandomNumberGenerator(
         std::default_random_engine eng, 
         std::normal_distribution<float> distribution
@@ -69,6 +72,7 @@ class UniformRandomNumberGenerator : public RandomNumberGenerator {
     std::uniform_real_distribution<float> distribution;
 
     public:
+    ~UniformRandomNumberGenerator() {}
     UniformRandomNumberGenerator(
         std::default_random_engine eng, 
         std::uniform_real_distribution<float> distribution
@@ -95,6 +99,7 @@ class UniformRandomNumberGenerator : public RandomNumberGenerator {
 
 class LineFactory {
     public:
+    virtual ~LineFactory() {}
     virtual std::optional<std::string> maybeGet() = 0;
     virtual void skipNext() = 0;
 };
@@ -104,6 +109,7 @@ class FromFileLineFactory : public LineFactory {
     std::istream &source;
 
     public:
+    ~FromFileLineFactory() {}
     FromFileLineFactory(std::istream &source) : source(source) {}
 
     void skipNext() {
@@ -124,6 +130,7 @@ class FromFileLineFactory : public LineFactory {
 
 class GeneratedLineFactory : public LineFactory {
     public:
+    virtual ~GeneratedLineFactory() {}
     virtual void jumpToLine(const size_t line) = 0;
     virtual std::unique_ptr<GeneratedLineFactory> copy() = 0;
 };
@@ -159,6 +166,7 @@ class GeneratedDenseLineFactory : public GeneratedLineFactory {
     }
 
     public:
+    ~GeneratedDenseLineFactory() {}
     static std::unique_ptr<GeneratedDenseLineFactory> create(
         const size_t numRows,
         const size_t numColumns,
@@ -243,6 +251,7 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
     }
 
     public:
+    ~GeneratedSparseLineFactory() {}
     static std::unique_ptr<GeneratedSparseLineFactory> create(
         const size_t numRows,
         const size_t numColumns,
@@ -319,6 +328,7 @@ class DataRowFactory {
     virtual std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<float> binary) const = 0;
     virtual std::unique_ptr<DataRow> getFromBinary(std::vector<float> binary) const = 0;
     virtual void skipNext(LineFactory &source) = 0;
+    virtual ~DataRowFactory() {}
     
     // Pretty horrific method to expose, but I need to expose this for 
     //  sparse generation since the sparse generator will always create
@@ -332,6 +342,7 @@ class DataRowFactory {
 
 class DenseDataRowFactory : public DataRowFactory {
     public:
+    ~DenseDataRowFactory() {}
     std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
         std::optional<std::string> data(source.maybeGet());
         if (!data.has_value()) {
@@ -382,6 +393,7 @@ class SparseDataRowFactory : public DataRowFactory {
     bool hasData;
 
     public:
+    ~SparseDataRowFactory() {}
     SparseDataRowFactory(const size_t totalColumns) : 
         expectedRow(0), 
         hasData(false),

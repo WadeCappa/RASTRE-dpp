@@ -1,5 +1,6 @@
 class BucketTitrator {
     public:
+    virtual ~BucketTitrator() {}
     // Returns true when this titrator is still accepting seeds, false otherwise.
     virtual bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
     virtual std::unique_ptr<Subset> getBestSolutionDestroyTitrator() = 0;
@@ -39,6 +40,7 @@ class BucketTitrator {
 
 class BucketTitratorFactory {
     public:
+    virtual ~BucketTitratorFactory() {}
     virtual std::unique_ptr<BucketTitrator> createWithKnownDeltaZero(const float deltaZero) const = 0;
     virtual std::unique_ptr<BucketTitrator> createWithDynamicBuckets() const = 0;
 };
@@ -67,6 +69,7 @@ class LazyInitializingBucketTitrator : public BucketTitrator {
     }
 
     public:
+    ~LazyInitializingBucketTitrator() {}
     LazyInitializingBucketTitrator(std::unique_ptr<BucketTitratorFactory> factory) : factory(move(factory)) {}
 
     bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
@@ -166,6 +169,8 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
     }
 
     public:
+    ~ThreeSieveBucketTitrator() {}
+
     /**
      * Only used for standalone streaming. This method will create a titrator that *does not* know delta zero, and 
      * will dynamicaly adjust buckets using input seeds.
@@ -258,6 +263,7 @@ class ThreeSeiveBucketTitratorFactory : public BucketTitratorFactory {
     const unsigned int k;
 
     public:
+    ~ThreeSeiveBucketTitratorFactory() {}
     ThreeSeiveBucketTitratorFactory(
         const float epsilon,
         const unsigned int T,
@@ -348,6 +354,8 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
     }
 
     public:
+    ~SieveStreamingBucketTitrator() {}
+
     /**
      * Only used for standalone streaming. This method will create a titrator that *does not* know delta zero, and 
      * will dynamicaly adjust buckets using input seeds.
@@ -467,6 +475,7 @@ class SieveStreamingBucketTitratorFactory : public BucketTitratorFactory {
     const unsigned int k;
 
     public:
+    ~SieveStreamingBucketTitratorFactory() {}
     SieveStreamingBucketTitratorFactory(
         const unsigned int numThreads,
         const float epsilon,

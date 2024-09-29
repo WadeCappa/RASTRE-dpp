@@ -2,6 +2,8 @@
 
 class CandidateConsumer {
     public:
+    virtual ~CandidateConsumer() {}
+
     // returns `true` when the consumer is still accepting seeds. `false` otherwise.
     virtual bool accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) = 0;
     virtual std::unique_ptr<Subset> getBestSolutionDestroyConsumer() = 0;
@@ -15,6 +17,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
     std::unordered_set<unsigned int> seenFirstElement;
 
     public: 
+    ~NaiveCandidateConsumer() {}
     static std::unique_ptr<NaiveCandidateConsumer> from(
         std::unique_ptr<BucketTitrator> titrator,
         const unsigned int numberOfSenders

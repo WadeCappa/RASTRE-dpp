@@ -13,6 +13,7 @@ struct diagnostics {
 
 class BaseData {
     public:
+    virtual ~BaseData() {}
     virtual const DataRow& getRow(size_t i) const = 0;
     virtual size_t totalRows() const = 0;
     virtual size_t totalColumns() const = 0;
@@ -70,6 +71,7 @@ class FullyLoadedData : public BaseData {
     FullyLoadedData(const BaseData&);
 
     public:
+    ~FullyLoadedData() {}
     static std::unique_ptr<FullyLoadedData> load(DataRowFactory &factory, LineFactory &getter) {
         size_t columns = 0;
         std::vector<std::unique_ptr<DataRow>> data;
@@ -117,6 +119,7 @@ class FullyLoadedData : public BaseData {
 
 class SegmentedData : public BaseData {
     public:
+    virtual ~SegmentedData() {}
     virtual size_t getRemoteIndexForRow(const size_t localRowIndex) const = 0; 
 };
 
@@ -131,6 +134,7 @@ class LoadedSegmentedData : public SegmentedData {
     LoadedSegmentedData(const BaseData&);
 
     public:
+    ~LoadedSegmentedData() {}
     static std::unique_ptr<SegmentedData> loadInParallel(
         DataRowFactory &factory, 
         GeneratedLineFactory &getter, 
@@ -244,6 +248,7 @@ class ReceivedData : public BaseData {
     ReceivedData(const BaseData&);
 
     public:
+    ~ReceivedData () {}
     ReceivedData(
         std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> input
     ) : 

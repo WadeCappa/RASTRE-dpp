@@ -6,6 +6,7 @@
 
 class KernelMatrix {
     public:
+    virtual ~KernelMatrix() {}
 
     /** 
      * Needs to be parallel safe for row based indexes, otherwise race conditions will occur
@@ -61,6 +62,7 @@ class LazyKernelMatrix : public KernelMatrix {
     LazyKernelMatrix(const LazyKernelMatrix &);
 
     public:
+    ~LazyKernelMatrix() {}
     static std::unique_ptr<LazyKernelMatrix> from(const BaseData &data) {
         return std::make_unique<LazyKernelMatrix>(data, std::unique_ptr<RelevanceCalculator>(new NaiveRelevanceCalculator(data)));
     }
@@ -97,6 +99,7 @@ class NaiveKernelMatrix : public KernelMatrix {
     NaiveKernelMatrix(const NaiveKernelMatrix &);
 
     public:
+    ~NaiveKernelMatrix() {}
     static std::unique_ptr<NaiveKernelMatrix> from(const BaseData &data) {
         return NaiveKernelMatrix::from(data, std::unique_ptr<RelevanceCalculator>(new NaiveRelevanceCalculator(data)));
     }
