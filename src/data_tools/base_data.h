@@ -132,7 +132,6 @@ class LoadedSegmentedData : public SegmentedData {
     LoadedSegmentedData(const BaseData&);
 
     public:
-    ~LoadedSegmentedData() {}
     static std::unique_ptr<SegmentedData> loadInParallel(
         DataRowFactory &factory, 
         GeneratedLineFactory &getter, 

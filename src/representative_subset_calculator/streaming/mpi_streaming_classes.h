@@ -33,7 +33,6 @@ class MpiRankBuffer : public RankBuffer {
     std::unique_ptr<MutableSubset> rankSolution;
 
     public:
-    ~MpiRankBuffer() {}
     MpiRankBuffer(
         const unsigned int rank,
         const size_t rowSize,

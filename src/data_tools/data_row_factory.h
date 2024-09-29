@@ -126,7 +126,6 @@ class FromFileLineFactory : public LineFactory {
 
 class GeneratedLineFactory : public LineFactory {
     public:
-    virtual ~GeneratedLineFactory() {}
     virtual void jumpToLine(const size_t line) = 0;
     virtual std::unique_ptr<GeneratedLineFactory> copy() = 0;
 };
@@ -162,7 +161,6 @@ class GeneratedDenseLineFactory : public GeneratedLineFactory {
     }
 
     public:
-    ~GeneratedDenseLineFactory() {}
     static std::unique_ptr<GeneratedDenseLineFactory> create(
         const size_t numRows,
         const size_t numColumns,
@@ -247,7 +245,6 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
     }
 
     public:
-    ~GeneratedSparseLineFactory() {}
     static std::unique_ptr<GeneratedSparseLineFactory> create(
         const size_t numRows,
         const size_t numColumns,
@@ -338,7 +335,6 @@ class DataRowFactory {
 
 class DenseDataRowFactory : public DataRowFactory {
     public:
-    ~DenseDataRowFactory() {}
     std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
         std::optional<std::string> data(source.maybeGet());
         if (!data.has_value()) {
@@ -389,7 +385,6 @@ class SparseDataRowFactory : public DataRowFactory {
     bool hasData;
 
     public:
-    ~SparseDataRowFactory() {}
     SparseDataRowFactory(const size_t totalColumns) : 
         expectedRow(0), 
         hasData(false),
