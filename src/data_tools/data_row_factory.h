@@ -404,7 +404,7 @@ class SparseDataRowFactory : public DataRowFactory {
             }
         }
 
-        return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));    
+        return std::unique_ptr<DataRow>(new SparseDataRow(res, this->totalColumns));    
     }
 
     std::unique_ptr<DataRow> getFromBinary(std::vector<float> binary) const {
@@ -419,7 +419,7 @@ class SparseDataRowFactory : public DataRowFactory {
             res.insert({static_cast<size_t>(binary[i]), binary[i + 1]});
         }
 
-        return std::unique_ptr<DataRow>(new SparseDataRow(move(res), this->totalColumns));
+        return std::unique_ptr<DataRow>(new SparseDataRow(res, this->totalColumns));
     }
 
     void jumpToLine(const size_t line) {
@@ -443,7 +443,7 @@ class SparseDataRowFactory : public DataRowFactory {
                 result.insert({to, value});
             } else {
                 this->expectedRow++;
-                return this->returnResult(move(result), skip);
+                return this->returnResult(result, skip);
             }
         }
 
@@ -452,7 +452,7 @@ class SparseDataRowFactory : public DataRowFactory {
             if (!line.has_value()) {
                 if (result.size() > 0) {
                     this->hasData = false;
-                    return this->returnResult(move(result), skip);
+                    return this->returnResult(result, skip);
                 } else {
                     return nullptr;
                 }
@@ -487,7 +487,7 @@ class SparseDataRowFactory : public DataRowFactory {
             } else if (currentRow > this->expectedRow) {
                 this->expectedRow++;
                 this->hasData = true;
-                return this->returnResult(move(result), skip);
+                return this->returnResult(result, skip);
             } else {
                 spdlog::error("had current row of {0:d} and expected row of {1:d}", currentRow, this->expectedRow);
                 throw std::invalid_argument("ERROR: cannot backtrack");
@@ -500,6 +500,6 @@ class SparseDataRowFactory : public DataRowFactory {
             return nullptr;
         }
 
-        return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
+        return std::unique_ptr<DataRow>(new SparseDataRow(result, this->totalColumns));
     }
 };

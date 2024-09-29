@@ -10,6 +10,7 @@ class DataRow {
     virtual size_t size() const = 0;
     virtual float dotProduct(const DataRow& dataRow) const = 0;
     virtual void voidVisit(DataRowVisitor &visitor) const = 0;
+    virtual ~DataRow() {}
 
     template <typename T>
     T visit(ReturningDataRowVisitor<T>& visitor) const {
@@ -25,6 +26,7 @@ class DenseDataRow : public DataRow {
     DenseDataRow(const DenseDataRow &);
 
     public:
+    ~DenseDataRow() {}
     DenseDataRow() {}
     
     DenseDataRow(std::vector<float> input) : data(move(input)) {}
@@ -60,20 +62,22 @@ class SparseDataRow : public DataRow {
 
     public:
     SparseDataRow(std::map<size_t, float> map, size_t totalColumns) : 
-        rowToValue(move(map)), 
+        rowToValue(move(map)),
         totalColumns(totalColumns) 
     {}
+
+    ~SparseDataRow() {}
 
     size_t size() const {
         return this->totalColumns;
     }
 
     float dotProduct(const DataRow& dataRow) const {
-        SparseDotProductDataRowVisitor visitor(this->rowToValue);
+        SparseDotProductDataRowVisitor visitor(rowToValue);
         return dataRow.visit(visitor);
     }
 
     void voidVisit(DataRowVisitor &visitor) const {
-        visitor.visitSparseDataRow(this->rowToValue, this->totalColumns);
+        visitor.visitSparseDataRow(rowToValue, this->totalColumns);
     }
 };
