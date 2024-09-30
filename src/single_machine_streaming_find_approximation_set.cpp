@@ -65,6 +65,7 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
 
     timers.loadingDatasetTime.startTimer();
 
+    auto loadBaseline = getPeakRSS();
     size_t globalRow = 0;
     while (true) {
         std::unique_ptr<DataRow> nextRow(factory->maybeGet(*getter));
@@ -77,8 +78,9 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
         elements.push_back(move(element));
     }
     timers.loadingDatasetTime.stopTimer();
+    size_t memUsageOnLoad = getPeakRSS()- loadBaseline;
 
-    spdlog::info("Finished loading dataset of size {0:d}...", elements.size());
+    spdlog::info("Finished loading dataset of size {0:d} requiring {1:d} kB...", elements.size(), memUsageOnLoad);
 
     // Randomize Order
     std::random_device rd; 
