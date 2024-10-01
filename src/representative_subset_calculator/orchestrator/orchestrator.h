@@ -12,6 +12,8 @@ const static float DEFAULT_GENERATED_SPARSITY = -1;
 
 struct loadInput {
     std::string inputFile = EMPTY_STRING;
+    unsigned int multiFile = 0;
+    std::string directory = EMPTY_STRING;
 } typedef LoadInput;
 
 struct generateInput {
@@ -122,7 +124,9 @@ class Orchestrator {
         genInput->add_option("--sparsity", appData.generateInput.sparsity, "Note that edges are generated uniformly at random.");
         genInput->add_option("--seed", appData.generateInput.seed)->required();
 
-        loadInput->add_option("-i,--input", appData.loadInput.inputFile, "Path to input file. Should contain data in row vector format.")->required();
+        loadInput->add_option("--multiFile", appData.loadInput.multiFile, "Load input from these many files.")->required();
+        loadInput->add_option("--directory", appData.loadInput.directory, "Path to directory containing multiple files. 1 to set this 0 otherwise.");
+        loadInput->add_option("-i,--input", appData.loadInput.inputFile, "Path to input file. Or pattern contained in filename.")->required();
     }
 
     static void addMpiCmdOptions(CLI::App &app, AppData &appData) {

@@ -228,7 +228,36 @@ int main(int argc, char** argv) {
 
     spdlog::info("Starting load for rank {0:d}", appData.worldRank);
     std::unique_ptr<SegmentedData> data;
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+    if (appData.loadInput.multiFile > 0) {
+        
+        size_t chunks = appData.worldSize / appData.loadInput.multiFile;
+        size_t fileIndex = std::floor((appData.worldRank - 1) / chunks);
+        size_t chunkIndex = (appData.worldRank - 1) % chunks;
+        size_t rowStart = (1048576 / chunks) * chunkIndex + (1048576 * fileIndex);
+        size_t rowEnd = rowStart + (1048576 / chunks) - 1;
+        if (appData.worldRank > 0) {
+            for (size_t i = 0; i < rowToRank.size(); i++) {
+                if (i >= rowStart && i <= rowEnd)
+                    rowToRank[i] = appData.worldRank;
+                else
+                    rowToRank[i] = -1;
+            }
+        }
+        std::string filePath = appData.loadInput.directory + std::to_string(fileIndex) + appData.loadInput.inputFile;
+        std::cout << "Rank " << appData.worldRank 
+                  << " loading file: " << filePath
+                  << " with first Row index: " << rowStart 
+                  << " with last Row index: " << rowEnd
+                  << std::endl;
+        
+        
+        std::ifstream inputFile;
+        inputFile.open(filePath);
+        std::unique_ptr<LineFactory> getter(std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile)));
+        data = Orchestrator::buildMpiData(appData, *getter.get(), rowToRank);
+        inputFile.close();
+        
+    } else if (appData.loadInput.inputFile != EMPTY_STRING) {
         std::ifstream inputFile;
         inputFile.open(appData.loadInput.inputFile);
         std::unique_ptr<LineFactory> getter(std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile)));
