@@ -1,6 +1,7 @@
 
 class RelevanceCalculatorFactory {
     public:
+    virtual ~RelevanceCalculatorFactory() {}
     virtual std::unique_ptr<RelevanceCalculator> build(const BaseData& d) const = 0;
 };
 

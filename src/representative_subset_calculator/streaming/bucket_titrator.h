@@ -1,5 +1,6 @@
 class BucketTitrator {
     public:
+    virtual ~BucketTitrator() {}
     // Returns true when this titrator is still accepting seeds, false otherwise.
     virtual bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) = 0;
     virtual std::unique_ptr<Subset> getBestSolutionDestroyTitrator() = 0;
@@ -39,6 +40,7 @@ class BucketTitrator {
 
 class BucketTitratorFactory {
     public:
+    virtual ~BucketTitratorFactory() {}
     virtual std::unique_ptr<BucketTitrator> createWithKnownDeltaZero(const float deltaZero) const = 0;
     virtual std::unique_ptr<BucketTitrator> createWithDynamicBuckets() const = 0;
 };
@@ -199,7 +201,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         }
 
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
-            std::unique_ptr<CandidateSeed> seed = move(pulledFromQueue[seedIndex]);
+            std::unique_ptr<CandidateSeed> seed(move(pulledFromQueue[seedIndex]));
             
             float newD0 = getDeltaFromSeed(*seed, *calcFactory, knownD0);
         
@@ -238,6 +240,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
     }
 
     std::unique_ptr<Subset> getBestSolutionDestroyTitrator() {
+        spdlog::info("seed storage had {0:d} seeds", this->seedStorage.size());
         return bucket->returnSolutionDestroyBucket();
     }
 

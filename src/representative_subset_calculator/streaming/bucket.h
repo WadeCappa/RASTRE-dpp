@@ -13,6 +13,7 @@ class ThresholdBucket
     const int k;
 
     public:
+    ~ThresholdBucket() {}
     ThresholdBucket(const float threshold, const int k) 
     : 
         threshold(threshold), 

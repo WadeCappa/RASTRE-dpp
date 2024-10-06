@@ -9,6 +9,7 @@
 
 class RandomNumberGenerator {
     public:
+    virtual ~RandomNumberGenerator() {}
     virtual float getNumber() = 0;
     virtual void skipNextElements(size_t elementsToSkip) = 0;
     virtual std::unique_ptr<RandomNumberGenerator> copy() = 0;
@@ -95,6 +96,7 @@ class UniformRandomNumberGenerator : public RandomNumberGenerator {
 
 class LineFactory {
     public:
+    virtual ~LineFactory() {}
     virtual std::optional<std::string> maybeGet() = 0;
     virtual void skipNext() = 0;
 };
@@ -319,6 +321,7 @@ class DataRowFactory {
     virtual std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<float> binary) const = 0;
     virtual std::unique_ptr<DataRow> getFromBinary(std::vector<float> binary) const = 0;
     virtual void skipNext(LineFactory &source) = 0;
+    virtual ~DataRowFactory() {}
     
     // Pretty horrific method to expose, but I need to expose this for 
     //  sparse generation since the sparse generator will always create

@@ -13,6 +13,7 @@ struct diagnostics {
 
 class BaseData {
     public:
+    virtual ~BaseData() {}
     virtual const DataRow& getRow(size_t i) const = 0;
     virtual size_t totalRows() const = 0;
     virtual size_t totalColumns() const = 0;

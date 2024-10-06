@@ -3,6 +3,8 @@
 
 class Subset {
     public:
+    virtual ~Subset() {}
+
     virtual float getScore() const = 0;
     virtual size_t getRow(const size_t index) const = 0;
     virtual size_t size() const = 0;

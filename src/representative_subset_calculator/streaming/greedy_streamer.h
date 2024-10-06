@@ -3,6 +3,7 @@
 
 class GreedyStreamer {
     public:
+    virtual ~GreedyStreamer() {}
     virtual std::unique_ptr<Subset> resolveStream() = 0;
 };
 
