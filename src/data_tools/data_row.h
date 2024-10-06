@@ -60,6 +60,7 @@ class SparseDataRow : public DataRow {
     SparseDataRow(const SparseDataRow &);
 
     public:
+    ~SparseDataRow() {}
     SparseDataRow(std::map<size_t, float> map, size_t totalColumns) : 
         rowToValue(move(map)),
         totalColumns(totalColumns) 

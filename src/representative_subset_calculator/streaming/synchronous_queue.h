@@ -27,12 +27,8 @@ class SynchronousQueue {
         this->lock.unlock();
     }
 
-    const size_t size() {
-        this->lock.lock();
-        size_t res = this->base.size();
-        this->lock.unlock();
-
-        return res;
+    const size_t size() const {
+        return this->base.size();
     }
 
     typename std::vector<T> emptyQueueIntoVector() {

@@ -43,7 +43,8 @@ std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
     std::unique_ptr<BucketTitrator> titrator(
         MpiOrchestrator::buildTitratorFactory(appData, omp_get_num_threads() - 1)->createWithDynamicBuckets()
     );
-    std::unique_ptr<NaiveCandidateConsumer> consumer(new NaiveCandidateConsumer(move(titrator), 1));
+    // std::unique_ptr<NaiveCandidateConsumer> consumer(new NaiveCandidateConsumer(move(titrator), 1));
+    std::unique_ptr<CandidateConsumer> consumer(new FakeCandidateConsumer());
     LoadingReceiver receiver(move(factory), move(getter));
     SeiveGreedyStreamer streamer(receiver, *consumer.get(), timers, !appData.stopEarly);
 

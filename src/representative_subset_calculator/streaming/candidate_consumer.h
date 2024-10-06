@@ -9,6 +9,18 @@ class CandidateConsumer {
     virtual std::unique_ptr<Subset> getBestSolutionDestroyConsumer() = 0;
 };
 
+class FakeCandidateConsumer : public CandidateConsumer {
+    public:
+    bool accept(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue, Timers &timers) {
+        seedQueue.emptyQueueIntoVector();
+        return true;
+    }
+
+    std::unique_ptr<Subset> getBestSolutionDestroyConsumer() {
+        return Subset::empty();
+    }
+};
+
 class NaiveCandidateConsumer : public CandidateConsumer {
     private:
     const unsigned int numberOfSenders;
