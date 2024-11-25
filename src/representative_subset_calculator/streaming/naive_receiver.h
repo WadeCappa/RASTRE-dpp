@@ -20,13 +20,14 @@ class NaiveReceiver : public Receiver {
                 RankBuffer* buffer = this->buffers[this->listeningToRank].get();
                 if (buffer->stillReceiving()) {
                     CandidateSeed* maybeSeed = buffer->askForData();
+                    bool stillReceivingAfterLastSeed = buffer->stillReceiving();
+                    if (!stillReceivingAfterLastSeed) {
+                        this->numberOfProcessorsStillReceiving--;
+                        spdlog::info("another buffer of rank {0:d} has stopped receiving, only {1:d} buffers left", buffer->getRank(), numberOfProcessorsStillReceiving);
+                        stillReceiving.store(this->numberOfProcessorsStillReceiving != 0);
+                        return nullptr;
+                    }
                     if (maybeSeed != nullptr) {
-                        bool stillReceivingAfterLastSeed = buffer->stillReceiving();
-                        if (!stillReceivingAfterLastSeed) {
-                            this->numberOfProcessorsStillReceiving--;
-                            spdlog::info("another buffer of rank {0:d} has stopped receiving, only {1:d} buffers left", buffer->getRank(), numberOfProcessorsStillReceiving);
-                            stillReceiving.store(this->numberOfProcessorsStillReceiving != 0);
-                        }
                         this->listeningToRank++;
                         return std::unique_ptr<CandidateSeed>(maybeSeed);
                     }

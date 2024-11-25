@@ -60,14 +60,21 @@ class SeiveGreedyStreamer : public GreedyStreamer {
 
                 while (stillReceiving.load() && stillConsuming.load()) {
                     std::unique_ptr<CandidateSeed> nextSeed(receiver.receiveNextSeed(stillReceiving));
-                    this->queue.push(move(nextSeed));
+                    if (!stillReceiving.load()) {
+                        break;
+                    }
+                    if (nextSeed != nullptr) { 
+                        this->queue.push(move(nextSeed));
+                    } else {
+                        SPDLOG_DEBUG("received nullptr");
+                    }
                 }
-
+                SPDLOG_DEBUG("receiver is no longer waiting for data");
                 timers.communicationTime.stopTimer();
             } else {
                 while (stillReceiving.load() && stillConsuming.load()) {
                     timers.waitingTime.startTimer();
-                    while (this->queue.isEmpty())  {
+                    while (this->queue.isEmpty() && stillReceiving.load() && stillConsuming.load())  {
                         dummyVal++;
                     }
                     timers.waitingTime.stopTimer();

@@ -69,8 +69,11 @@ class StreamingSubset : public MutableSubset {
 
         // Include total marginal gain
         localSubset.push_back(this->base->getScore());
+        
+        localSubset.push_back(CommunicationConstants::endOfSendTag());
 
         std::unique_ptr<MpiSendRequest> send = std::unique_ptr<MpiSendRequest>(new MpiSendRequest(move(localSubset)));
+        send->isend(CommunicationConstants::getStopTag());
         send->waitForISend();
         this->timers.communicationTime.stopTimer();
     }
@@ -81,9 +84,6 @@ class StreamingSubset : public MutableSubset {
         if (this->base->size() <= this->seedsToSend) {
             ToBinaryVisitor visitor;
             std::vector<float> rowToSend(move(this->data.getRow(row).visit(visitor)));
-
-            // second to last value should be the marginal gain of this element for the local solution
-            rowToSend.push_back(marginalGain);
 
             // last value should be the global row index
             rowToSend.push_back(this->data.getRemoteIndexForRow(row));
@@ -100,12 +100,7 @@ class StreamingSubset : public MutableSubset {
             // Since we are now sending a summary of the local subset after finding all seeds, we
             // can just send seeds as we find them. We do not need to wait to send the first seed
             bool sendingLastSeed = this->base->size() == this->seedsToSend;
-            const int tag = sendingLastSeed ? 
-                CommunicationConstants::getStopTag() : 
-                CommunicationConstants::getContinueTag();
-            if (sendingLastSeed) {
-                SPDLOG_DEBUG("Sending last seed");
-            }
+            const int tag = CommunicationConstants::getContinueTag();
             this->sends.back()->isend(tag);
         }
     }

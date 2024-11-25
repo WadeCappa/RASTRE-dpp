@@ -168,7 +168,7 @@ void streaming(
         spdlog::info("rank {0:d} is ready to start streaming local seeds", appData.worldRank);
 
         timers.localCalculationTime.startTimer();
-        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), data, std::floor(appData.outputSetSize * appData.alpha)));
+        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), data, appData.outputSetSize));
 
         spdlog::info("rank {0:d} finished streaming local seeds. Found {1:d} seeds of score {2:f}", appData.worldRank, localSolution->size(), localSolution->getScore());
 
@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
 
     size_t memUsage = getPeakRSS() - baseline;
 
-    spdlog::info("rank {0:d} allocated {1:d} KiB for the dataset", appData.worldRank, memUsage);
+    spdlog::debug("rank {0:d} allocated {1:d} KiB for the dataset", appData.worldRank, memUsage);
 
     for (auto t: comparisonTimers)
         t.loadingDatasetTime.stopTimer();
