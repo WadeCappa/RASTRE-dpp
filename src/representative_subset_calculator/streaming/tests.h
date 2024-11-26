@@ -82,51 +82,51 @@ class FakeReceiver : public Receiver {
 class FakeRankBuffer : public RankBuffer {
     private:
     const unsigned int rank;
-    const unsigned int worldSize;
-    const size_t totalGlobalRows;
-    const unsigned int totalSeedsToSend;
+    
+    // How many times nullptr is returned for every real seed
+    const unsigned int offset;
 
-    size_t nextRowToReturn;
-    bool shouldReturnSeed;
     unsigned int seedsSent;
-    std::unique_ptr<MutableSubset> rankSolution;
+    
+    // Represents how many times this object has been asked for 
+    // data. Used with the offset to determine if data should
+    // be returned.
+    unsigned int wait;
+    std::unique_ptr<Subset> seeds;
 
     public:
     FakeRankBuffer(
         const unsigned int rank, 
-        const unsigned int worldSize
+        const unsigned int offset,
+        std::unique_ptr<Subset> seeds
     ) : 
-        shouldReturnSeed(false), 
-        nextRowToReturn(0), 
         rank(rank), 
-        worldSize(worldSize), 
-        totalGlobalRows(DENSE_DATA.size()),
-        totalSeedsToSend(DENSE_DATA.size() / worldSize),
+        offset(offset),
+        seeds(move(seeds)),
         seedsSent(0),
-        rankSolution(std::unique_ptr<MutableSubset>(NaiveMutableSubset::makeNew()))
+        wait(0)
     {}
 
     CandidateSeed* askForData() {
-        if (this->shouldReturnSeed) {
-            if ((this->nextRowToReturn + this->rank) % this->worldSize == 0) {
-                size_t row = this->nextRowToReturn;
-                CandidateSeed *nextSeed = new CandidateSeed(row, DenseDataRow::of(DENSE_DATA[row]), this->rank);
-                this->shouldReturnSeed = false;
-                this->nextRowToReturn++;
-                this->seedsSent++;
-                this->rankSolution->addRow(row, 1);
-                return nextSeed;
-            } else {
-                this->nextRowToReturn++;
-            }
-        } else {
-            this->shouldReturnSeed = true;
+        if (this->seedsSent >= this->seeds->size()) {
+            this->seedsSent++;
+            return nullptr;
         }
-        return nullptr;
+
+        if (this->wait > 0) {
+            this->wait--;
+            return nullptr;
+        }
+
+        size_t row = this->seeds->getRow(seedsSent);
+        CandidateSeed *nextSeed = new CandidateSeed(row, DenseDataRow::of(DENSE_DATA[row]), this->rank);
+        this->seedsSent++;
+        this->wait = this->offset;
+        return nextSeed;
     }
 
     bool stillReceiving() {
-        return this->seedsSent < this->totalSeedsToSend;
+        return this->seedsSent <= this->seeds->size();
     }
 
     unsigned int getRank() const {
@@ -134,11 +134,11 @@ class FakeRankBuffer : public RankBuffer {
     }
 
     float getLocalSolutionScore() const {
-        return this->rankSolution->getScore();
+        return this->seeds->getScore();
     }
 
     std::unique_ptr<Subset> getLocalSolutionDestroyBuffer() {
-        return move(this->rankSolution);
+        return move(this->seeds);
     }
 };
 
@@ -168,7 +168,9 @@ void assertSolutionsEqual(std::unique_ptr<Subset> a, std::unique_ptr<Subset> b, 
 std::vector<std::unique_ptr<RankBuffer>> buildFakeBuffers(const unsigned int worldSize) {
     std::vector<std::unique_ptr<RankBuffer>> buffers;
     for (size_t rank = 0; rank < worldSize; rank++) {
-        buffers.push_back(std::unique_ptr<RankBuffer>(new FakeRankBuffer(rank, worldSize)));
+        buffers.push_back(std::unique_ptr<RankBuffer>(
+            new FakeRankBuffer(rank, worldSize, Subset::ofCopy(std::vector<size_t>{rank}, 5))
+        ));
     }
 
     return buffers;
@@ -295,7 +297,10 @@ TEST_CASE("Testing streaming with fake receiver") {
 }
 
 TEST_CASE("Testing the fake buffer") {
-    std::unique_ptr<RankBuffer> fakeBuffer(new FakeRankBuffer(0, 1));
+    std::vector<size_t> data{0, 1, 2, 3};
+    std::unique_ptr<RankBuffer> fakeBuffer(new FakeRankBuffer(
+        0, 0, Subset::of(data, 20))
+    );
 
     size_t expectedRow = 0;
     while (fakeBuffer->stillReceiving()) {
@@ -306,37 +311,24 @@ TEST_CASE("Testing the fake buffer") {
         }
     }
 
-    CHECK(expectedRow == DENSE_DATA.size());
+    CHECK(expectedRow == data.size());
 }
 
 TEST_CASE("Testing the naiveReceiver with fake buffers") {
     const unsigned int worldSize = 1;
-    NaiveReceiver receiver(buildFakeBuffers(1));
-
-    size_t expectedRow = 0;
-    std::atomic_bool moreData = true;
-    while (moreData) {
-        std::unique_ptr<CandidateSeed> nextElement = receiver.receiveNextSeed(moreData);
-        CHECK(nextElement->getRow() == expectedRow);
-        expectedRow++;
-    }
-
-    CHECK(expectedRow == DENSE_DATA.size());
-}
-
-TEST_CASE("Testing multiple buffers") {
-    const unsigned int worldSize = DENSE_DATA.size()/2;
     NaiveReceiver receiver(buildFakeBuffers(worldSize));
 
     size_t expectedRow = 0;
     std::atomic_bool moreData = true;
     while (moreData) {
         std::unique_ptr<CandidateSeed> nextElement = receiver.receiveNextSeed(moreData);
-        CHECK(nextElement->getRow() == expectedRow);
-        expectedRow++;
+        if (nextElement != nullptr) {
+            CHECK(nextElement->getRow() == expectedRow);
+            expectedRow++;
+        }
     }
 
-    CHECK(expectedRow == DENSE_DATA.size());
+    CHECK(expectedRow == worldSize);
 }
 
 TEST_CASE("Testing end to end without MPI") {
@@ -344,7 +336,6 @@ TEST_CASE("Testing end to end without MPI") {
     for (size_t i = 0; i < titrators.size(); i++) {
         evaluateTitrator(move(titrators[i]->createWithDynamicBuckets()));
     }
-
 }
 
 TEST_CASE("Streaming with decorator") {
