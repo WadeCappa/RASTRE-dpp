@@ -100,7 +100,9 @@ class Orchestrator {
     ) {
         nlohmann::json output = buildOutputBase(appData, solution, data, timers);
         output.push_back({"timings", timers.outputToJson()});
-        return output;
+        nlohmann::json wrapper;
+        wrapper.push_back(output);
+        return wrapper;
     }
 
     static void addCmdOptions(CLI::App &app, AppData &appData) {

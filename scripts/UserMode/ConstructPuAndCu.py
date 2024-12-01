@@ -7,12 +7,13 @@ import sys
 
 def calcualteRU(PU, CU, similarities):
     RU = {}
+    matrix = similarities.toarray()
     for user in PU.keys():
         RU[user] = []
         for i in CU[user]:
             s = 0
             for j in PU[user]:
-                s += similarities[i, j]
+                s += float(matrix[i, j])
             RU[user].append(s)
     return RU
 
@@ -80,7 +81,6 @@ def outputUserData(topN, topU, infile, outfile):
 
     LU = {}
     RU = calcualteRU(PU, CU, similarities)
-    print(RU)
 
     # Order of information per row
     # UID TID LPU PU1 PU2 ... PU_LPU LCU CU1 CU2 ... CU_LCU
