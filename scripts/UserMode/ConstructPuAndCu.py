@@ -99,6 +99,7 @@ def outputUserData(topN, topU, infile, outfile):
             l.extend(list(PU[user]))
             l.append(len(CU[user]))
             l.extend(CU[user])
+            l.extend(RU[user])
 
             LU[user] = l
             print("LU size:")
