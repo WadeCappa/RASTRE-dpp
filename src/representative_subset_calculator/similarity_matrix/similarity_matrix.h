@@ -7,6 +7,7 @@
 
 class SimilarityMatrix {
     public:
+    virtual ~SimilarityMatrix() {}
     virtual float getCoverage() const = 0; 
 };
 

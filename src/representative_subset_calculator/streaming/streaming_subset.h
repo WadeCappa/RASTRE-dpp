@@ -11,18 +11,19 @@ class StreamingSubset : public MutableSubset {
     std::vector<std::unique_ptr<MpiSendRequest>> sends;
     std::unique_ptr<MutableSubset> base;
 
-    const unsigned int desiredSeeds;
+    const unsigned int seedsToSend;
+    unsigned int seedsSent;
 
     public:
     StreamingSubset(
         const SegmentedData& data, 
-        const unsigned int desiredSeeds,
-        Timers &timers
+        Timers &timers,
+        const unsigned int seedsToSend
     ) : 
         data(data), 
         base(NaiveMutableSubset::makeNew()),
-        desiredSeeds(desiredSeeds),
-        timers(timers)
+        timers(timers),
+        seedsToSend(seedsToSend)
     {
         timers.firstSeedTime.startTimer();
     }
@@ -58,42 +59,49 @@ class StreamingSubset : public MutableSubset {
             send->waitForISend();
         }
 
-        // Can only queue the last send after all other sends have been sent. Otherwise 
-        //  this will cause a race condition causing senders to sometimes never finish 
-        //  sending seeds.
-        this->sends.back()->isend(CommunicationConstants::getStopTag());
-        this->sends.back()->waitForISend();
+        // Without this, the global receiver would have no way of knowing when
+        // to stop receiving
+        SPDLOG_DEBUG("sending stop metadata");
+        std::vector<float> localSubset;
+        for (size_t r : *this->base) {
+            localSubset.push_back(this->data.getRemoteIndexForRow(r));
+        }
+
+        // Include total marginal gain
+        localSubset.push_back(this->base->getScore());
+        
+        localSubset.push_back(CommunicationConstants::endOfSendTag());
+
+        std::unique_ptr<MpiSendRequest> send = std::unique_ptr<MpiSendRequest>(new MpiSendRequest(move(localSubset)));
+        send->isend(CommunicationConstants::getStopTag());
+        send->waitForISend();
         this->timers.communicationTime.stopTimer();
     }
 
     void addRow(const size_t row, const float marginalGain) {
         this->base->addRow(row, marginalGain);
 
-        ToBinaryVisitor visitor;
-        std::vector<float> rowToSend(move(this->data.getRow(row).visit(visitor)));
+        if (this->base->size() <= this->seedsToSend) {
+            ToBinaryVisitor visitor;
+            std::vector<float> rowToSend(move(this->data.getRow(row).visit(visitor)));
 
-        // second to last value should be the marginal gain of this element for the local solution
-        rowToSend.push_back(marginalGain);
+            // last value should be the global row index
+            rowToSend.push_back(this->data.getRemoteIndexForRow(row));
 
-        // last value should be the global row index
-        rowToSend.push_back(data.getRemoteIndexForRow(row));
+            // Mark the end of the send buffer
+            rowToSend.push_back(CommunicationConstants::endOfSendTag());
 
-        // Mark the end of the send buffer
-        rowToSend.push_back(CommunicationConstants::endOfSendTag());
+            if(this->base->size() == 1) {
+                timers.firstSeedTime.stopTimer();
+            }
 
-        if(this->base->size() == 1) {
-            timers.firstSeedTime.stopTimer();
-        }
+            this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(move(rowToSend))));
 
-        this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(move(rowToSend))));
-
-        // Keep at least one seed until finalize is called. Otherwise there is no garuntee of
-        //  how many seeds there are left to find.
-        if (sends.size() > 1) {
-            // Tag should be -1 iff this is the last seed to be sent. This code purposefully
-            //  does not send the last seed until finalize is called
+            // Since we are now sending a summary of the local subset after finding all seeds, we
+            // can just send seeds as we find them. We do not need to wait to send the first seed
+            bool sendingLastSeed = this->base->size() == this->seedsToSend;
             const int tag = CommunicationConstants::getContinueTag();
-            sends[this->sends.size() - 2]->isend(tag);
+            this->sends.back()->isend(tag);
         }
     }
 };

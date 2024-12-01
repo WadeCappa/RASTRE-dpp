@@ -3,6 +3,7 @@
 
 class GreedyStreamer {
     public:
+    virtual ~GreedyStreamer() {}
     virtual std::unique_ptr<Subset> resolveStream() = 0;
 };
 
@@ -31,20 +32,20 @@ class SeiveGreedyStreamer : public GreedyStreamer {
     std::unique_ptr<Subset> resolveStream() {
         resolveStreamInternal();
 
-        spdlog::info("getting best consumer, destroying in process");
-        
         std::unique_ptr<Subset> bestLocalSolution(receiver.getBestReceivedSolution());
         std::unique_ptr<Subset> streamingSolution(consumer.getBestSolutionDestroyConsumer());
 
-        spdlog::info("streaming solution has score of {0:f}", streamingSolution->getScore());
-        spdlog::info("best local solution has score of {0:f}", bestLocalSolution->getScore());
+        spdlog::info("streaming solution has score of {0:f} and size of {1:d}", streamingSolution->getScore(), streamingSolution->size());
+        spdlog::info("best local solution has score of {0:f} and size of {1:d}", bestLocalSolution->getScore(), bestLocalSolution->size());
 
         return bestLocalSolution->getScore() > streamingSolution->getScore() ? move(bestLocalSolution) : move(streamingSolution);
     }
 
     private:
-    // TODO: One more send then required is accepted after `stillConsuming` is false. There
-    //  should be a way to exit even earlier here.
+    /**
+     * N.B. Stop early has been disabled since it was causing segfaults and is technically incorrect. The code 
+     * for stop-early has not been entirly removed.
+     */
     void resolveStreamInternal() {
         unsigned int dummyVal = 0;
         std::atomic_bool stillReceiving = true;
@@ -59,14 +60,21 @@ class SeiveGreedyStreamer : public GreedyStreamer {
 
                 while (stillReceiving.load() && stillConsuming.load()) {
                     std::unique_ptr<CandidateSeed> nextSeed(receiver.receiveNextSeed(stillReceiving));
-                    this->queue.push(move(nextSeed));
+                    if (!stillReceiving.load()) {
+                        break;
+                    }
+                    if (nextSeed != nullptr) { 
+                        this->queue.push(move(nextSeed));
+                    } else {
+                        SPDLOG_DEBUG("received nullptr");
+                    }
                 }
-
+                SPDLOG_DEBUG("receiver is no longer waiting for data");
                 timers.communicationTime.stopTimer();
             } else {
                 while (stillReceiving.load() && stillConsuming.load()) {
                     timers.waitingTime.startTimer();
-                    while (this->queue.isEmpty())  {
+                    while (this->queue.isEmpty() && stillReceiving.load() && stillConsuming.load())  {
                         dummyVal++;
                     }
                     timers.waitingTime.stopTimer();

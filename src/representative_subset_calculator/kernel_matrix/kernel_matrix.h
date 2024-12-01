@@ -6,6 +6,7 @@
 
 class KernelMatrix {
     public:
+    virtual ~KernelMatrix() {}
 
     /** 
      * Needs to be parallel safe for row based indexes, otherwise race conditions will occur

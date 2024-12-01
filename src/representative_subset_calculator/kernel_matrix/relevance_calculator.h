@@ -3,6 +3,7 @@
 
 class RelevanceCalculator {
     public:
+    virtual ~RelevanceCalculator() {}
     virtual float get(const size_t a, const size_t b) const = 0;
 };
 

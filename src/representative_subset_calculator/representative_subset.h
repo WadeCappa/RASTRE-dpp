@@ -3,6 +3,8 @@
 
 class Subset {
     public:
+    virtual ~Subset() {}
+
     virtual float getScore() const = 0;
     virtual size_t getRow(const size_t index) const = 0;
     virtual size_t size() const = 0;
@@ -11,6 +13,7 @@ class Subset {
     virtual const size_t* end() const = 0;
 
     static std::unique_ptr<Subset> of(const std::vector<size_t> &rows, const float score);
+    static std::unique_ptr<Subset> ofCopy(const std::vector<size_t> rows, const float score);
     static std::unique_ptr<Subset> empty();
 };
 
@@ -74,6 +77,13 @@ class NaiveMutableSubset : public MutableSubset {
         return std::unique_ptr<MutableSubset>(dynamic_cast<MutableSubset*>(new NaiveMutableSubset()));
     }
 };
+
+std::unique_ptr<Subset> Subset::ofCopy(
+    const std::vector<size_t> rows, 
+    const float score
+) {
+    return std::unique_ptr<Subset>(new NaiveMutableSubset(move(rows), score));
+}
 
 std::unique_ptr<Subset> Subset::of(
     const std::vector<size_t> &rows, 

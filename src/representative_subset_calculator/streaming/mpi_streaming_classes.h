@@ -56,10 +56,12 @@ class MpiRankBuffer : public RankBuffer {
         MPI_Status status;
         MPI_Test(&request, &flag, &status);
         if (flag == 1) {
-            CandidateSeed *nextSeed = this->extractSeedFromBuffer();
+            CandidateSeed *nextSeed = nullptr;
             if (status.MPI_TAG == CommunicationConstants::getContinueTag()) {
-                readyForNextReceive();
+                nextSeed = this->extractSeedFromBuffer();
+                this->readyForNextReceive();
             } else if (status.MPI_TAG == CommunicationConstants::getStopTag()) {
+                this->extractSubsetFromBuffer();
                 spdlog::info("listening buffer for rank {0:d} has finished listening", this->rank);
                 isStillReceiving = false;
             } else {
@@ -96,6 +98,25 @@ class MpiRankBuffer : public RankBuffer {
         );
     }
 
+    void extractSubsetFromBuffer() {
+        auto endOfData = this->buffer.end();
+        while (*endOfData != CommunicationConstants::endOfSendTag() && endOfData != this->buffer.begin()) {
+            endOfData--;
+        }
+
+        if (endOfData == this->buffer.begin()) {
+            spdlog::error("Received empty send buffer");
+        }
+
+        // Remove the stop tag. This will allow the next send to be received.
+        *endOfData = 0;
+
+        // TODO: This byte cast might be wrong now that we're sending floats. You need to double check this.
+        const double marginal = *(endOfData - 1);
+        std::vector<size_t> seeds(this->buffer.begin(), endOfData - 1);
+        this->rankSolution = std::unique_ptr<MutableSubset>(new NaiveMutableSubset(move(seeds), marginal));
+    }
+
     CandidateSeed* extractSeedFromBuffer() {
         auto endOfData = this->buffer.end();
         while (*endOfData != CommunicationConstants::endOfSendTag() && endOfData != this->buffer.begin()) {
@@ -111,9 +132,7 @@ class MpiRankBuffer : public RankBuffer {
 
         // TODO: This byte cast might be wrong now that we're sending floats. You need to double check this.
         const size_t globalRowIndex = static_cast<size_t>(*(endOfData - 1));
-        const float localMarginalGain = *(endOfData - 2);
-        std::vector<float> data(this->buffer.begin(), endOfData - 2);
-        this->rankSolution->addRow(globalRowIndex, localMarginalGain);
+        std::vector<float> data(this->buffer.begin(), endOfData - 1);
         return new CandidateSeed(globalRowIndex, this->factory.getFromBinary(move(data)), this->rank);
     }
 };

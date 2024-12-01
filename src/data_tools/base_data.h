@@ -13,6 +13,7 @@ struct diagnostics {
 
 class BaseData {
     public:
+    virtual ~BaseData() {}
     virtual const DataRow& getRow(size_t i) const = 0;
     virtual size_t totalRows() const = 0;
     virtual size_t totalColumns() const = 0;
@@ -116,6 +117,11 @@ class FullyLoadedData : public BaseData {
 };
 
 class SegmentedData : public BaseData {
+    public:
+    virtual size_t getRemoteIndexForRow(const size_t localRowIndex) const = 0; 
+};
+
+class LoadedSegmentedData : public SegmentedData {
     private:
     const std::vector<std::unique_ptr<DataRow>> data;
     const std::vector<size_t> localRowToGlobalRow;
@@ -123,7 +129,7 @@ class SegmentedData : public BaseData {
 
     // Disable pass by value. This object is too large for pass by value to make sense implicitly.
     //  Use an explicit constructor to pass by value.
-    SegmentedData(const BaseData&);
+    LoadedSegmentedData(const BaseData&);
 
     public:
     static std::unique_ptr<SegmentedData> loadInParallel(
@@ -166,7 +172,7 @@ class SegmentedData : public BaseData {
         }
 
         const size_t columns = localRowToGlobalRow.size() > 0 ? data.back()->size() : 0;
-        return std::unique_ptr<SegmentedData>(new SegmentedData(move(data), move(localRowToGlobalRow), columns));
+        return std::unique_ptr<SegmentedData>(new LoadedSegmentedData(move(data), move(localRowToGlobalRow), columns));
     }
 
     static std::unique_ptr<SegmentedData> load(
@@ -202,10 +208,10 @@ class SegmentedData : public BaseData {
             spdlog::error("sizes did not match, this is likely a serious error");
         }
 
-        return std::unique_ptr<SegmentedData>(new SegmentedData(move(data), move(localRowToGlobalRow), columns));
+        return std::unique_ptr<SegmentedData>(new LoadedSegmentedData(move(data), move(localRowToGlobalRow), columns));
     }
 
-    SegmentedData(
+    LoadedSegmentedData(
         std::vector<std::unique_ptr<DataRow>> raw,
         std::vector<size_t> localRowToGlobalRow,
         size_t columns

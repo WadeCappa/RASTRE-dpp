@@ -34,8 +34,10 @@
 #include "representative_subset_calculator/streaming/greedy_streamer.h"
 #include "representative_subset_calculator/streaming/mpi_streaming_classes.h"
 #include "representative_subset_calculator/streaming/streaming_subset.h"
+#include "representative_subset_calculator/streaming/naive_receiver.h"
 #include "representative_subset_calculator/streaming/mpi_receiver.h"
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
+#include "representative_subset_calculator/memoryProfiler/MemUsage.h"
 #include <thread>
 
 void randGreedi(
@@ -149,9 +151,6 @@ void streaming(
         timers.totalCalculationTime.stopTimer();
         spdlog::info("rank 0 finished receiving");
 
-        MPI_Barrier(MPI_COMM_WORLD);
-        spdlog::info("receiver is through the barrier");
-
         nlohmann::json result = MpiOrchestrator::buildMpiOutput(
             appData, *solution.get(), data, timers, rowToRank
         );
@@ -164,24 +163,14 @@ void streaming(
         spdlog::info("rank {0:d} entered streaming function and know the total columns of {1:d}", appData.worldRank, data.totalColumns());
         timers.totalCalculationTime.startTimer();
         
-        std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, std::floor(appData.outputSetSize * appData.alpha), timers));
+        std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, timers, std::floor(appData.outputSetSize * appData.alpha)));
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         spdlog::info("rank {0:d} is ready to start streaming local seeds", appData.worldRank);
 
         timers.localCalculationTime.startTimer();
-        std::thread findAndSendSolution([&calculator, &subset, &data, &appData]() {
-            return calculator->getApproximationSet(move(subset), data, std::floor(appData.outputSetSize * appData.alpha));
-        });
+        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), data, appData.outputSetSize));
 
-        // Block until reciever is finished.
-        MPI_Barrier(MPI_COMM_WORLD);
-        if (appData.stopEarly) {
-            findAndSendSolution.detach();
-        } else {
-            // Don't kill any extra sends, we need them to compare local solutions to the global solution.
-            findAndSendSolution.join();
-        }
-        spdlog::info("rank {0:d} finished streaming local seeds", appData.worldRank);
+        spdlog::info("rank {0:d} finished streaming local seeds. Found {1:d} seeds of score {2:f}", appData.worldRank, localSolution->size(), localSolution->getScore());
 
         timers.localCalculationTime.stopTimer();
         timers.totalCalculationTime.stopTimer();
@@ -192,6 +181,8 @@ void streaming(
 }
 
 int main(int argc, char** argv) {
+
+    size_t baselinePreLoad = getPeakRSS();
 
     LoggerHelper::setupLoggers();
 
@@ -207,6 +198,10 @@ int main(int argc, char** argv) {
     MPI_Init(NULL, NULL);
     MPI_Comm_rank(MPI_COMM_WORLD, &appData.worldRank);
     MPI_Comm_size(MPI_COMM_WORLD, &appData.worldSize);
+
+    if (appData.sendAllToReceiver && appData.worldRank == 0) {
+        spdlog::warn("sendAllToReceiver is an experimental feature and has not been fully implemented. Use with caution. Most critically, this feature does not support loading while sending and will load the entire dataset in bulk before sending any seeds. Depending on your input, this might be very expensive.");
+    }
 
     unsigned int seed = (unsigned int)time(0);
     MPI_Bcast(&seed, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
@@ -226,6 +221,12 @@ int main(int argc, char** argv) {
     // Put this somewhere more sane
     const unsigned int DEFAULT_VALUE = -1;
 
+    size_t memUsagePreLoad = getPeakRSS() - baselinePreLoad;
+    spdlog::debug("rank {0:d} allocated {1:d} KiB during the preload", appData.worldRank, memUsagePreLoad);
+
+    size_t baseline = getPeakRSS();
+
+    spdlog::info("Starting load for rank {0:d}", appData.worldRank);
     std::unique_ptr<SegmentedData> data;
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         std::ifstream inputFile;
@@ -237,6 +238,10 @@ int main(int argc, char** argv) {
         std::unique_ptr<GeneratedLineFactory> getter(Orchestrator::getLineGenerator(appData));
         data = Orchestrator::buildMpiData(appData, *getter.get(), rowToRank);
     }
+
+    size_t memUsage = getPeakRSS() - baseline;
+
+    spdlog::debug("rank {0:d} allocated {1:d} KiB for the dataset", appData.worldRank, memUsage);
 
     for (auto t: comparisonTimers)
         t.loadingDatasetTime.stopTimer();

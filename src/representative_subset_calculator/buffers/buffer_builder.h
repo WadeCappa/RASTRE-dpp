@@ -6,6 +6,7 @@ class Buffer {
     static const size_t FLOATS_FOR_ROW_INDEX_PER_COLUMN = 1;
 
     public:
+    virtual ~Buffer() {}
 };
 
 class BufferBuilder : public Buffer {

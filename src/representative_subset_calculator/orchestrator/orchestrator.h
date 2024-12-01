@@ -37,6 +37,8 @@ struct appData{
     float alpha = 1;
     bool stopEarly = false;
     std::string userModeFile;
+    bool loadWhileStreaming = false;
+    bool sendAllToReceiver = false;
 
     int worldSize = 1;
     int worldRank = 0;
@@ -131,18 +133,25 @@ class Orchestrator {
         app.add_option("--distributedEpsilon", appData.distributedEpsilon, "Only used for streaming. Defaults to 0.13.");
         app.add_option("-T,--threeSieveT", appData.threeSieveT, "Only used for ThreeSieveStreaming.");
         app.add_option("--alpha", appData.alpha, "Only used for the truncated setting.");
+        app.add_flag("--sendAllToReceiver", appData.sendAllToReceiver, "Enable this flag to skip the greedy calculation on the local nodes and to send all seeds directly to the receiver.");
+        app.add_flag("--loadWhileStreaming", appData.loadWhileStreaming, "Only used during standalone streaming (or in conjunction with sendAllToReceiver). Only set this to true if your input dataset has already been randomized");
     }
 
-    static SubsetCalculator* getCalculator(const AppData &appData) {
+    static std::unique_ptr<SubsetCalculator> getCalculator(const AppData &appData) {
+        if (appData.sendAllToReceiver) {
+            spdlog::warn("rank {0:d} is going to send all seeds to receiver", appData.worldRank);
+            return std::unique_ptr<SubsetCalculator>(new AddAllToSubsetCalculator());
+        } 
+
         switch (appData.algorithm) {
             case 0:
-                return dynamic_cast<SubsetCalculator*>(new NaiveSubsetCalculator());
+                return std::unique_ptr<SubsetCalculator>(new NaiveSubsetCalculator());
             case 1:
-                return dynamic_cast<SubsetCalculator*>(new LazySubsetCalculator());
+                return std::unique_ptr<SubsetCalculator>(new LazySubsetCalculator());
             case 2:
-                return dynamic_cast<SubsetCalculator*>(new FastSubsetCalculator(appData.epsilon));
+                return std::unique_ptr<SubsetCalculator>(new FastSubsetCalculator(appData.epsilon));
             case 3: 
-                return dynamic_cast<SubsetCalculator*>(new LazyFastSubsetCalculator(appData.epsilon));
+                return std::unique_ptr<SubsetCalculator>(new LazyFastSubsetCalculator(appData.epsilon));
             default:
                 throw new std::invalid_argument("Could not find algorithm");
         }
@@ -223,7 +232,7 @@ class Orchestrator {
         const std::vector<unsigned int> &rowToRank
     ) {
         std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
-        return SegmentedData::loadInParallel(*factory, getter, rowToRank, appData.worldRank);
+        return LoadedSegmentedData::loadInParallel(*factory, getter, rowToRank, appData.worldRank);
     }
 
     static std::unique_ptr<SegmentedData> buildMpiData(
@@ -232,7 +241,7 @@ class Orchestrator {
         const std::vector<unsigned int> &rowToRank
     ) {
         std::unique_ptr<DataRowFactory> factory(getDataRowFactory(appData));
-        return SegmentedData::load(*factory, getter, rowToRank, appData.worldRank);
+        return LoadedSegmentedData::load(*factory, getter, rowToRank, appData.worldRank);
     }
 
     static std::unique_ptr<BaseData> loadData(const AppData& appData, GeneratedLineFactory &getter) {

@@ -22,43 +22,51 @@
 #include "representative_subset_calculator/streaming/bucket_titrator.h"
 #include "representative_subset_calculator/streaming/candidate_consumer.h"
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
-
 #include "representative_subset_calculator/buffers/buffer_builder.h"
 #include "representative_subset_calculator/memoryProfiler/MemUsage.h"
+#include "representative_subset_calculator/streaming/receiver_interface.h"
+#include "representative_subset_calculator/streaming/loading_receiver.h"
+#include "representative_subset_calculator/streaming/greedy_streamer.h"
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
 #include <random>
 #include <algorithm>
 
-int main(int argc, char** argv) {
-    LoggerHelper::setupLoggers();
-    CLI::App app{"Approximates the best possible approximation set for the input dataset using streaming."};
-    AppData appData;
-    MpiOrchestrator::addMpiCmdOptions(app, appData);
-    CLI11_PARSE(app, argc, argv);
+std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
+    const AppData& appData, std::unique_ptr<DataRowFactory> factory, std::unique_ptr<LineFactory> getter, Timers& timers
+) { 
+    timers.totalCalculationTime.startTimer();
 
-    Timers timers;
-    size_t memUsage;
-    // Put this somewhere more sane
-    const unsigned int DEFAULT_VALUE = -1;
+    auto baseline = getPeakRSS();
 
-    std::unique_ptr<LineFactory> getter;
-    std::ifstream inputFile;
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
-        inputFile.open(appData.loadInput.inputFile);
-        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
-    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
-        getter = Orchestrator::getLineGenerator(appData);
-    }
+    std::unique_ptr<BucketTitrator> titrator(
+        MpiOrchestrator::buildTitratorFactory(appData, omp_get_num_threads() - 1)->createWithDynamicBuckets()
+    );
+    std::unique_ptr<NaiveCandidateConsumer> consumer(new NaiveCandidateConsumer(move(titrator), 1));
+    LoadingReceiver receiver(move(factory), move(getter));
+    SeiveGreedyStreamer streamer(receiver, *consumer.get(), timers, !appData.stopEarly);
 
+    spdlog::info("Starting to load and stream");
+    std::unique_ptr<Subset> solution(streamer.resolveStream());
+
+    size_t memUsage = getPeakRSS()- baseline;
+    
+    timers.totalCalculationTime.stopTimer();
+
+    return std::make_pair(move(solution), memUsage);
+}
+
+std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
+    const AppData& appData, std::unique_ptr<DataRowFactory> factory, std::unique_ptr<LineFactory> getter, Timers& timers
+) {
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     std::vector<std::unique_ptr<CandidateSeed>> elements;
-    std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
 
     timers.loadingDatasetTime.startTimer();
-    size_t globalRow = 0;
 
+    auto loadBaseline = getPeakRSS();
+    size_t globalRow = 0;
     while (true) {
         std::unique_ptr<DataRow> nextRow(factory->maybeGet(*getter));
 
@@ -70,6 +78,9 @@ int main(int argc, char** argv) {
         elements.push_back(move(element));
     }
     timers.loadingDatasetTime.stopTimer();
+    size_t memUsageOnLoad = getPeakRSS()- loadBaseline;
+
+    spdlog::info("Finished loading dataset of size {0:d} requiring {1:d} kB...", elements.size(), memUsageOnLoad);
 
     // Randomize Order
     std::random_device rd; 
@@ -78,6 +89,8 @@ int main(int argc, char** argv) {
     for (auto& element : elements) {
         queue.push(move(element)); // Move elements into the queue
     }        
+
+    spdlog::info("Randomized dataset...");
 
     timers.totalCalculationTime.startTimer();
 
@@ -91,11 +104,45 @@ int main(int argc, char** argv) {
     titrator->processQueue(queue);
     timers.insertSeedsTimer.stopTimer();
     
-    memUsage = getPeakRSS()- baseline;
+    size_t memUsage = getPeakRSS()- baseline;
     
     timers.totalCalculationTime.stopTimer();
 
     std::unique_ptr<Subset> solution(titrator->getBestSolutionDestroyTitrator());
+    return std::make_pair(move(solution), memUsage);
+}
+
+int main(int argc, char** argv) {
+    LoggerHelper::setupLoggers();
+    CLI::App app{"Approximates the best possible approximation set for the input dataset using streaming."};
+    AppData appData;
+    MpiOrchestrator::addMpiCmdOptions(app, appData);
+    CLI11_PARSE(app, argc, argv);
+
+    Timers timers;
+    // Put this somewhere more sane
+    const unsigned int DEFAULT_VALUE = -1;
+
+    spdlog::info("Starting standalone streaming...");
+
+    std::unique_ptr<LineFactory> getter;
+    std::ifstream inputFile;
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.open(appData.loadInput.inputFile);
+        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
+    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
+        getter = Orchestrator::getLineGenerator(appData);
+    }
+
+    std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
+
+    std::pair<std::unique_ptr<Subset>, size_t> solution(
+        appData.loadWhileStreaming ? 
+            loadWhileCalculating(appData, move(factory), move(getter), timers) : 
+            loadThenCalculate(appData, move(factory), move(getter), timers)
+    );
+
+    spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution.first->size(), solution.first->getScore());
     
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         inputFile.close();
@@ -105,10 +152,10 @@ int main(int argc, char** argv) {
     std::vector<size_t> dummyRowMapping;
     size_t dummyColumns = 0;  // A placeholder for columns, set to 0 or any valid number.
 
-    SegmentedData dummySegmentedData(std::move(dummyData), std::move(dummyRowMapping), dummyColumns);
+    LoadedSegmentedData dummySegmentedData(std::move(dummyData), std::move(dummyRowMapping), dummyColumns);
 
-    nlohmann::json result = Orchestrator::buildOutput(appData, *solution.get(), dummySegmentedData, timers);
-    result.push_back({"Memory (KiB)", memUsage});
+    nlohmann::json result = Orchestrator::buildOutput(appData, *solution.first.get(), dummySegmentedData, timers);
+    result.push_back({"Memory (KiB)", solution.second});
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
     outputFile << result.dump(2);

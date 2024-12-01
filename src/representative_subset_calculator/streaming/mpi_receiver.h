@@ -1,7 +1,8 @@
 
-
-
-
+/**
+ * This class is basically just a constructor for our NaiveReceiver class. We 
+ * have seperated these classes so that our test suite doesn't need to implement MPI
+ */
 class MpiReceiver : public Receiver {
     public:
     static std::unique_ptr<Receiver> buildReceiver(
