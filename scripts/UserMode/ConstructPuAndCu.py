@@ -83,13 +83,14 @@ def outputUserData(topN, topU, infile, outfile):
     RU = calcualteRU(PU, CU, similarities)
 
     # Order of information per row
-    # UID TID LPU PU1 PU2 ... PU_LPU LCU CU1 CU2 ... CU_LCU
+    # UID TID LPU PU1 PU2 ... PU_LPU LCU CU1 CU2 ... CU_LCU RU1 ... RU_LRU
     # UID: User ID
     # TID: Test item excluded from PU for that user
     # LPU: Length of PU
     # PU1 ... PU_LPU: Items in PU (total LPU items)
     # LCU: Length of CU
     # CU1 ... CU_LCU: Items in CU (total LCU items)
+    # RU1 ... RU_LRU: Items in RU which is also of size LCU
     with open(outfile, "ab") as f:
         for user,items in PU.items():
             l = []
