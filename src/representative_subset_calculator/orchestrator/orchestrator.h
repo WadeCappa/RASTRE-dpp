@@ -36,7 +36,7 @@ struct appData{
     unsigned int threeSieveT;
     float alpha = 1;
     bool stopEarly = false;
-    std::string userModeFile;
+    std::string userModeFile = EMPTY_STRING;
     bool loadWhileStreaming = false;
     bool sendAllToReceiver = false;
 
@@ -94,7 +94,7 @@ class Orchestrator {
 
     static nlohmann::json buildOutput(
         const AppData &appData, 
-        const Subset &solution,
+        const std::vector<std::unique_ptr<Subset>> &solution,
         const BaseData &data,
         const Timers &timers
     ) {
@@ -177,7 +177,7 @@ class Orchestrator {
 
     static nlohmann::json buildOutputBase(
         const AppData &appData, 
-        const Subset &solution,
+        const std::vector<std::unique_ptr<Subset>> &solution,
         const BaseData &data,
         const Timers &timers
     ) { 
@@ -186,9 +186,19 @@ class Orchestrator {
             {"algorithm", algorithmToString(appData)},
             {"inputSettings", getInputSettings(appData)},
             {"epsilon", appData.epsilon},
-            {"Rows", solution.toJson()},
+            {"Rows", outputSubsetsForSolution(solution)},
             {"worldSize", appData.worldSize}
         };
+
+        return output;
+    }
+
+    static nlohmann::json outputSubsetsForSolution(const std::vector<std::unique_ptr<Subset>> &solution) {
+        nlohmann::json output;
+
+        for (const auto & subset : solution) {
+            output.push_back(subset->toJson());
+        }
 
         return output;
     }

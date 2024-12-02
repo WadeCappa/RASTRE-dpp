@@ -1,5 +1,10 @@
 class UserData {
-
+    public:
+    virtual double getUserId() const = 0;
+    virtual double getTestId() const = 0;
+    virtual const std::vector<double> & getPu() const = 0;
+    virtual const std::vector<double> & getCu() const = 0;
+    virtual const std::vector<double> & getRu() const = 0;
 };
 
 class UserDataImplementation : public UserData {
@@ -55,6 +60,26 @@ class UserDataImplementation : public UserData {
         }
 
         return result;
+    }
+
+    double getUserId() const {
+        return this->uid;
+    }
+
+    double getTestId() const {
+        return this->tid;
+    }
+
+    const std::vector<double> & getPu() const {
+        return this->pu;
+    }
+
+    const std::vector<double> & getCu() const {
+        return this->cu;
+    }
+
+    const std::vector<double> & getRu() const {
+        return this->ru;
     }
 
     private:
