@@ -18,6 +18,9 @@
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/orchestrator/orchestrator.h"
 #include "representative_subset_calculator/memoryProfiler/MemUsage.h"
+
+#include "user_mode/user_data.h"
+
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
 
@@ -56,19 +59,33 @@ int main(int argc, char** argv) {
 
     spdlog::info("Finished loading dataset of size {0:d} ...", data->totalRows());
 
+    std::vector<std::unique_ptr<UserData>> userData;
+
+    if (appData.userModeFile != EMPTY_STRING) {
+        userData = UserDataImplementation::load(appData);
+        spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
+    }
+
     timers.loadingDatasetTime.stopTimer();
 
     timers.totalCalculationTime.startTimer();
-    
-    std::unique_ptr<SubsetCalculator> calculator(Orchestrator::getCalculator(appData));
-    
-    std::unique_ptr<Subset> solution(calculator->getApproximationSet(*data.get(), appData.outputSetSize));
 
-    spdlog::info("Found solution of size {0:d} and score {1:f}", solution->size(), solution->getScore());
-    
+    std::vector<std::unique_ptr<Subset>> solutions;
+
+    std::unique_ptr<SubsetCalculator> calculator(Orchestrator::getCalculator(appData));
+    if (userData.size() == 0) {
+        solutions.push_back(calculator->getApproximationSet(*data.get(), appData.outputSetSize));
+        spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
+    } else {
+        for (const auto & user : userData) {
+            solutions.push_back(calculator->getApproximationSet(*data.get(), appData.outputSetSize));
+            spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
+        }
+    }
+
     timers.totalCalculationTime.stopTimer();
     auto memUsage = getPeakRSS()- baseline;
-    nlohmann::json result = Orchestrator::buildOutput(appData, *solution.get(), *data.get(), timers);
+    nlohmann::json result = Orchestrator::buildOutput(appData, solutions, *data.get(), timers);
     result.push_back({"Memory (KiB)", memUsage});
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
