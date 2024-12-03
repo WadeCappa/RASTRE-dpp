@@ -72,7 +72,8 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
 
                 size_t j_t = consumer->getRow(t); 
                 float dotProduct = KernelMatrix::getDotProduct(this->getSlice(v[i], consumer.get(), t), this->getSlice(v[j_t], consumer.get(), t));                
-                v[i].insert({j_t, (kernelMatrix->get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t])});                
+                float newScore = (kernelMatrix->get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t]);
+                v[i].insert({j_t, newScore});                
                 diagonals[i] -= std::pow(v[i][j_t], 2);
             }
             
