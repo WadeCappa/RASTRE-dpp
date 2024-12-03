@@ -36,6 +36,7 @@ struct appData{
     unsigned int threeSieveT;
     float alpha = 1;
     bool stopEarly = false;
+    std::string userModeFile = EMPTY_STRING;
     bool loadWhileStreaming = false;
     bool sendAllToReceiver = false;
 
@@ -93,13 +94,15 @@ class Orchestrator {
 
     static nlohmann::json buildOutput(
         const AppData &appData, 
-        const Subset &solution,
+        const std::vector<std::unique_ptr<Subset>> &solution,
         const BaseData &data,
         const Timers &timers
     ) {
         nlohmann::json output = buildOutputBase(appData, solution, data, timers);
         output.push_back({"timings", timers.outputToJson()});
-        return output;
+        nlohmann::json wrapper;
+        wrapper.push_back(output);
+        return wrapper;
     }
 
     static void addCmdOptions(CLI::App &app, AppData &appData) {
@@ -112,6 +115,7 @@ class Orchestrator {
         app.add_flag("--loadBinary", appData.binaryInput, "Use this flag if you want to load a binary input file.");
         app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
         app.add_flag("--stopEarly", appData.stopEarly, "Used excusevly during streaming to stop the execution of the program early. If you use this in conjuntion with randgreedi, you will lose your approximation guarantee");
+        app.add_option("-u,--userModeFile", appData.userModeFile, "Path to user mode data. Only set this if you are processing a dataset for a set of users.");
     
         CLI::App *loadInput = app.add_subcommand("loadInput", "loads the requested input from the provided path");
         CLI::App *genInput = app.add_subcommand("generateInput", "generates synthetic data");
@@ -173,7 +177,7 @@ class Orchestrator {
 
     static nlohmann::json buildOutputBase(
         const AppData &appData, 
-        const Subset &solution,
+        const std::vector<std::unique_ptr<Subset>> &solution,
         const BaseData &data,
         const Timers &timers
     ) { 
@@ -182,9 +186,19 @@ class Orchestrator {
             {"algorithm", algorithmToString(appData)},
             {"inputSettings", getInputSettings(appData)},
             {"epsilon", appData.epsilon},
-            {"Rows", solution.toJson()},
+            {"Rows", outputSubsetsForSolution(solution)},
             {"worldSize", appData.worldSize}
         };
+
+        return output;
+    }
+
+    static nlohmann::json outputSubsetsForSolution(const std::vector<std::unique_ptr<Subset>> &solution) {
+        nlohmann::json output;
+
+        for (const auto & subset : solution) {
+            output.push_back(subset->toJson());
+        }
 
         return output;
     }

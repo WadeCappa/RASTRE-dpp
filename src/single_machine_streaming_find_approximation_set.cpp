@@ -28,6 +28,8 @@
 #include "representative_subset_calculator/streaming/loading_receiver.h"
 #include "representative_subset_calculator/streaming/greedy_streamer.h"
 
+#include "user_mode/user_data.h"
+
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
 #include <random>
@@ -154,7 +156,9 @@ int main(int argc, char** argv) {
 
     LoadedSegmentedData dummySegmentedData(std::move(dummyData), std::move(dummyRowMapping), dummyColumns);
 
-    nlohmann::json result = Orchestrator::buildOutput(appData, *solution.first.get(), dummySegmentedData, timers);
+    nlohmann::json result = Orchestrator::buildOutput(
+        appData, std::vector<std::unique_ptr<Subset>>{move(solution.first)}, dummySegmentedData, timers
+    );
     result.push_back({"Memory (KiB)", solution.second});
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
