@@ -96,7 +96,7 @@ class GlobalBufferLoader : public BufferLoader {
 
         timers.globalCalculationTime.startTimer();
 
-        std::unique_ptr<Subset> untranslatedSolution(calculator->getApproximationSet(move(NaiveMutableSubset::makeNew()), bestRows, k));
+        std::unique_ptr<Subset> untranslatedSolution(calculator->getApproximationSet(bestRows, k));
         std::unique_ptr<Subset> globalResult(bestRows.translateSolution(move(untranslatedSolution)));
 
         timers.globalCalculationTime.stopTimer();

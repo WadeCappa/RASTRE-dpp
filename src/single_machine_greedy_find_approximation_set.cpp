@@ -20,6 +20,7 @@
 #include "representative_subset_calculator/memoryProfiler/MemUsage.h"
 
 #include "user_mode/user_data.h"
+#include "data_tools/user_mode_data.h"
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
@@ -78,7 +79,8 @@ int main(int argc, char** argv) {
         spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
     } else {
         for (const auto & user : userData) {
-            solutions.push_back(calculator->getApproximationSet(*data.get(), appData.outputSetSize));
+            UserModeDataDecorator userData(*data.get(), *user.get());
+            solutions.push_back(calculator->getApproximationSet(userData, appData.outputSetSize));
             spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
         }
     }

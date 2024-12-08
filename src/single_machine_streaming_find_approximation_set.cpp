@@ -29,6 +29,7 @@
 #include "representative_subset_calculator/streaming/greedy_streamer.h"
 
 #include "user_mode/user_data.h"
+#include "data_tools/user_mode_data.h"
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
@@ -156,8 +157,10 @@ int main(int argc, char** argv) {
 
     LoadedSegmentedData dummySegmentedData(std::move(dummyData), std::move(dummyRowMapping), dummyColumns);
 
+    std::vector<std::unique_ptr<Subset>> allSolutions;
+    allSolutions.push_back(move(solution.first));
     nlohmann::json result = Orchestrator::buildOutput(
-        appData, std::vector<std::unique_ptr<Subset>>{move(solution.first)}, dummySegmentedData, timers
+        appData, allSolutions, dummySegmentedData, timers
     );
     result.push_back({"Memory (KiB)", solution.second});
     std::ofstream outputFile;

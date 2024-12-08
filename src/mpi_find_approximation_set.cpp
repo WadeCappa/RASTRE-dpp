@@ -38,6 +38,10 @@
 #include "representative_subset_calculator/streaming/mpi_receiver.h"
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 #include "representative_subset_calculator/memoryProfiler/MemUsage.h"
+
+#include "user_mode/user_data.h"
+#include "data_tools/user_mode_data.h"
+
 #include <thread>
 
 void randGreedi(
@@ -100,7 +104,9 @@ void randGreedi(
 
         timers.totalCalculationTime.stopTimer();
 
-        nlohmann::json result = MpiOrchestrator::buildMpiOutput(appData, *globalSolution.get(), data, timers, rowToRank);
+        std::vector<std::unique_ptr<Subset>> solutions;
+        solutions.push_back(move(globalSolution));
+        nlohmann::json result = MpiOrchestrator::buildMpiOutput(appData, solutions, data, timers, rowToRank);
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
         outputFile << result.dump(2);
@@ -108,9 +114,9 @@ void randGreedi(
     } else {
         // used to load global timers on rank 0
         timers.totalCalculationTime.stopTimer();
-        auto dummyResult = Subset::empty();
+        std::vector<std::unique_ptr<Subset>> emptySolution;
 
-        MpiOrchestrator::buildMpiOutput(appData, *dummyResult.get(), data, timers, rowToRank);
+        MpiOrchestrator::buildMpiOutput(appData, emptySolution, data, timers, rowToRank);
     }
 }
 
@@ -151,8 +157,10 @@ void streaming(
         timers.totalCalculationTime.stopTimer();
         spdlog::info("rank 0 finished receiving");
 
+        std::vector<std::unique_ptr<Subset>> solutions;
+        solutions.push_back(move(solution));
         nlohmann::json result = MpiOrchestrator::buildMpiOutput(
-            appData, *solution.get(), data, timers, rowToRank
+            appData, solutions, data, timers, rowToRank
         );
         std::ofstream outputFile;
         outputFile.open(appData.outputFile);
@@ -168,15 +176,15 @@ void streaming(
         spdlog::info("rank {0:d} is ready to start streaming local seeds", appData.worldRank);
 
         timers.localCalculationTime.startTimer();
-        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), data, appData.outputSetSize));
+        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), NaiveRelevanceCalculator::from(data), data, appData.outputSetSize));
 
         spdlog::info("rank {0:d} finished streaming local seeds. Found {1:d} seeds of score {2:f}", appData.worldRank, localSolution->size(), localSolution->getScore());
 
         timers.localCalculationTime.stopTimer();
         timers.totalCalculationTime.stopTimer();
 
-        auto dummyResult = Subset::empty();
-        MpiOrchestrator::buildMpiOutput(appData, *dummyResult.get(), data, timers, rowToRank);
+        std::vector<std::unique_ptr<Subset>> fakeSolution;
+        MpiOrchestrator::buildMpiOutput(appData, fakeSolution, data, timers, rowToRank);
     }
 }
 

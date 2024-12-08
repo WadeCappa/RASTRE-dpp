@@ -37,9 +37,9 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         }
     }
 
-    // TODO: Break when marginal gain is below epsilon
     std::unique_ptr<Subset> getApproximationSet(
         std::unique_ptr<MutableSubset> consumer, 
+        std::unique_ptr<RelevanceCalculator> calc,
         const BaseData &data, 
         size_t k
     ) {
@@ -48,9 +48,11 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         std::vector<std::unordered_map<size_t, float>> v(data.totalRows());
         std::vector<size_t> u(data.totalRows(), 0);
         
-        // Initialize kernel matrix 
-        std::unique_ptr<LazyKernelMatrix> kernelMatrix(LazyKernelMatrix::from(data));
+        // Just needs to pass diag(e^(alpha * r_u)) for our per-user calc. Should be an opt 
+        // for the non-user case. For use during all kernel matrix opts
+        std::unique_ptr<LazyKernelMatrix> kernelMatrix(LazyKernelMatrix::from(data, move(calc)));
         
+        // Account for user mode here
         std::vector<float> diagonals = kernelMatrix->getDiagonals();
         
         // Initialize priority queue
@@ -72,6 +74,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
 
                 size_t j_t = consumer->getRow(t); 
                 float dotProduct = KernelMatrix::getDotProduct(this->getSlice(v[i], consumer.get(), t), this->getSlice(v[j_t], consumer.get(), t));                
+                // account for user mode in ->get()
                 float newScore = (kernelMatrix->get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t]);
                 v[i].insert({j_t, newScore});                
                 diagonals[i] -= std::pow(v[i][j_t], 2);
