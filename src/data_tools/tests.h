@@ -3,6 +3,8 @@
 #include "dot_product_visitor.h"
 #include "data_row.h"
 #include "data_row_factory.h"
+
+#include "../user_mode/user_data.h"
 #include "../representative_subset_calculator/representative_subset.h"
 #include "base_data.h"
 

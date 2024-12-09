@@ -1,3 +1,6 @@
+#include <fstream>
+#include <sstream> 
+
 class UserData {
     public:
     /**
@@ -11,11 +14,6 @@ class UserData {
      * resulting subset, our calculation was wrong
      */
     virtual unsigned long long getTestId() const = 0;
-    
-    /**
-     * 
-     */
-    virtual const std::vector<unsigned long long> & getPu() const = 0;
     
     /**
      * This is the ground set for this user. We should only examine 
@@ -34,13 +32,13 @@ class UserData {
 class UserDataImplementation : public UserData {
     private:
     const unsigned long long uid, tid;
-    const std::vector<unsigned long long> pu, cu;
+    const std::vector<unsigned long long> cu;
     const std::vector<double> ru;
 
     public:
-    static std::vector<std::unique_ptr<UserData>> load(const AppData &appData) {
+    static std::vector<std::unique_ptr<UserData>> load(const std::string path) {
         std::ifstream inputFile;
-        inputFile.open(appData.loadInput.inputFile);
+        inputFile.open(path);
         std::vector<std::unique_ptr<UserData>> result(UserDataImplementation::load(inputFile));
         inputFile.close();
         return move(result);
@@ -54,13 +52,13 @@ class UserDataImplementation : public UserData {
         std::string data;
 
         while (std::getline(input, data)) {
-            unsigned long long uid, tid, lpu, lcu;
-            std::vector<unsigned long long> cu, pu;
+            unsigned long long uid, tid, lcu;
+            std::vector<unsigned long long> cu;
             std::vector<double> ru;
 
             std::istringstream iss(data);
             std::string num;
-            // UID TID LPU PU1 PU2 ... PU_LPU LCU CU1 CU2 ... CU_LCU RU1 ... RU_LRU
+            // UID TID LCU CU1 CU2 ... CU_LCU RU1 ... RU_LRU
             size_t i = 0;
             while (std::getline(iss, num, ' ')) {
                 if (i == 0) {
@@ -68,22 +66,18 @@ class UserDataImplementation : public UserData {
                 } else if (i == 1) {
                     tid = std::stoull(num);
                 } else if (i == 2) {
-                    lpu = std::stoull(num);
-                } else if (i > 2 && i < lpu) {
-                    pu.push_back(std::stoull(num));
-                } else if (i == lpu) {
                     lcu = std::stoull(num);
-                } else if (i > lpu && i < lcu) {
+                } else if (i <= lcu + 2) {
                     cu.push_back(std::stoull(num));
-                } else if (i < (lcu * 2)) {
+                } else if (i <= (lcu * 2) + 2) {
                     ru.push_back(std::stod(num));
                 } else {
-                    spdlog::error("did not expect to reach this");
+                    spdlog::error("did not expect to reach {0:d} with lcu of {1:d}", i, lcu);
                 }
                 i++;
             }
 
-            result.push_back(std::unique_ptr<UserData>(new UserDataImplementation(uid, tid, move(pu), move(cu), move(ru))));
+            result.push_back(std::unique_ptr<UserData>(new UserDataImplementation(uid, tid, move(cu), move(ru))));
         }
 
         return result;
@@ -95,10 +89,6 @@ class UserDataImplementation : public UserData {
 
     unsigned long long getTestId() const {
         return this->tid;
-    }
-
-    const std::vector<unsigned long long> & getPu() const {
-        return this->pu;
     }
 
     const std::vector<unsigned long long> & getCu() const {
@@ -113,13 +103,11 @@ class UserDataImplementation : public UserData {
     UserDataImplementation(
         const unsigned long long uid, 
         const unsigned long long tid, 
-        const std::vector<unsigned long long> pu, 
         const std::vector<unsigned long long> cu, 
         const std::vector<double> ru
         ) : 
         uid(uid), 
         tid(tid), 
-        pu(move(pu)), 
         cu(move(cu)), 
         ru(move(ru)) {}
 };

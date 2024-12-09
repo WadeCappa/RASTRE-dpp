@@ -1,5 +1,6 @@
 #include "log_macros.h"
 
+#include "user_mode/user_data.h"
 #include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/representative_subset.h"
 #include "data_tools/data_row_visitor.h"
@@ -19,7 +20,6 @@
 #include "representative_subset_calculator/orchestrator/orchestrator.h"
 #include "representative_subset_calculator/memoryProfiler/MemUsage.h"
 
-#include "user_mode/user_data.h"
 #include "data_tools/user_mode_data.h"
 
 #include <CLI/CLI.hpp>
@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     std::vector<std::unique_ptr<UserData>> userData;
 
     if (appData.userModeFile != EMPTY_STRING) {
-        userData = UserDataImplementation::load(appData);
+        userData = UserDataImplementation::load(appData.userModeFile);
         spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
     }
 
@@ -80,7 +80,8 @@ int main(int argc, char** argv) {
     } else {
         for (const auto & user : userData) {
             UserModeDataDecorator userData(*data.get(), *user.get());
-            solutions.push_back(calculator->getApproximationSet(userData, appData.outputSetSize));
+            std::unique_ptr<RelevanceCalculator> userCalc(UserModeRelevanceCalculator::from(userData, *user.get(), appData.theta));
+            solutions.push_back(calculator->getApproximationSet(move(userCalc), userData, appData.outputSetSize));
             spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
         }
     }

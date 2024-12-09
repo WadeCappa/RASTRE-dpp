@@ -1,5 +1,6 @@
 #include "log_macros.h"
 
+#include "user_mode/user_data.h"
 #include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/representative_subset.h"
 #include "data_tools/data_row_visitor.h"
@@ -39,7 +40,6 @@
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 #include "representative_subset_calculator/memoryProfiler/MemUsage.h"
 
-#include "user_mode/user_data.h"
 #include "data_tools/user_mode_data.h"
 
 #include <thread>

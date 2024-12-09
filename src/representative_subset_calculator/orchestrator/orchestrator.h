@@ -36,9 +36,12 @@ struct appData{
     unsigned int threeSieveT;
     float alpha = 1;
     bool stopEarly = false;
-    std::string userModeFile = EMPTY_STRING;
     bool loadWhileStreaming = false;
     bool sendAllToReceiver = false;
+    
+    // user mode config
+    std::string userModeFile = EMPTY_STRING;
+    double theta = 0.7; // defaults to 70% focus on relevance, 30% focus on diversity
 
     int worldSize = 1;
     int worldRank = 0;
@@ -116,6 +119,7 @@ class Orchestrator {
         app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
         app.add_flag("--stopEarly", appData.stopEarly, "Used excusevly during streaming to stop the execution of the program early. If you use this in conjuntion with randgreedi, you will lose your approximation guarantee");
         app.add_option("-u,--userModeFile", appData.userModeFile, "Path to user mode data. Only set this if you are processing a dataset for a set of users.");
+        app.add_option("--userModeTheta", appData.theta, "Only used during user mode. Sets the ratio of relevance to diveristy, where a value of 0.7 is a 70\% focuse on relevance.");
     
         CLI::App *loadInput = app.add_subcommand("loadInput", "loads the requested input from the provided path");
         CLI::App *genInput = app.add_subcommand("generateInput", "generates synthetic data");

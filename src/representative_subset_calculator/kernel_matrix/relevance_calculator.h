@@ -28,6 +28,14 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
     const double alpha;
 
     public:
+    static std::unique_ptr<UserModeRelevanceCalculator> from(
+        const BaseData &data, 
+        const UserData &userData, 
+        const double theta
+    ) {
+        return std::make_unique<UserModeRelevanceCalculator>(data, userData.getRu(), calcAlpha(theta));
+    }
+
     UserModeRelevanceCalculator(
         const BaseData &data, 
         const std::vector<double> &ru,
@@ -44,5 +52,9 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
     private:
     double getRu(size_t i) const {
         return std::exp(this->alpha * this->ru[i]);
+    }
+
+    static double calcAlpha(const double theta) {
+        return 0.5 * (theta / (1.0 - theta));
     }
 };
