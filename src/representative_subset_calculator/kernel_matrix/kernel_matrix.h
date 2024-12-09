@@ -59,11 +59,19 @@ class LazyKernelMatrix : public KernelMatrix {
 
     // Disable pass by value. This object is too large for pass by value to make sense implicitly.
     //  Use an explicit constructor to pass by value.
+
+    // L[i][j] = r[i] * S[i][j] * r[j] <- for user mode
     LazyKernelMatrix(const LazyKernelMatrix &);
 
     public:
     static std::unique_ptr<LazyKernelMatrix> from(const BaseData &data) {
-        return std::make_unique<LazyKernelMatrix>(data, std::unique_ptr<RelevanceCalculator>(new NaiveRelevanceCalculator(data)));
+        return LazyKernelMatrix::from(data, std::make_unique<NaiveRelevanceCalculator>(data));
+    }
+
+    static std::unique_ptr<LazyKernelMatrix> from(
+        const BaseData &data, 
+        std::unique_ptr<RelevanceCalculator> calc) {
+        return std::make_unique<LazyKernelMatrix>(data, move(calc));
     }
 
     LazyKernelMatrix(const BaseData &data, std::unique_ptr<RelevanceCalculator> calc) 
@@ -77,6 +85,8 @@ class LazyKernelMatrix : public KernelMatrix {
         return this->data.totalRows();
     }
 
+    // This will also be affected during user mode. This means we should build the kernel matrix 
+    // with the user specific information
     float get(size_t j, size_t i) {
         const size_t forward_key = std::max(j, i);
         const size_t back_key = std::min(j, i);
@@ -99,7 +109,7 @@ class NaiveKernelMatrix : public KernelMatrix {
 
     public:
     static std::unique_ptr<NaiveKernelMatrix> from(const BaseData &data) {
-        return NaiveKernelMatrix::from(data, std::unique_ptr<RelevanceCalculator>(new NaiveRelevanceCalculator(data)));
+        return NaiveKernelMatrix::from(data, NaiveRelevanceCalculator::from(data));
     }
 
     static std::unique_ptr<NaiveKernelMatrix> from(

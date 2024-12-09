@@ -1,5 +1,6 @@
 #include "log_macros.h"
 
+#include "user_mode/user_data.h"
 #include "representative_subset_calculator/streaming/communication_constants.h"
 #include "representative_subset_calculator/representative_subset.h"
 #include "data_tools/data_row_visitor.h"
@@ -27,6 +28,8 @@
 #include "representative_subset_calculator/streaming/receiver_interface.h"
 #include "representative_subset_calculator/streaming/loading_receiver.h"
 #include "representative_subset_calculator/streaming/greedy_streamer.h"
+
+#include "data_tools/user_mode_data.h"
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
@@ -154,7 +157,11 @@ int main(int argc, char** argv) {
 
     LoadedSegmentedData dummySegmentedData(std::move(dummyData), std::move(dummyRowMapping), dummyColumns);
 
-    nlohmann::json result = Orchestrator::buildOutput(appData, *solution.first.get(), dummySegmentedData, timers);
+    std::vector<std::unique_ptr<Subset>> allSolutions;
+    allSolutions.push_back(move(solution.first));
+    nlohmann::json result = Orchestrator::buildOutput(
+        appData, allSolutions, dummySegmentedData, timers
+    );
     result.push_back({"Memory (KiB)", solution.second});
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);

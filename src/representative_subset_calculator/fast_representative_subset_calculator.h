@@ -38,12 +38,13 @@ class FastSubsetCalculator : public SubsetCalculator {
 
     std::unique_ptr<Subset> getApproximationSet(
         std::unique_ptr<MutableSubset> consumer, 
+        std::unique_ptr<RelevanceCalculator> calc,
         const BaseData &data, 
         size_t k
     ) {
         std::unordered_set<size_t> seen;
 
-        std::unique_ptr<NaiveKernelMatrix> kernelMatrix(NaiveKernelMatrix::from(data));
+        std::unique_ptr<NaiveKernelMatrix> kernelMatrix(NaiveKernelMatrix::from(data, move(calc)));
         std::vector<float> diagonals = kernelMatrix->getDiagonals(); 
 
         std::vector<std::vector<float>> c(data.totalRows(), std::vector<float>());
