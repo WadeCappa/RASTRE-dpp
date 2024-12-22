@@ -23,7 +23,7 @@ class NaiveRelevanceCalculator : public RelevanceCalculator {
 
 class UserModeRelevanceCalculator : public RelevanceCalculator {
     private:
-    const BaseData &data;
+    std::unique_ptr<RelevanceCalculator> delegate;
     const std::vector<double> &ru;
     const double alpha;
 
@@ -33,20 +33,28 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
         const UserData &userData, 
         const double theta
     ) {
-        return std::make_unique<UserModeRelevanceCalculator>(data, userData.getRu(), calcAlpha(theta));
+        const double alpha = calcAlpha(theta);
+        spdlog::debug("user mode alpha of {0:f}", alpha);
+        return std::make_unique<UserModeRelevanceCalculator>(
+            NaiveRelevanceCalculator::from(data), 
+            userData.getRu(), 
+            alpha
+        );
     }
 
     UserModeRelevanceCalculator(
-        const BaseData &data, 
+        std::unique_ptr<RelevanceCalculator> delegate, 
         const std::vector<double> &ru,
         const double alpha
-    ) : data(data), ru(ru), alpha(alpha) {}
+    ) : delegate(move(delegate)), ru(ru), alpha(alpha) {}
 
     float get(const size_t i, const size_t j) const {
-        const double s_ij = this->data.getRow(i).dotProduct(this->data.getRow(j)) + static_cast<int>(i == j);
+        const double s_ij = this->delegate->get(i, j);
         const double r_i = getRu(i);
         const double r_j = getRu(j);
-        return r_i * s_ij * r_j;
+        const double result = r_i * s_ij * r_j;
+        SPDLOG_TRACE("result for user mode of {0:f} from {1:d} of value {2:f} and {3:d} of value {4:f}", result, i, r_i, j, r_j);
+        return result;
     }
 
     private:

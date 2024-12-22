@@ -86,18 +86,14 @@ def outputUserData(topN, topU, infile, outfile):
     # UID TID LPU PU1 PU2 ... PU_LPU LCU CU1 CU2 ... CU_LCU RU1 ... RU_LRU
     # UID: User ID
     # TID: Test item excluded from PU for that user
-    # LPU: Length of PU
-    # PU1 ... PU_LPU: Items in PU (total LPU items)
     # LCU: Length of CU
     # CU1 ... CU_LCU: Items in CU (total LCU items)
     # RU1 ... RU_LRU: Items in RU which is also of size LCU
-    with open(outfile, "ab") as f:
+    with open(outfile, "w") as f:
         for user,items in PU.items():
             l = []
             l.append(user)
             l.append(PU_test[user])
-            l.append(len(PU[user]))
-            l.extend(list(PU[user]))
             l.append(len(CU[user]))
             l.extend(CU[user])
             l.extend(RU[user])

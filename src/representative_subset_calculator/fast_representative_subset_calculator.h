@@ -45,7 +45,10 @@ class FastSubsetCalculator : public SubsetCalculator {
         std::unordered_set<size_t> seen;
 
         std::unique_ptr<NaiveKernelMatrix> kernelMatrix(NaiveKernelMatrix::from(data, move(calc)));
+        spdlog::debug("created fast kernel matrix");
+        
         std::vector<float> diagonals = kernelMatrix->getDiagonals(); 
+        spdlog::debug("created fast kernel matrix");
 
         std::vector<std::vector<float>> c(data.totalRows(), std::vector<float>());
 

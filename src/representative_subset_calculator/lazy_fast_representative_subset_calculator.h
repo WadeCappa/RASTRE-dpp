@@ -51,9 +51,11 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         // Just needs to pass diag(e^(alpha * r_u)) for our per-user calc. Should be an opt 
         // for the non-user case. For use during all kernel matrix opts
         std::unique_ptr<LazyKernelMatrix> kernelMatrix(LazyKernelMatrix::from(data, move(calc)));
+        spdlog::debug("created lazy fast kernel matrix");
         
         // Account for user mode here
         std::vector<float> diagonals = kernelMatrix->getDiagonals();
+        spdlog::debug("got diagonals for lazy fast kernel");
         
         // Initialize priority queue
         std::vector<size_t> priorityQueue;
@@ -83,8 +85,10 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
             u[i] = consumer->size();
             
             // To ensure "Numerical stability" ¯\_(ツ)_/¯
-            if (diagonals[i] < this->epsilon) 
+            if (diagonals[i] < this->epsilon) {
+                spdlog::info("breaking to ensure Numerical stability");
                 break;
+            }
             
             float marginalGain = std::log(diagonals[i]);
             float nextScore = std::log(diagonals[priorityQueue.front()]);
