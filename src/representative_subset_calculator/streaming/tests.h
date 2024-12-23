@@ -16,17 +16,17 @@ static const int K = 3;
 static const int T = 1;
 static float EPSILON = 0.5;
 
-std::vector<std::unique_ptr<BucketTitrator>> getTitrators() {
+std::vector<std::unique_ptr<BucketTitrator>> getTitrators(const RelevanceCalculatorFactory& calcFactory) {
     std::vector<std::unique_ptr<BucketTitrator>> res;
-    res.push_back(SieveStreamingBucketTitrator::createWithDynamicBuckets(1, EPSILON, DENSE_DATA.size()));
-    res.push_back(ThreeSieveBucketTitrator::createWithDynamicBuckets(EPSILON, T, DENSE_DATA.size()));
+    res.push_back(SieveStreamingBucketTitrator::createWithDynamicBuckets(1, EPSILON, DENSE_DATA.size(), calcFactory));
+    res.push_back(ThreeSieveBucketTitrator::createWithDynamicBuckets(EPSILON, T, DENSE_DATA.size(), calcFactory));
     return move(res);
 }
 
-std::vector<std::unique_ptr<BucketTitratorFactory>> getTitratorFactories() {
+std::vector<std::unique_ptr<BucketTitratorFactory>> getTitratorFactories(const RelevanceCalculatorFactory& calcFactory) {
     std::vector<std::unique_ptr<BucketTitratorFactory>> res;
-    res.push_back(std::unique_ptr<BucketTitratorFactory>(new SieveStreamingBucketTitratorFactory(1, EPSILON, DENSE_DATA.size())));
-    res.push_back(std::unique_ptr<BucketTitratorFactory>(new ThreeSeiveBucketTitratorFactory(EPSILON, T, DENSE_DATA.size())));
+    res.push_back(std::unique_ptr<BucketTitratorFactory>(new SieveStreamingBucketTitratorFactory(1, EPSILON, DENSE_DATA.size(), calcFactory)));
+    res.push_back(std::unique_ptr<BucketTitratorFactory>(new ThreeSeiveBucketTitratorFactory(EPSILON, T, DENSE_DATA.size(), calcFactory)));
     return move(res);
 }
 
@@ -47,8 +47,10 @@ std::unique_ptr<CandidateSeed> buildSeed() {
     return buildSeed(row, rank);
 }
 
-std::unique_ptr<BucketTitrator> getTitrator(unsigned int numThreads, float eps, unsigned int k) {
-    return SieveStreamingBucketTitrator::createWithDynamicBuckets(numThreads, eps, k);
+std::unique_ptr<BucketTitrator> getTitrator(
+    unsigned int numThreads, float eps, unsigned int k, const RelevanceCalculatorFactory& calcFactory
+) {
+    return SieveStreamingBucketTitrator::createWithDynamicBuckets(numThreads, eps, k, calcFactory);
 }
 
 std::unique_ptr<NaiveCandidateConsumer> getConsumer(std::unique_ptr<BucketTitrator> titrator, size_t worldSize) {
@@ -237,7 +239,8 @@ TEST_CASE("Candidate seed can exist") {
 
 TEST_CASE("Consumer can process seeds") {
     const unsigned int worldSize = 1;
-    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, 1), worldSize));
+    NaiveRelevanceCalculatorFactory calcFactory;
+    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, 1, calcFactory), worldSize));
     Timers timers;
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     std::unique_ptr<CandidateSeed> seed(buildSeed());
@@ -255,7 +258,8 @@ TEST_CASE("Consumer can process seeds") {
 
 TEST_CASE("Consumer can find a solution") {
     const unsigned int worldSize = DENSE_DATA.size();
-    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, worldSize), worldSize));
+    NaiveRelevanceCalculatorFactory calcFactory;
+    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, worldSize, calcFactory), worldSize));
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     Timers timers;
     for (size_t i = 0; i < worldSize; i++) {
@@ -288,7 +292,8 @@ TEST_CASE("Test fake receiver") {
 TEST_CASE("Testing streaming with fake receiver") {
     const unsigned int worldSize = DENSE_DATA.size() / 2;
     FakeReceiver receiver(worldSize);
-    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, DENSE_DATA.size()), worldSize));
+    NaiveRelevanceCalculatorFactory calcFactory;
+    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(getTitrator(5, EPSILON, DENSE_DATA.size(), calcFactory), worldSize));
 
     Timers timers;
     SeiveGreedyStreamer streamer(receiver, *consumer, timers, false);
@@ -332,26 +337,29 @@ TEST_CASE("Testing the naiveReceiver with fake buffers") {
 }
 
 TEST_CASE("Testing end to end without MPI") {
-    std::vector<std::unique_ptr<BucketTitratorFactory>> titrators(getTitratorFactories());
+    NaiveRelevanceCalculatorFactory calcFactory;
+    std::vector<std::unique_ptr<BucketTitratorFactory>> titrators(getTitratorFactories(calcFactory));
     for (size_t i = 0; i < titrators.size(); i++) {
         evaluateTitrator(move(titrators[i]->createWithDynamicBuckets()));
     }
 }
 
 TEST_CASE("Streaming with decorator") {
-    std::vector<std::unique_ptr<BucketTitratorFactory>> titrators(getTitratorFactories());
+    NaiveRelevanceCalculatorFactory calcFactory;
+    std::vector<std::unique_ptr<BucketTitratorFactory>> titrators(getTitratorFactories(calcFactory));
     for (size_t i = 0; i < titrators.size(); i++) {
-        std::unique_ptr<BucketTitrator> decorator(new LazyInitializingBucketTitrator(move(titrators[i])));
+        std::unique_ptr<BucketTitrator> decorator(new LazyInitializingBucketTitrator(move(titrators[i]), calcFactory));
         evaluateTitrator(move(decorator));
     }
 }
 
 TEST_CASE("Comparing titrators") {
-    std::vector<std::unique_ptr<BucketTitratorFactory>> titrators(getTitratorFactories());
+    NaiveRelevanceCalculatorFactory calcFactory;
+    std::vector<std::unique_ptr<BucketTitratorFactory>> titrators(getTitratorFactories(calcFactory));
     const size_t worldSize = 1;
     std::vector<std::unique_ptr<Subset>> solutions;
     for (size_t i = 0; i < titrators.size(); i++) {
-        std::unique_ptr<BucketTitrator> decorator(new LazyInitializingBucketTitrator(move(titrators[i])));
+        std::unique_ptr<BucketTitrator> decorator(new LazyInitializingBucketTitrator(move(titrators[i]), calcFactory));
         solutions.push_back(getSolution(move(decorator), worldSize));
     }
     assertSolutionsEqual(move(solutions[0]), move(solutions[1]), DENSE_DATA.size());

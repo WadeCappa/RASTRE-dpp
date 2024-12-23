@@ -12,6 +12,22 @@ class NaiveRelevanceCalculatorFactory : public RelevanceCalculatorFactory {
     }
 };
 
+class UserModeNaiveRelevanceCalculatorFactory : public RelevanceCalculatorFactory {
+    private:
+    const UserData& user;
+    const double theta;
+
+    public:
+    UserModeNaiveRelevanceCalculatorFactory(
+        const UserData& user,
+        const double theta
+    ) : user(user), theta(theta) {}
+
+    std::unique_ptr<RelevanceCalculator> build(const BaseData& d) const {
+        return UserModeRelevanceCalculator::from(d, user, theta);
+    }
+};
+
 class PerRowRelevanceCalculator {
     private:
     class DummyData : public BaseData {

@@ -140,11 +140,17 @@ std::unique_ptr<Subset> streaming(
         rowSize = appData.adjacencyListColumnCount > 0 ? rowSizes.back() : rowSizes.back() * 2;
 
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
+        std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
+        if (user.has_value()) {
+            calcFactory = std::unique_ptr<RelevanceCalculatorFactory>(
+                new UserModeNaiveRelevanceCalculatorFactory(*user.value(), appData.theta)
+            );
+        }
         std::unique_ptr<Receiver> receiver(
             MpiReceiver::buildReceiver(appData.worldSize, rowSize, *factory)
         );
         std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(
-            appData, omp_get_num_threads() - 1, appData.worldSize - 1)
+            appData, omp_get_num_threads() - 1, appData.worldSize - 1, *calcFactory)
         );
         SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers, !appData.stopEarly);
 

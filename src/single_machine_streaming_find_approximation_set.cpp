@@ -47,8 +47,15 @@ std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
 
     auto baseline = getPeakRSS();
 
+    std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory()); 
+    if (user.has_value()) {
+        calcFactory = std::unique_ptr<RelevanceCalculatorFactory>(
+            new UserModeNaiveRelevanceCalculatorFactory(*user.value(), appData.theta)
+        );  
+    }
+
     std::unique_ptr<BucketTitrator> titrator(
-        MpiOrchestrator::buildTitratorFactory(appData, omp_get_num_threads() - 1)->createWithDynamicBuckets()
+        MpiOrchestrator::buildTitratorFactory(appData, omp_get_num_threads() - 1, *calcFactory)->createWithDynamicBuckets()
     );
     std::unique_ptr<NaiveCandidateConsumer> consumer(new NaiveCandidateConsumer(move(titrator), 1));
 
@@ -126,8 +133,14 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
 
     auto baseline = getPeakRSS();
 
+    std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory()); 
+    if (user.has_value()) {
+        calcFactory = std::unique_ptr<RelevanceCalculatorFactory>(
+            new UserModeNaiveRelevanceCalculatorFactory(*user.value(), appData.theta)
+        );  
+    }
     std::unique_ptr<BucketTitrator> titrator(
-        MpiOrchestrator::buildTitratorFactory(appData, omp_get_num_threads() - 1)->createWithDynamicBuckets()
+        MpiOrchestrator::buildTitratorFactory(appData, omp_get_num_threads() - 1, *calcFactory)->createWithDynamicBuckets()
     );
 
     timers.insertSeedsTimer.startTimer();

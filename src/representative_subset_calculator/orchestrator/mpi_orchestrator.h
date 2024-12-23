@@ -89,19 +89,32 @@ class MpiOrchestrator : public Orchestrator {
         return output;
     }
 
-    static std::unique_ptr<BucketTitratorFactory> buildTitratorFactory(const AppData &appData, const unsigned int threads) {
+    static std::unique_ptr<BucketTitratorFactory> buildTitratorFactory(
+        const AppData &appData, 
+        const unsigned int threads,
+        const RelevanceCalculatorFactory& calcFactory
+    ) {
         if (appData.distributedAlgorithm == 1) {
-            return std::unique_ptr<BucketTitratorFactory>(new SieveStreamingBucketTitratorFactory(threads, appData.distributedEpsilon, appData.outputSetSize));
+            return std::unique_ptr<BucketTitratorFactory>(
+                new SieveStreamingBucketTitratorFactory(threads, appData.distributedEpsilon, appData.outputSetSize, calcFactory)
+            );
         }
         else if (appData.distributedAlgorithm == 2) {
-            return std::unique_ptr<BucketTitratorFactory>(new ThreeSeiveBucketTitratorFactory(appData.distributedEpsilon, appData.threeSieveT, appData.outputSetSize));
+            return std::unique_ptr<BucketTitratorFactory>(
+                new ThreeSeiveBucketTitratorFactory(appData.distributedEpsilon, appData.threeSieveT, appData.outputSetSize, calcFactory)
+            );
         } else {
             throw std::invalid_argument("ERROR: bad input");
         }
     }
 
-    static std::unique_ptr<CandidateConsumer> buildConsumer(const AppData &appData, const unsigned int threads, const unsigned int numSenders) {
-        std::unique_ptr<BucketTitratorFactory> titratorFactory(buildTitratorFactory(appData, threads));
+    static std::unique_ptr<CandidateConsumer> buildConsumer(
+        const AppData &appData, 
+        const unsigned int threads, 
+        const unsigned int numSenders,
+        const RelevanceCalculatorFactory& calcFactory
+    ) {
+        std::unique_ptr<BucketTitratorFactory> titratorFactory(buildTitratorFactory(appData, threads, calcFactory));
         std::unique_ptr<BucketTitrator> titrator;
         
         // If we know that we're going to be sending all seeds, we do not know that the first m seeds from
@@ -112,7 +125,7 @@ class MpiOrchestrator : public Orchestrator {
         if (appData.sendAllToReceiver) {
             titrator = std::unique_ptr<BucketTitrator>(titratorFactory->createWithDynamicBuckets());
         } else {
-            titrator = std::unique_ptr<BucketTitrator>(new LazyInitializingBucketTitrator(move(titratorFactory)));
+            titrator = std::unique_ptr<BucketTitrator>(new LazyInitializingBucketTitrator(move(titratorFactory), calcFactory));
         }
         return std::unique_ptr<NaiveCandidateConsumer>(new NaiveCandidateConsumer(move(titrator), appData.sendAllToReceiver ? 0 : numSenders));
     }
