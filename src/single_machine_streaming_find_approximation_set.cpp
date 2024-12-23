@@ -37,7 +37,11 @@
 #include <algorithm>
 
 std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
-    const AppData& appData, std::unique_ptr<DataRowFactory> factory, std::unique_ptr<LineFactory> getter, Timers& timers
+    const AppData& appData, 
+    std::unique_ptr<DataRowFactory> factory, 
+    std::unique_ptr<LineFactory> getter, 
+    const std::optional<UserData*> user,
+    Timers& timers
 ) { 
     timers.totalCalculationTime.startTimer();
 
@@ -47,8 +51,15 @@ std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
         MpiOrchestrator::buildTitratorFactory(appData, omp_get_num_threads() - 1)->createWithDynamicBuckets()
     );
     std::unique_ptr<NaiveCandidateConsumer> consumer(new NaiveCandidateConsumer(move(titrator), 1));
-    LoadingReceiver receiver(move(factory), move(getter));
-    SeiveGreedyStreamer streamer(receiver, *consumer.get(), timers, !appData.stopEarly);
+
+    std::unique_ptr<Receiver> receiver(new LoadingReceiver(move(factory), move(getter)));
+
+    if (user.has_value()) {
+        std::unique_ptr<Receiver> usermode_receiver(UserModeReceiver::create(move(receiver), *user.value()));
+        receiver = move(usermode_receiver);
+    }
+
+    SeiveGreedyStreamer streamer(*receiver, *consumer.get(), timers, !appData.stopEarly);
 
     spdlog::info("Starting to load and stream");
     std::unique_ptr<Subset> solution(streamer.resolveStream());
@@ -61,7 +72,11 @@ std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
 }
 
 std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
-    const AppData& appData, std::unique_ptr<DataRowFactory> factory, std::unique_ptr<LineFactory> getter, Timers& timers
+    const AppData& appData, 
+    std::unique_ptr<DataRowFactory> factory, 
+    std::unique_ptr<LineFactory> getter, 
+    const std::optional<UserData*> user,
+    Timers& timers
 ) {
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     std::vector<std::unique_ptr<CandidateSeed>> elements;
@@ -70,6 +85,14 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
 
     auto loadBaseline = getPeakRSS();
     size_t globalRow = 0;
+
+    std::unordered_set<unsigned long long> user_set;
+    if (user.has_value()) {
+        user_set = std::unordered_set<unsigned long long>(
+            user.value()->getCu().begin(),
+            user.value()->getCu().end());
+    }
+
     while (true) {
         std::unique_ptr<DataRow> nextRow(factory->maybeGet(*getter));
 
@@ -77,8 +100,12 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
             break;
         }
 
-        auto element = std::unique_ptr<CandidateSeed>(new CandidateSeed(globalRow++, move(nextRow), 1));
-        elements.push_back(move(element));
+        auto element = std::unique_ptr<CandidateSeed>(new CandidateSeed(globalRow, move(nextRow), 1));
+
+        if (!user.has_value() || user_set.find(globalRow) != user_set.end()) {
+            elements.push_back(move(element));
+        }
+        globalRow++;
     }
     timers.loadingDatasetTime.stopTimer();
     size_t memUsageOnLoad = getPeakRSS()- loadBaseline;
@@ -139,13 +166,32 @@ int main(int argc, char** argv) {
 
     std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
 
-    std::pair<std::unique_ptr<Subset>, size_t> solution(
-        appData.loadWhileStreaming ? 
-            loadWhileCalculating(appData, move(factory), move(getter), timers) : 
-            loadThenCalculate(appData, move(factory), move(getter), timers)
-    );
+    std::vector<std::unique_ptr<UserData>> userData;
+    if (appData.userModeFile != EMPTY_STRING) {
+        userData = UserDataImplementation::load(appData.userModeFile);
+        spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
+    }
 
-    spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution.first->size(), solution.first->getScore());
+    std::optional<UserData*> user;
+    std::vector<std::unique_ptr<Subset>> solutions;
+    if (userData.size() == 0) {
+        std::pair<std::unique_ptr<Subset>, size_t> solution = 
+            appData.loadWhileStreaming ? 
+                loadWhileCalculating(appData, move(factory), move(getter), std::nullopt, timers) : 
+                loadThenCalculate(appData, move(factory), move(getter), std::nullopt, timers);
+        spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution.first->size(), solution.first->getScore());
+        solutions.push_back(move(solution.first));
+    } else {
+        for (const auto & user : userData) {
+            std::pair<std::unique_ptr<Subset>, size_t> solution = 
+                appData.loadWhileStreaming ? 
+                    loadWhileCalculating(appData, move(factory), move(getter), user.get(), timers) : 
+                    loadThenCalculate(appData, move(factory), move(getter), user.get(), timers);
+            spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution.first->size(), solution.first->getScore());
+            solutions.push_back(move(solution.first));
+        }
+    }
+
     
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         inputFile.close();
@@ -157,12 +203,9 @@ int main(int argc, char** argv) {
 
     LoadedSegmentedData dummySegmentedData(std::move(dummyData), std::move(dummyRowMapping), dummyColumns);
 
-    std::vector<std::unique_ptr<Subset>> allSolutions;
-    allSolutions.push_back(move(solution.first));
     nlohmann::json result = Orchestrator::buildOutput(
-        appData, allSolutions, dummySegmentedData, timers
+        appData, solutions, dummySegmentedData, timers
     );
-    result.push_back({"Memory (KiB)", solution.second});
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
     outputFile << result.dump(2);
