@@ -1,0 +1,1 @@
+mpirun -n 5 ./tools/mpi_find_approximation_set --numberOfRows 40858 --adjacencyListColumnCount 478615 -o mpi_usermode_movielens.json -k 100 -e 0.000000001 -a 3 -d 2 --distributedEpsilon 0.0372 -T 50 --userModeFile scripts/UserMode/users.txt loadInput -i ~/Projects/datasets/MovieLens.txt

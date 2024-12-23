@@ -14,7 +14,7 @@ def calcualteRU(PU, CU, similarities):
             s = 0
             for j in PU[user]:
                 s += float(matrix[i, j])
-            RU[user].append(s)
+            RU[user].append(s/len(PU[user]))
     return RU
 
 def outputUserData(topN, topU, infile, outfile):
@@ -99,9 +99,8 @@ def outputUserData(topN, topU, infile, outfile):
             l.extend(RU[user])
 
             LU[user] = l
-            print("LU size:")
-            print(len(LU[user]))
-            np.savetxt(f, [np.array(l)], fmt='%d', delimiter=' ')
+            print(f"LU size: {len(LU[user])}")
+            np.savetxt(f, [np.array(l)], fmt='%f', delimiter=' ')
 
 def getDataset(filepath_input):
     return pd.read_csv(filepath_input, header=None, delim_whitespace=True)  # Assuming no header in the CSV
