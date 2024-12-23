@@ -56,11 +56,15 @@ std::unique_ptr<Subset> randGreedi(
     std::vector<float> sendBuffer;
     timers.totalCalculationTime.startTimer();
     if (appData.worldRank != 0) {
-        
+        std::unique_ptr<RelevanceCalculator> calc(new NaiveRelevanceCalculator(data));
+        if (user.has_value()) {
+            calc = std::unique_ptr<RelevanceCalculator>(UserModeRelevanceCalculator::from(data, *user.value(), appData.theta));
+        }
+
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         
         timers.localCalculationTime.startTimer();
-        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(data, appData.outputSetSize));
+        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(*calc, data, appData.outputSetSize));
         timers.localCalculationTime.stopTimer();
         
         // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
@@ -99,7 +103,15 @@ std::unique_ptr<Subset> randGreedi(
     if (appData.worldRank == 0) {
         std::unique_ptr<SubsetCalculator> globalCalculator(MpiOrchestrator::getCalculator(appData));
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
-        GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers);
+
+        std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
+        if (user.has_value()) {
+            calcFactory = std::unique_ptr<RelevanceCalculatorFactory>(
+                new UserModeNaiveRelevanceCalculatorFactory(*user.value(), appData.theta)
+            );
+        }
+
+        GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers, *calcFactory);
         std::unique_ptr<Subset> globalSolution(bufferLoader.getSolution(move(globalCalculator), appData.outputSetSize, *factory.get()));
 
         timers.totalCalculationTime.stopTimer();
@@ -168,8 +180,13 @@ std::unique_ptr<Subset> streaming(
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         spdlog::info("rank {0:d} is ready to start streaming local seeds", appData.worldRank);
 
+        std::unique_ptr<RelevanceCalculator> calc(new NaiveRelevanceCalculator(data));
+        if (user.has_value()) {
+            calc = std::unique_ptr<RelevanceCalculator>(UserModeRelevanceCalculator::from(data, *user.value(), appData.theta));
+        }
+
         timers.localCalculationTime.startTimer();
-        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), NaiveRelevanceCalculator::from(data), data, appData.outputSetSize));
+        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), *calc, data, appData.outputSetSize));
 
         spdlog::info("rank {0:d} finished streaming local seeds. Found {1:d} seeds of score {2:f}", appData.worldRank, localSolution->size(), localSolution->getScore());
 

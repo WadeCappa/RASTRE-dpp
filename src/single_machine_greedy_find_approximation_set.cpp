@@ -74,13 +74,14 @@ int main(int argc, char** argv) {
 
     std::unique_ptr<SubsetCalculator> calculator(Orchestrator::getCalculator(appData));
     if (userData.size() == 0) {
-        solutions.push_back(calculator->getApproximationSet(*data.get(), appData.outputSetSize));
+        NaiveRelevanceCalculator calc(*data);
+        solutions.push_back(calculator->getApproximationSet(calc, *data, appData.outputSetSize));
         spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
     } else {
         for (const auto & user : userData) {
             UserModeDataDecorator userData(*data.get(), *user.get());
             std::unique_ptr<RelevanceCalculator> userCalc(UserModeRelevanceCalculator::from(userData, *user.get(), appData.theta));
-            solutions.push_back(calculator->getApproximationSet(move(userCalc), userData, appData.outputSetSize));
+            solutions.push_back(calculator->getApproximationSet(*userCalc, userData, appData.outputSetSize));
             spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
         }
     }

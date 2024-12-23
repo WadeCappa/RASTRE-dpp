@@ -83,6 +83,7 @@ class GlobalBufferLoader : public BufferLoader {
     const size_t columnsPerRowInBuffer;
     const std::vector<int> &displacements;
     const size_t worldSize;
+    const RelevanceCalculatorFactory &calcFactory;
 
     public:
     std::unique_ptr<Subset> getSolution(
@@ -96,7 +97,8 @@ class GlobalBufferLoader : public BufferLoader {
 
         timers.globalCalculationTime.startTimer();
 
-        std::unique_ptr<Subset> untranslatedSolution(calculator->getApproximationSet(bestRows, k));
+        std::unique_ptr<RelevanceCalculator> calc(calcFactory.build(bestRows));
+        std::unique_ptr<Subset> untranslatedSolution(calculator->getApproximationSet(*calc, bestRows, k));
         std::unique_ptr<Subset> globalResult(bestRows.translateSolution(move(untranslatedSolution)));
 
         timers.globalCalculationTime.stopTimer();
@@ -115,13 +117,15 @@ class GlobalBufferLoader : public BufferLoader {
         const std::vector<float> &binaryInput, 
         const size_t columnsPerRowInBuffer,
         const std::vector<int> &displacements,
-        Timers &timers
+        Timers &timers,
+        const RelevanceCalculatorFactory &calcFactory
     ) : 
-    timers(timers),
-    binaryInput(binaryInput), 
-    columnsPerRowInBuffer(columnsPerRowInBuffer + FLOATS_FOR_ROW_INDEX_PER_COLUMN), 
-    displacements(displacements),
-    worldSize(displacements.size())
+        timers(timers),
+        binaryInput(binaryInput), 
+        columnsPerRowInBuffer(columnsPerRowInBuffer + FLOATS_FOR_ROW_INDEX_PER_COLUMN), 
+        displacements(displacements),
+        worldSize(displacements.size()),
+        calcFactory(calcFactory)
     {}
 
     private:

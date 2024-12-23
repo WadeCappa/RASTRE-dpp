@@ -55,7 +55,7 @@ class LazyKernelMatrix : public KernelMatrix {
     const BaseData &data;
 
     std::vector<std::unordered_map<size_t, float>> kernelMatrix;
-    std::unique_ptr<RelevanceCalculator> calc;
+    const RelevanceCalculator& calc;
 
     // Disable pass by value. This object is too large for pass by value to make sense implicitly.
     //  Use an explicit constructor to pass by value.
@@ -64,21 +64,17 @@ class LazyKernelMatrix : public KernelMatrix {
     LazyKernelMatrix(const LazyKernelMatrix &);
 
     public:
-    static std::unique_ptr<LazyKernelMatrix> from(const BaseData &data) {
-        return LazyKernelMatrix::from(data, std::make_unique<NaiveRelevanceCalculator>(data));
-    }
-
     static std::unique_ptr<LazyKernelMatrix> from(
         const BaseData &data, 
-        std::unique_ptr<RelevanceCalculator> calc) {
-        return std::make_unique<LazyKernelMatrix>(data, move(calc));
+        const RelevanceCalculator& calc) {
+        return std::make_unique<LazyKernelMatrix>(data, calc);
     }
 
-    LazyKernelMatrix(const BaseData &data, std::unique_ptr<RelevanceCalculator> calc) 
+    LazyKernelMatrix(const BaseData &data, const RelevanceCalculator& calc) 
     : 
         kernelMatrix(data.totalRows(), std::unordered_map<size_t, float>()),
         data(data),
-        calc(move(calc))
+        calc(calc)
     {}
 
     size_t size() {
@@ -91,7 +87,7 @@ class LazyKernelMatrix : public KernelMatrix {
         const size_t forward_key = std::max(j, i);
         const size_t back_key = std::min(j, i);
         if (this->kernelMatrix[forward_key].find(back_key) == this->kernelMatrix[forward_key].end()) {
-            float score = calc->get(forward_key, back_key);
+            float score = calc.get(forward_key, back_key);
             this->kernelMatrix[forward_key].insert({back_key, score});
         }
 
@@ -108,13 +104,9 @@ class NaiveKernelMatrix : public KernelMatrix {
     NaiveKernelMatrix(const NaiveKernelMatrix &);
 
     public:
-    static std::unique_ptr<NaiveKernelMatrix> from(const BaseData &data) {
-        return NaiveKernelMatrix::from(data, NaiveRelevanceCalculator::from(data));
-    }
-
     static std::unique_ptr<NaiveKernelMatrix> from(
         const BaseData &data, 
-        std::unique_ptr<RelevanceCalculator> calc) {
+        const RelevanceCalculator &calc) {
         std::vector<std::vector<float>> result(
             data.totalRows(), 
             std::vector<float>(data.totalRows(), 0)
@@ -124,7 +116,7 @@ class NaiveKernelMatrix : public KernelMatrix {
         #pragma omp parallel for
         for (size_t i = 0; i < data.totalRows(); i++) {
             for (size_t j = i; j < data.totalRows(); j++) {
-                float score = calc->get(i, j);
+                float score = calc.get(i, j);
                 result[j][i] = score;
                 result[i][j] = score;
             }

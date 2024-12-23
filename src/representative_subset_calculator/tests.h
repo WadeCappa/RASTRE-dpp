@@ -19,7 +19,8 @@ static const float epsilon = 0.01;
 
 static std::unique_ptr<Subset> testCalculator(SubsetCalculator *calculator) {
     std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(DENSE_DATA));
-    std::unique_ptr<Subset> res = calculator->getApproximationSet(*data, k);
+    NaiveRelevanceCalculator calc(*data);
+    std::unique_ptr<Subset> res = calculator->getApproximationSet(calc, *data, k);
 
     CHECK(res->size() == k);
     std::set<size_t> seen;

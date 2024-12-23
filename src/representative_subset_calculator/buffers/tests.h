@@ -109,7 +109,8 @@ TEST_CASE("Getting solution from a buffer") {
     displacements.push_back(0);
 
     Timers timers;
-    GlobalBufferLoader bufferLoader(sendBuffer, denseData->totalColumns(), displacements, timers);
+    NaiveRelevanceCalculatorFactory calc;
+    GlobalBufferLoader bufferLoader(sendBuffer, denseData->totalColumns(), displacements, timers, calc);
     std::unique_ptr<Subset> receivedSolution(
         bufferLoader.getSolution(
             std::unique_ptr<SubsetCalculator>(new NaiveSubsetCalculator()), 

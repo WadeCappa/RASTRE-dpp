@@ -39,7 +39,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
 
     std::unique_ptr<Subset> getApproximationSet(
         std::unique_ptr<MutableSubset> consumer, 
-        std::unique_ptr<RelevanceCalculator> calc,
+        const RelevanceCalculator& calc,
         const BaseData &data, 
         size_t k
     ) {
@@ -50,7 +50,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         
         // Just needs to pass diag(e^(alpha * r_u)) for our per-user calc. Should be an opt 
         // for the non-user case. For use during all kernel matrix opts
-        std::unique_ptr<LazyKernelMatrix> kernelMatrix(LazyKernelMatrix::from(data, move(calc)));
+        std::unique_ptr<LazyKernelMatrix> kernelMatrix(LazyKernelMatrix::from(data, calc));
         spdlog::debug("created lazy fast kernel matrix");
         
         // Account for user mode here

@@ -24,7 +24,7 @@ class LazySubsetCalculator : public SubsetCalculator {
      */
     std::unique_ptr<Subset> getApproximationSet(
         std::unique_ptr<MutableSubset> consumer, 
-        std::unique_ptr<RelevanceCalculator> _calc,
+        const RelevanceCalculator& _calc,
         const BaseData &data, 
         size_t k
     ) {
