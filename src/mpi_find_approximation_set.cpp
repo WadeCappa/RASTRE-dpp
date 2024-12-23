@@ -44,10 +44,11 @@
 
 #include <thread>
 
-void randGreedi(
+std::unique_ptr<Subset> randGreedi(
     const AppData &appData, 
     const SegmentedData &data, 
     const std::vector<unsigned int> &rowToRank, 
+    const std::optional<UserData*> user,
     Timers &timers
 ) {
     unsigned int sendDataSize = 0;
@@ -96,7 +97,6 @@ void randGreedi(
     timers.communicationTime.stopTimer();
     
     if (appData.worldRank == 0) {
-
         std::unique_ptr<SubsetCalculator> globalCalculator(MpiOrchestrator::getCalculator(appData));
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
         GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers);
@@ -104,26 +104,22 @@ void randGreedi(
 
         timers.totalCalculationTime.stopTimer();
 
-        std::vector<std::unique_ptr<Subset>> solutions;
-        solutions.push_back(move(globalSolution));
-        nlohmann::json result = MpiOrchestrator::buildMpiOutput(appData, solutions, data, timers, rowToRank);
-        std::ofstream outputFile;
-        outputFile.open(appData.outputFile);
-        outputFile << result.dump(2);
-        outputFile.close();
+        return move(globalSolution);
     } else {
         // used to load global timers on rank 0
         timers.totalCalculationTime.stopTimer();
         std::vector<std::unique_ptr<Subset>> emptySolution;
 
         MpiOrchestrator::buildMpiOutput(appData, emptySolution, data, timers, rowToRank);
+        return Subset::empty();
     }
 }
 
-void streaming(
+std::unique_ptr<Subset> streaming(
     const AppData &appData, 
     const SegmentedData &data, 
     const std::vector<unsigned int> &rowToRank, 
+    const std::optional<UserData*> user,
     Timers &timers
 ) {
     // This is hacky. We only do this because the receiver doesn't load any data and therefore
@@ -157,16 +153,7 @@ void streaming(
         timers.totalCalculationTime.stopTimer();
         spdlog::info("rank 0 finished receiving");
 
-        std::vector<std::unique_ptr<Subset>> solutions;
-        solutions.push_back(move(solution));
-        nlohmann::json result = MpiOrchestrator::buildMpiOutput(
-            appData, solutions, data, timers, rowToRank
-        );
-        std::ofstream outputFile;
-        outputFile.open(appData.outputFile);
-        outputFile << result.dump(2);
-        outputFile.close();
-        spdlog::info("rank 0 output all information");
+        return move(solution);
     } else {
         spdlog::info("rank {0:d} entered streaming function and know the total columns of {1:d}", appData.worldRank, data.totalColumns());
         timers.totalCalculationTime.startTimer();
@@ -183,10 +170,51 @@ void streaming(
         timers.localCalculationTime.stopTimer();
         timers.totalCalculationTime.stopTimer();
 
-        std::vector<std::unique_ptr<Subset>> fakeSolution;
-        MpiOrchestrator::buildMpiOutput(appData, fakeSolution, data, timers, rowToRank);
+        return Subset::empty();
     }
 }
+
+std::vector<std::unique_ptr<Subset>> getSolutions(
+    AppData& appData, // ideally this should be const
+    const SegmentedData &data, 
+    const std::vector<unsigned int> &rowToRank, 
+    const std::optional<UserData*> user,
+    Timers &timers,
+    std::vector<Timers> comparisonTimers
+) {
+    std::vector<std::unique_ptr<Subset>> solutions;
+    if (appData.distributedAlgorithm == 0) {
+        solutions.push_back(randGreedi(appData, data, rowToRank, std::nullopt, timers));
+    } else if (appData.distributedAlgorithm == 1 || appData.distributedAlgorithm == 2) {
+        solutions.push_back(streaming(appData, data, rowToRank, std::nullopt, timers));
+    } else if (appData.distributedAlgorithm == 3) {
+
+        std::string output = appData.outputFile;
+        spdlog::info("Starting Baseline RandGreedI...");
+        appData.distributedAlgorithm = 0;
+        // need to mark output with "_RandGreedI_Base.json";
+        randGreedi(appData, data, rowToRank, std::nullopt, comparisonTimers[0]);
+
+        spdlog::info("Done! Starting RandGreedI + Streaming with Sieve Streaming...");
+
+        appData.distributedAlgorithm = 1;
+        // need to mark output with "_RandGreedI_Sieve.json";
+        streaming(appData, data, rowToRank, std::nullopt, comparisonTimers[1]);
+
+        spdlog::info("Done! Starting RandGreedI + Streaming with Three-Sieves Streaming... ");
+
+        appData.distributedAlgorithm = 2;
+        // need to mark output with "_RandGreedI_ThreeSieve.json";
+        streaming(appData, data, rowToRank, std::nullopt, comparisonTimers[2]);
+        
+        spdlog::info("Done!");
+    } else {
+        spdlog::error("did not recognize distributed Algorithm of {0:d}", appData.distributedAlgorithm);
+    }
+
+    return move(solutions);
+}
+
 
 int main(int argc, char** argv) {
 
@@ -265,34 +293,35 @@ int main(int argc, char** argv) {
         t.barrierTime.stopTimer();
     timers.barrierTime.stopTimer();
 
-    if (appData.distributedAlgorithm == 0) {
-        randGreedi(appData, *data, rowToRank, timers);
-    } else if (appData.distributedAlgorithm == 1 || appData.distributedAlgorithm == 2) {
-        streaming(appData, *data, rowToRank, timers);
-    } else if (appData.distributedAlgorithm == 3) {
+    std::vector<std::unique_ptr<UserData>> userData;
+    if (appData.userModeFile != EMPTY_STRING) {
+        userData = UserDataImplementation::load(appData.userModeFile);
+        spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
+    }
 
-        std::string output = appData.outputFile;
-        spdlog::info("Starting Baseline RandGreedI...");
-        appData.distributedAlgorithm = 0;
-        appData.outputFile = output + "_RandGreedI_Base.json";
-        randGreedi(appData, *data, rowToRank, comparisonTimers[0]);
-
-        spdlog::info("Done! Starting RandGreedI + Streaming with Sieve Streaming...");
-
-        appData.distributedAlgorithm = 1;
-        appData.outputFile = output + "_RandGreedI_Sieve.json";
-        streaming(appData, *data, rowToRank, comparisonTimers[1]);
-
-        spdlog::info("Done! Starting RandGreedI + Streaming with Three-Sieves Streaming... ");
-
-        appData.distributedAlgorithm = 2;
-        appData.outputFile = output + "_RandGreedI_ThreeSieve.json";
-        streaming(appData, *data, rowToRank, comparisonTimers[2]);
-        
-        spdlog::info("Done!");
-
+    std::vector<std::unique_ptr<Subset>> solutions;
+    if (userData.size() == 0) {
+        solutions = getSolutions(appData, *data, rowToRank, std::nullopt, timers, comparisonTimers);
     } else {
-        spdlog::error("did not recognize distributed Algorithm of {0:d}", appData.distributedAlgorithm);
+        for (const auto & user : userData) {
+            std::vector<std::unique_ptr<Subset>> new_solutions(
+                getSolutions(appData, *data, rowToRank, user.get(), timers, comparisonTimers)
+            );
+            solutions.insert(
+                solutions.end(), 
+                std::make_move_iterator(new_solutions.begin()),
+                std::make_move_iterator(new_solutions.end())
+            );
+        }
+    }
+
+    nlohmann::json result = MpiOrchestrator::buildMpiOutput(appData, solutions, *data, timers, rowToRank);
+    if (appData.worldRank == 0) {
+        std::ofstream outputFile;
+        outputFile.open(appData.outputFile);
+        outputFile << result.dump(2);
+        outputFile.close();
+        spdlog::info("rank 0 output all information");
     }
 
     MPI_Finalize();

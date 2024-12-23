@@ -61,7 +61,6 @@ int main(int argc, char** argv) {
     spdlog::info("Finished loading dataset of size {0:d} ...", data->totalRows());
 
     std::vector<std::unique_ptr<UserData>> userData;
-
     if (appData.userModeFile != EMPTY_STRING) {
         userData = UserDataImplementation::load(appData.userModeFile);
         spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
