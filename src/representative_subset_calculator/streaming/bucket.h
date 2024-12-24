@@ -91,7 +91,7 @@ class ThresholdBucket
         const float marginal = std::log(std::pow(d_i, 2));
         
         if (this->passesThreshold(marginal)) {
-            SPDLOG_DEBUG("seed {0:d} with mirginal of {1:f} passed threshold of {2:f}", rowIndex, marginal, this->threshold);
+            SPDLOG_TRACE("seed {0:d} with mirginal of {1:f} passed threshold of {2:f}", rowIndex, marginal, this->threshold);
             this->solution->addRow(rowIndex, marginal);
             this->solutionRows->push_back(&data);
             this->d->push_back(d_i);

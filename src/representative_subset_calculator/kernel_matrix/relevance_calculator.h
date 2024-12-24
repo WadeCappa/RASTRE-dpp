@@ -37,6 +37,7 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
         const double theta
     ) {
         const double alpha = calcAlpha(theta);
+        SPDLOG_TRACE("calculated alpha of {0:f}", alpha);
         return std::make_unique<UserModeRelevanceCalculator>(
             NaiveRelevanceCalculator::from(data), 
             userData.getRu(), 
