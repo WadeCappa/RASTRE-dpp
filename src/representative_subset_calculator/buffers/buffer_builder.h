@@ -107,9 +107,9 @@ class GlobalBufferLoader : public BufferLoader {
 
         spdlog::info("best local solution had score of {0:f} while the global solution had a score of {1:f}", bestLocal->getScore(), globalResult->getScore());
         if (globalResult->getScore() > bestLocal->getScore()) {
-            return globalResult; 
+            return move(globalResult); 
         } else {
-            return bestLocal;
+            return move(bestLocal);
         }
     }
 

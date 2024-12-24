@@ -327,9 +327,11 @@ int main(int argc, char** argv) {
         solutions = getSolutions(appData, *data, rowToRank, std::nullopt, timers, comparisonTimers);
     } else {
         for (const auto & user : userData) {
+            spdlog::info("starting to process user {0:d}", user->getUserId());
             std::vector<std::unique_ptr<Subset>> new_solutions(
                 getSolutions(appData, *data, rowToRank, user.get(), timers, comparisonTimers)
             );
+            spdlog::info("finished getting {0:d} solutions", new_solutions.size());
             solutions.insert(
                 solutions.end(), 
                 std::make_move_iterator(new_solutions.begin()),

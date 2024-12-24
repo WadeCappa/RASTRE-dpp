@@ -36,13 +36,25 @@
 #include <random>
 #include <algorithm>
 
+// Put this somewhere more sane
+const unsigned int DEFAULT_VALUE = -1;
+
 std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
     const AppData& appData, 
-    std::unique_ptr<DataRowFactory> factory, 
-    std::unique_ptr<LineFactory> getter, 
     const std::optional<UserData*> user,
     Timers& timers
 ) { 
+    std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
+
+    std::unique_ptr<LineFactory> getter;
+    std::ifstream inputFile;
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.open(appData.loadInput.inputFile);
+        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
+    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
+        getter = Orchestrator::getLineGenerator(appData);
+    }
+
     timers.totalCalculationTime.startTimer();
 
     auto baseline = getPeakRSS();
@@ -72,6 +84,10 @@ std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
     std::unique_ptr<Subset> solution(streamer.resolveStream());
 
     size_t memUsage = getPeakRSS()- baseline;
+
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.close();
+    } 
     
     timers.totalCalculationTime.stopTimer();
 
@@ -80,11 +96,20 @@ std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
 
 std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
     const AppData& appData, 
-    std::unique_ptr<DataRowFactory> factory, 
-    std::unique_ptr<LineFactory> getter, 
     const std::optional<UserData*> user,
     Timers& timers
 ) {
+    std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
+
+    std::unique_ptr<LineFactory> getter;
+    std::ifstream inputFile;
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.open(appData.loadInput.inputFile);
+        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
+    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
+        getter = Orchestrator::getLineGenerator(appData);
+    }
+
     SynchronousQueue<std::unique_ptr<CandidateSeed>> queue;
     std::vector<std::unique_ptr<CandidateSeed>> elements;
 
@@ -117,6 +142,10 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
     timers.loadingDatasetTime.stopTimer();
     size_t memUsageOnLoad = getPeakRSS()- loadBaseline;
 
+    if (appData.loadInput.inputFile != EMPTY_STRING) {
+        inputFile.close();
+    } 
+    
     spdlog::info("Finished loading dataset of size {0:d} requiring {1:d} kB...", elements.size(), memUsageOnLoad);
 
     // Randomize Order
@@ -163,21 +192,8 @@ int main(int argc, char** argv) {
     CLI11_PARSE(app, argc, argv);
 
     Timers timers;
-    // Put this somewhere more sane
-    const unsigned int DEFAULT_VALUE = -1;
 
     spdlog::info("Starting standalone streaming...");
-
-    std::unique_ptr<LineFactory> getter;
-    std::ifstream inputFile;
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
-        inputFile.open(appData.loadInput.inputFile);
-        getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
-    } else if (appData.generateInput.seed != DEFAULT_VALUE) {
-        getter = Orchestrator::getLineGenerator(appData);
-    }
-
-    std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
 
     std::vector<std::unique_ptr<UserData>> userData;
     if (appData.userModeFile != EMPTY_STRING) {
@@ -190,25 +206,20 @@ int main(int argc, char** argv) {
     if (userData.size() == 0) {
         std::pair<std::unique_ptr<Subset>, size_t> solution = 
             appData.loadWhileStreaming ? 
-                loadWhileCalculating(appData, move(factory), move(getter), std::nullopt, timers) : 
-                loadThenCalculate(appData, move(factory), move(getter), std::nullopt, timers);
+                loadWhileCalculating(appData, std::nullopt, timers) : 
+                loadThenCalculate(appData, std::nullopt, timers);
         spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution.first->size(), solution.first->getScore());
         solutions.push_back(move(solution.first));
     } else {
         for (const auto & user : userData) {
             std::pair<std::unique_ptr<Subset>, size_t> solution = 
                 appData.loadWhileStreaming ? 
-                    loadWhileCalculating(appData, move(factory), move(getter), user.get(), timers) : 
-                    loadThenCalculate(appData, move(factory), move(getter), user.get(), timers);
+                    loadWhileCalculating(appData, user.get(), timers) : 
+                    loadThenCalculate(appData, user.get(), timers);
             spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution.first->size(), solution.first->getScore());
             solutions.push_back(move(solution.first));
         }
     }
-
-    
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
-        inputFile.close();
-    } 
     
     std::vector<std::unique_ptr<DataRow>> dummyData;
     std::vector<size_t> dummyRowMapping;

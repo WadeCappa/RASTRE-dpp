@@ -28,13 +28,15 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
     const double alpha;
 
     public:
+    /**
+     * This constructor gets spammed. We should really cache this or otherwise make this more efficent
+     */
     static std::unique_ptr<UserModeRelevanceCalculator> from(
         const BaseData &data, 
         const UserData &userData, 
         const double theta
     ) {
         const double alpha = calcAlpha(theta);
-        spdlog::debug("user mode alpha of {0:f}", alpha);
         return std::make_unique<UserModeRelevanceCalculator>(
             NaiveRelevanceCalculator::from(data), 
             userData.getRu(), 

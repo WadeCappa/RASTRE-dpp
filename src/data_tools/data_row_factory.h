@@ -372,6 +372,9 @@ class DenseDataRowFactory : public DataRowFactory {
     }
 };
 
+/**
+ * This is a stateful class, we cannot re-use this between loads.
+ */
 class SparseDataRowFactory : public DataRowFactory {
     private:
     const static size_t EXPECTED_ELEMENTS_PER_LINE = 3;
