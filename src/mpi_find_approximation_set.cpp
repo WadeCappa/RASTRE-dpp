@@ -73,10 +73,12 @@ std::unique_ptr<Subset> randGreedi(
         timers.bufferEncodingTime.stopTimer();
     } 
     
+    spdlog::debug("starting gather on rank {0:d}", appData.worldRank);
     timers.communicationTime.startTimer();
     MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
     timers.communicationTime.stopTimer();
     
+    spdlog::debug("building buffer rank {0:d}", appData.worldRank);
     timers.bufferEncodingTime.startTimer();
     std::vector<float> receiveBuffer;
     std::vector<int> displacements;
@@ -87,6 +89,7 @@ std::unique_ptr<Subset> randGreedi(
     timers.bufferEncodingTime.stopTimer();
     
     timers.communicationTime.startTimer();
+    spdlog::debug("gather v rank {0:d}", appData.worldRank);
     MPI_Gatherv(
         sendBuffer.data(),
         sendBuffer.size(), 
@@ -111,7 +114,10 @@ std::unique_ptr<Subset> randGreedi(
             );
         }
 
+        spdlog::debug("building buffer on rank 0");
         GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers, *calcFactory);
+
+        spdlog::debug("getting global solution");
         std::unique_ptr<Subset> globalSolution(bufferLoader.getSolution(move(globalCalculator), appData.outputSetSize, *factory.get()));
 
         timers.totalCalculationTime.stopTimer();
@@ -136,7 +142,7 @@ std::unique_ptr<Subset> streaming(
 ) {
     // This is hacky. We only do this because the receiver doesn't load any data and therefore
     //  doesn't know the rowsize of the input. Just load one row instead.
-    unsigned int rowSize = data.totalColumns();
+    unsigned int rowSize = appData.worldRank == 0 ? 0 : data.totalColumns();
     std::vector<unsigned int> rowSizes(appData.worldSize);
     MPI_Gather(&rowSize, 1, MPI_INT, rowSizes.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -171,6 +177,8 @@ std::unique_ptr<Subset> streaming(
         timers.totalCalculationTime.stopTimer();
         spdlog::info("rank 0 finished receiving");
 
+        MPI_Barrier(MPI_COMM_WORLD);
+
         return move(solution);
     } else {
         spdlog::info("rank {0:d} entered streaming function and know the total columns of {1:d}", appData.worldRank, data.totalColumns());
@@ -192,6 +200,8 @@ std::unique_ptr<Subset> streaming(
 
         timers.localCalculationTime.stopTimer();
         timers.totalCalculationTime.stopTimer();
+
+        MPI_Barrier(MPI_COMM_WORLD);
 
         return Subset::empty();
     }
