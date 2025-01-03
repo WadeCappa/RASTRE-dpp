@@ -1,1 +1,1 @@
-./tools/single_machine_greedy_find_approximation_set --numberOfRows 40858 --adjacencyListColumnCount 478615 -o movielens_2.json -k 100 -e 0.000000001 -a 3 --userModeFile scripts/UserMode/users.txt loadInput -i ~/Projects/datasets/MovieLens.txt
+./tools/single_machine_streaming_find_approximation_set --numberOfRows 40858 --adjacencyListColumnCount 478615 -o movielens_2.json -k 100 -e 0.000000001 -a 3 --userModeFile scripts/UserMode/users.txt loadInput -i ~/Projects/datasets/MovieLens.txt

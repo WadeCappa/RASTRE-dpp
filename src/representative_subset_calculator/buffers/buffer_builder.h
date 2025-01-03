@@ -132,6 +132,8 @@ class GlobalBufferLoader : public BufferLoader {
     std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> rebuildData(
         const DataRowFactory &factory
     ) {
+
+        spdlog::debug("rebuilding data for evaluation");
         std::vector<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> tempData(worldSize);
     
         // Because we're sending local marginals along with the data, the input data is no longer uniform.

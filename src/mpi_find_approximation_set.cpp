@@ -73,10 +73,15 @@ std::unique_ptr<Subset> randGreedi(
         timers.bufferEncodingTime.stopTimer();
     } 
     
-    spdlog::debug("starting gather on rank {0:d}", appData.worldRank);
+    spdlog::debug("starting gather on rank {0:d}, sending {1:d} with buffer size {2:d}", appData.worldRank, sendDataSize, sendBuffer.size());
     timers.communicationTime.startTimer();
-    MPI_Gather(&sendDataSize, 1, MPI_INT, receivingDataSizesBuffer.data(), 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Gather(&sendDataSize, 1, MPI_UNSIGNED, receivingDataSizesBuffer.data(), 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     timers.communicationTime.stopTimer();
+
+    MPI_Gather(&sendDataSize, 1, MPI_UNSIGNED, receivingDataSizesBuffer.data(), 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    for (size_t i = 0; i < receivingDataSizesBuffer.size(); i++) {
+        spdlog::debug("rank {0:d} sees {1:d} from {2:d}", appData.worldRank, receivingDataSizesBuffer[i], i);
+    }
     
     spdlog::debug("building buffer rank {0:d}", appData.worldRank);
     timers.bufferEncodingTime.startTimer();
@@ -89,7 +94,8 @@ std::unique_ptr<Subset> randGreedi(
     timers.bufferEncodingTime.stopTimer();
     
     timers.communicationTime.startTimer();
-    spdlog::debug("gather v rank {0:d}", appData.worldRank);
+    spdlog::debug("gather v rank {0:d} sending {1:d} bytes", appData.worldRank, sendBuffer.size());
+
     MPI_Gatherv(
         sendBuffer.data(),
         sendBuffer.size(), 
@@ -104,6 +110,7 @@ std::unique_ptr<Subset> randGreedi(
     timers.communicationTime.stopTimer();
     
     if (appData.worldRank == 0) {
+        spdlog::debug("rank 0 starting to process seeds");
         std::unique_ptr<SubsetCalculator> globalCalculator(MpiOrchestrator::getCalculator(appData));
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
 
@@ -122,13 +129,11 @@ std::unique_ptr<Subset> randGreedi(
 
         timers.totalCalculationTime.stopTimer();
 
+        spdlog::debug("rank 0 returning solution");
         return move(globalSolution);
     } else {
         // used to load global timers on rank 0
         timers.totalCalculationTime.stopTimer();
-        std::vector<std::unique_ptr<Subset>> emptySolution;
-
-        MpiOrchestrator::buildMpiOutput(appData, emptySolution, data, timers, rowToRank);
         return Subset::empty();
     }
 }
@@ -217,28 +222,28 @@ std::vector<std::unique_ptr<Subset>> getSolutions(
 ) {
     std::vector<std::unique_ptr<Subset>> solutions;
     if (appData.distributedAlgorithm == 0) {
-        solutions.push_back(randGreedi(appData, data, rowToRank, std::nullopt, timers));
+        solutions.push_back(randGreedi(appData, data, rowToRank, user, timers));
     } else if (appData.distributedAlgorithm == 1 || appData.distributedAlgorithm == 2) {
-        solutions.push_back(streaming(appData, data, rowToRank, std::nullopt, timers));
+        solutions.push_back(streaming(appData, data, rowToRank, user, timers));
     } else if (appData.distributedAlgorithm == 3) {
 
         std::string output = appData.outputFile;
         spdlog::info("Starting Baseline RandGreedI...");
         appData.distributedAlgorithm = 0;
         // need to mark output with "_RandGreedI_Base.json";
-        randGreedi(appData, data, rowToRank, std::nullopt, comparisonTimers[0]);
+        randGreedi(appData, data, rowToRank, user, comparisonTimers[0]);
 
         spdlog::info("Done! Starting RandGreedI + Streaming with Sieve Streaming...");
 
         appData.distributedAlgorithm = 1;
         // need to mark output with "_RandGreedI_Sieve.json";
-        streaming(appData, data, rowToRank, std::nullopt, comparisonTimers[1]);
+        streaming(appData, data, rowToRank, user, comparisonTimers[1]);
 
         spdlog::info("Done! Starting RandGreedI + Streaming with Three-Sieves Streaming... ");
 
         appData.distributedAlgorithm = 2;
         // need to mark output with "_RandGreedI_ThreeSieve.json";
-        streaming(appData, data, rowToRank, std::nullopt, comparisonTimers[2]);
+        streaming(appData, data, rowToRank, user, comparisonTimers[2]);
         
         spdlog::info("Done!");
     } else {
@@ -337,7 +342,7 @@ int main(int argc, char** argv) {
         solutions = getSolutions(appData, *data, rowToRank, std::nullopt, timers, comparisonTimers);
     } else {
         for (const auto & user : userData) {
-            spdlog::info("starting to process user {0:d}", user->getUserId());
+            spdlog::info("rank {0:d} starting to process user {1:d}", appData.worldRank, user->getUserId());
             std::vector<std::unique_ptr<Subset>> new_solutions(
                 getSolutions(appData, *data, rowToRank, user.get(), timers, comparisonTimers)
             );
