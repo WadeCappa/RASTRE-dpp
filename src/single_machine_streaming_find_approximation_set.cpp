@@ -28,6 +28,7 @@
 #include "representative_subset_calculator/streaming/receiver_interface.h"
 #include "representative_subset_calculator/streaming/loading_receiver.h"
 #include "representative_subset_calculator/streaming/greedy_streamer.h"
+#include "user_mode/user_score.h"
 
 #include "data_tools/user_mode_data.h"
 

@@ -39,6 +39,7 @@
 #include "representative_subset_calculator/streaming/mpi_receiver.h"
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 #include "representative_subset_calculator/memoryProfiler/MemUsage.h"
+#include "user_mode/user_score.h"
 
 #include "data_tools/user_mode_data.h"
 
