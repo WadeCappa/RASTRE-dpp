@@ -344,16 +344,16 @@ int main(int argc, char** argv) {
         solutions = getSolutions(appData, *data, rowToRank, std::nullopt, timers, comparisonTimers);
     } else {
         for (const auto & user : userData) {
-            std::unique_ptr<RelevanceCalculator> calc(UserModeRelevanceCalculator::from(*data, *user, appData.theta));
             spdlog::info("rank {0:d} starting to process user {1:d}", appData.worldRank, user->getUserId());
-            // TODO: You can refector getSolutions to just take a calc factory instead of an optional user
             std::vector<std::unique_ptr<Subset>> new_solutions(
                 getSolutions(appData, *data, rowToRank, user.get(), timers, comparisonTimers)
             );
             spdlog::info("finished getting {0:d} solutions", new_solutions.size());
-            for (size_t i = 0; i < new_solutions.size(); i++) {
-                solutions.push_back(UserSubset::create(move(new_solutions[i]), *user, *data, *calc));
-            }
+            solutions.insert(
+                solutions.end(), 
+                std::make_move_iterator(new_solutions.begin()),
+                std::make_move_iterator(new_solutions.end())
+            );
         }
     }
 

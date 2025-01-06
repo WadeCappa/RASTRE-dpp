@@ -15,7 +15,7 @@ class UserScore {
         return 0.0;
     }
 
-    static double calculateILAD(const UserData& userData, const SegmentedData& data, const RelevanceCalculator& calc) {
+    static double calculateILAD(const UserData& userData, const RelevanceCalculator& calc) {
         double aggregate_scores;
         size_t total_scores = 0;
         const std::vector<double> &ru = userData.getRu();
@@ -33,7 +33,7 @@ class UserScore {
         return aggregate_scores / (double)total_scores;
     }
 
-    static double calculateILMD(const UserData& userData, const SegmentedData& data, const RelevanceCalculator& calc) {
+    static double calculateILMD(const UserData& userData, const RelevanceCalculator& calc) {
         double minimum_score = std::numeric_limits<double>::max();
         const std::vector<double> &ru = userData.getRu();
         for (size_t j = 0; j < ru.size(); j++) {

@@ -83,7 +83,8 @@ int main(int argc, char** argv) {
         for (const auto & user : userData) {
             UserModeDataDecorator userData(*data.get(), *user.get());
             std::unique_ptr<RelevanceCalculator> userCalc(UserModeRelevanceCalculator::from(userData, *user.get(), appData.theta));
-            solutions.push_back(calculator->getApproximationSet(*userCalc, userData, appData.outputSetSize));
+            std::unique_ptr<Subset> solution(calculator->getApproximationSet(*userCalc, userData, appData.outputSetSize));
+            solutions.push_back(UserSubset::create(move(solution), *user, *userCalc));
             spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
         }
     }

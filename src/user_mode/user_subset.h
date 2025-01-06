@@ -2,23 +2,28 @@ class UserSubset : public Subset {
     private:
     std::unique_ptr<Subset> delegate;
     const UserData &userData;
-    const SegmentedData& data; 
-    const RelevanceCalculator& calc;
+    const double MRR_score;
+    const double ILAD_score;
+    const double ILMD_score;
 
     public:
     UserSubset(
         std::unique_ptr<Subset> delegate, 
         const UserData &userData, 
-        const SegmentedData& data, 
-        const RelevanceCalculator& calc)
-    : delegate(move(delegate)), userData(userData), data(data), calc(calc) {}
+        const double MRR_score,
+        const double ILAD_score,
+        const double ILMD_score)
+    : delegate(move(delegate)), userData(userData), MRR_score(MRR_score), ILAD_score(ILAD_score), ILMD_score(ILMD_score) {}
 
     static std::unique_ptr<UserSubset> create(
         std::unique_ptr<Subset> delegate, 
-        const UserData &userData, 
-        const SegmentedData& data, 
+        const UserData &userData,
         const RelevanceCalculator& calc) {
-        return std::unique_ptr<UserSubset>(new UserSubset(move(delegate), userData, data, calc));
+        
+        const double mrr = UserScore::calculateMRR(userData, *delegate);
+        const double ilad = UserScore::calculateILAD(userData, calc);
+        const double ilmd = UserScore::calculateILMD(userData, calc);
+        return std::unique_ptr<UserSubset>(new UserSubset(move(delegate), userData, mrr, ilad, ilmd));
     }
 
     float getScore() const {
@@ -36,9 +41,9 @@ class UserSubset : public Subset {
     nlohmann::json toJson() const {
         nlohmann::json output{
             {"userId", userData.getUserId()}, 
-            {"MRR", UserScore::calculateMRR(userData, *delegate)}, 
-            {"ILAD", UserScore::calculateILAD(userData, data, calc)}, 
-            {"ILMD", UserScore::calculateILMD(userData, data, calc)}
+            {"MRR", MRR_score}, 
+            {"ILAD", ILAD_score}, 
+            {"ILMD", ILMD_score}
         };
 
         output.push_back(delegate->toJson());
