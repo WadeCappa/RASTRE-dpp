@@ -55,7 +55,7 @@ class LazyKernelMatrix : public KernelMatrix {
     const BaseData &data;
 
     std::vector<std::unordered_map<size_t, float>> kernelMatrix;
-    const RelevanceCalculator& calc;
+    RelevanceCalculator& calc;
 
     // Disable pass by value. This object is too large for pass by value to make sense implicitly.
     //  Use an explicit constructor to pass by value.
@@ -66,11 +66,11 @@ class LazyKernelMatrix : public KernelMatrix {
     public:
     static std::unique_ptr<LazyKernelMatrix> from(
         const BaseData &data, 
-        const RelevanceCalculator& calc) {
+        RelevanceCalculator& calc) {
         return std::make_unique<LazyKernelMatrix>(data, calc);
     }
 
-    LazyKernelMatrix(const BaseData &data, const RelevanceCalculator& calc) 
+    LazyKernelMatrix(const BaseData &data, RelevanceCalculator& calc) 
     : 
         kernelMatrix(data.totalRows(), std::unordered_map<size_t, float>()),
         data(data),
@@ -106,7 +106,7 @@ class NaiveKernelMatrix : public KernelMatrix {
     public:
     static std::unique_ptr<NaiveKernelMatrix> from(
         const BaseData &data, 
-        const RelevanceCalculator &calc) {
+        RelevanceCalculator &calc) {
         std::vector<std::vector<float>> result(
             data.totalRows(), 
             std::vector<float>(data.totalRows(), 0)

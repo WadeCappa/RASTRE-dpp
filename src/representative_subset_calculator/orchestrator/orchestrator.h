@@ -190,7 +190,7 @@ class Orchestrator {
             {"algorithm", algorithmToString(appData)},
             {"inputSettings", getInputSettings(appData)},
             {"epsilon", appData.epsilon},
-            {"Rows", outputSubsetsForSolution(solution)},
+            {"solutions", outputSubsetsForSolution(solution)},
             {"worldSize", appData.worldSize}
         };
 

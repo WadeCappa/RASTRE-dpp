@@ -38,7 +38,7 @@ class FastSubsetCalculator : public SubsetCalculator {
 
     std::unique_ptr<Subset> getApproximationSet(
         std::unique_ptr<MutableSubset> consumer, 
-        const RelevanceCalculator& calc,
+        RelevanceCalculator& calc,
         const BaseData &data, 
         size_t k
     ) {

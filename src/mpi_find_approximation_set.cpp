@@ -349,11 +349,9 @@ int main(int argc, char** argv) {
                 getSolutions(appData, *data, rowToRank, user.get(), timers, comparisonTimers)
             );
             spdlog::info("finished getting {0:d} solutions", new_solutions.size());
-            solutions.insert(
-                solutions.end(), 
-                std::make_move_iterator(new_solutions.begin()),
-                std::make_move_iterator(new_solutions.end())
-            );
+            for (size_t i = 0; i < new_solutions.size(); i++) {
+                solutions.push_back(UserSubset::create(move(new_solutions[i]), *user));
+            }
         }
     }
 

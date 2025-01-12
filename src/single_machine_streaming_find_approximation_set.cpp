@@ -219,7 +219,7 @@ int main(int argc, char** argv) {
                     loadWhileCalculating(appData, user.get(), timers) : 
                     loadThenCalculate(appData, user.get(), timers);
             spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution.first->size(), solution.first->getScore());
-            solutions.push_back(move(solution.first));
+            solutions.push_back(UserSubset::create(move(solution.first), *user));
         }
     }
     

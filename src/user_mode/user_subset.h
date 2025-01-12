@@ -1,29 +1,19 @@
 class UserSubset : public Subset {
     private:
     std::unique_ptr<Subset> delegate;
-    const UserData &userData;
-    const double MRR_score;
-    const double ILAD_score;
-    const double ILMD_score;
+    unsigned long long userId;
 
     public:
     UserSubset(
         std::unique_ptr<Subset> delegate, 
-        const UserData &userData, 
-        const double MRR_score,
-        const double ILAD_score,
-        const double ILMD_score)
-    : delegate(move(delegate)), userData(userData), MRR_score(MRR_score), ILAD_score(ILAD_score), ILMD_score(ILMD_score) {}
+        unsigned long long userId
+    ) : delegate(move(delegate)), userId(userId) {}
 
     static std::unique_ptr<UserSubset> create(
         std::unique_ptr<Subset> delegate, 
-        const UserData &userData,
-        const RelevanceCalculator& calc) {
+        const UserData &userData) {
         
-        const double mrr = UserScore::calculateMRR(userData, *delegate);
-        const double ilad = UserScore::calculateILAD(userData, calc);
-        const double ilmd = UserScore::calculateILMD(userData, calc);
-        return std::unique_ptr<UserSubset>(new UserSubset(move(delegate), userData, mrr, ilad, ilmd));
+        return std::unique_ptr<UserSubset>(new UserSubset(move(delegate), userData.getUserId()));
     }
 
     float getScore() const {
@@ -40,13 +30,9 @@ class UserSubset : public Subset {
 
     nlohmann::json toJson() const {
         nlohmann::json output{
-            {"userId", userData.getUserId()}, 
-            {"MRR", MRR_score}, 
-            {"ILAD", ILAD_score}, 
-            {"ILMD", ILMD_score}
+            {"userId", userId},
+            {"solution", delegate->toJson()}
         };
-
-        output.push_back(delegate->toJson());
         return output;
     }
 

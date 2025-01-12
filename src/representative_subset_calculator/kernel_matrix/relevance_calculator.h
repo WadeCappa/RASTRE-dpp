@@ -1,8 +1,10 @@
+#include <unordered_map>
+#include <format>
 
 class RelevanceCalculator {
     public:
     virtual ~RelevanceCalculator() {}
-    virtual float get(const size_t i, const size_t j) const = 0;
+    virtual float get(const size_t i, const size_t j) = 0;
 };
 
 class NaiveRelevanceCalculator : public RelevanceCalculator {
@@ -16,8 +18,35 @@ class NaiveRelevanceCalculator : public RelevanceCalculator {
         return std::make_unique<NaiveRelevanceCalculator>(data);
     }
 
-    float get(const size_t i, const size_t j) const {
+    float get(const size_t i, const size_t j) {
         return (1.0 + this->data.getRow(i).dotProduct(this->data.getRow(j))) / 2.0;
+    }
+};
+
+/**
+ * TODO: needs to be threadsafe
+ */
+class MemoizedRelevanceCalculator : public RelevanceCalculator {
+    private:
+    std::unique_ptr<RelevanceCalculator> delegate;
+    std::unordered_map<std::string, float> memo;
+
+    static std::string get_key(const size_t i, const size_t j) {
+        return std::to_string(i) + "," + std::to_string(j);
+    }
+
+    public:
+    MemoizedRelevanceCalculator(std::unique_ptr<RelevanceCalculator> delegate) 
+    : delegate(move(delegate)) {}
+
+    float get(const size_t i, const size_t j) {
+        std::string key = get_key(i, j);
+        if (memo.find(key) != memo.end()) {
+            return memo.at(key);
+        }
+
+        memo[key] = delegate->get(i, j);
+        return memo.at(key);
     }
 };
 
@@ -51,7 +80,7 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
         const double alpha
     ) : delegate(move(delegate)), ru(ru), alpha(alpha) {}
 
-    float get(const size_t i, const size_t j) const {
+    float get(const size_t i, const size_t j) {
         const double s_ij = this->delegate->get(i, j);
         const double r_i = getRu(i);
         const double r_j = getRu(j);

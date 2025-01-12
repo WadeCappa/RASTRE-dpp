@@ -26,22 +26,24 @@
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
+#include <fstream>
+
+struct UserModeAppData{
+    std::string outputFile;
+    std::string inputFile;
+    std::string userModeFile;
+};
 
 int main(int argc, char** argv) {
     LoggerHelper::setupLoggers();
     CLI::App app{"Approximates the best possible approximation set for the input dataset."};
     AppData appData;
     Orchestrator::addCmdOptions(app, appData);
+    std::string userModeOutputFile;
+    app.add_option("--userModeOutputFile", userModeOutputFile, "The output file from running a user-mode job")->required();
     CLI11_PARSE(app, argc, argv);
     appData.worldRank = 0;
     appData.worldSize = 1;
-
-    Timers timers;
-
-    spdlog::info("Starting standalone greedy...");
-    
-    auto baseline = getPeakRSS();
-    timers.loadingDatasetTime.startTimer();
 
     // Put this somewhere more sane
     const unsigned int DEFAULT_VALUE = -1;
@@ -62,41 +64,36 @@ int main(int argc, char** argv) {
 
     spdlog::info("Finished loading dataset of size {0:d} ...", data->totalRows());
 
-    std::vector<std::unique_ptr<UserData>> userData;
+    std::map<unsigned long long, std::unique_ptr<UserData>> userMap;
     if (appData.userModeFile != EMPTY_STRING) {
-        userData = UserDataImplementation::load(appData.userModeFile);
+        std::vector<std::unique_ptr<UserData>> userData (UserDataImplementation::load(appData.userModeFile));
         spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
-    }
-
-    timers.loadingDatasetTime.stopTimer();
-
-    timers.totalCalculationTime.startTimer();
-
-    std::vector<std::unique_ptr<Subset>> solutions;
-
-    std::unique_ptr<SubsetCalculator> calculator(Orchestrator::getCalculator(appData));
-    if (userData.size() == 0) {
-        NaiveRelevanceCalculator calc(*data);
-        solutions.push_back(calculator->getApproximationSet(calc, *data, appData.outputSetSize));
-        spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
-    } else {
-        for (const auto & user : userData) {
-            UserModeDataDecorator userData(*data.get(), *user.get());
-            std::unique_ptr<RelevanceCalculator> userCalc(UserModeRelevanceCalculator::from(userData, *user.get(), appData.theta));
-            std::unique_ptr<Subset> solution(calculator->getApproximationSet(*userCalc, userData, appData.outputSetSize));
-            solutions.push_back(UserSubset::create(move(solution), *user));
-            spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
+        for (size_t i = 0; i < userData.size(); i++) {
+            spdlog::debug("user {0:d} has ru of size {1:d}", userData[i]->getUserId(), userData[i]->getRu().size());
+            userMap.insert({userData[i]->getUserId(), move(userData[i])});
         }
     }
 
-    timers.totalCalculationTime.stopTimer();
-    auto memUsage = getPeakRSS()- baseline;
-    nlohmann::json result = Orchestrator::buildOutput(appData, solutions, *data.get(), timers);
-    result.push_back({"Memory (KiB)", memUsage});
-    std::ofstream outputFile;
-    outputFile.open(appData.outputFile);
-    outputFile << result.dump(2);
-    outputFile.close();
+    std::ifstream file(userModeOutputFile);
+    nlohmann::json userModeOutputData(nlohmann::json::parse(file));
+
+    std::vector<std::unique_ptr<Subset>> subsets;
+    for (const auto & solution : userModeOutputData["solutions"]) {
+        unsigned long long user_id = solution["userId"];
+        auto userSolution = solution["solution"];
+        std::vector<size_t> rows(userSolution["rows"].begin(), userSolution["rows"].end());
+        std::unique_ptr<Subset> subset(Subset::of(rows, userSolution["totalCoverage"]));
+
+        std::unique_ptr<RelevanceCalculator> calc(UserModeRelevanceCalculator::from(*data, *userMap[user_id], appData.theta));
+        // calc = std::unique_ptr<RelevanceCalculator>(new MemoizedRelevanceCalculator(move(calc)));
+
+        const double mrr = UserScore::calculateMRR(*userMap[user_id], *subset);
+        spdlog::info("finished mrr");
+        const double ilad = UserScore::calculateILAD(*userMap[user_id], *calc);
+        spdlog::info("finished ilad");
+        const double ilmd = UserScore::calculateILMD(*userMap[user_id], *calc);
+        spdlog::info("User {0:d}: MRR = {1:f}, ILAD = {2:f}, ILMD = {3:f}", user_id, mrr, ilad, ilmd);
+    }
 
     return 0;
 }
