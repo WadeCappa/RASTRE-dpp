@@ -47,7 +47,7 @@
 
 std::unique_ptr<Subset> randGreedi(
     const AppData &appData, 
-    const SegmentedData &data, 
+    const BaseData &data, 
     const std::vector<unsigned int> &rowToRank, 
     const std::optional<UserData*> user,
     Timers &timers
@@ -143,7 +143,7 @@ std::unique_ptr<Subset> randGreedi(
 
 std::unique_ptr<Subset> streaming(
     const AppData &appData, 
-    const SegmentedData &data, 
+    const BaseData &data, 
     const std::vector<unsigned int> &rowToRank, 
     const std::optional<UserData*> user,
     Timers &timers
@@ -217,7 +217,7 @@ std::unique_ptr<Subset> streaming(
 
 std::vector<std::unique_ptr<Subset>> getSolutions(
     AppData& appData, // ideally this should be const
-    const SegmentedData &data, 
+    const BaseData &data, 
     const std::vector<unsigned int> &rowToRank, 
     const std::optional<UserData*> user,
     Timers &timers,
@@ -304,7 +304,7 @@ int main(int argc, char** argv) {
     size_t baseline = getPeakRSS();
 
     spdlog::info("Starting load for rank {0:d}", appData.worldRank);
-    std::unique_ptr<SegmentedData> data;
+    std::unique_ptr<BaseData> data;
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         std::ifstream inputFile;
         inputFile.open(appData.loadInput.inputFile);
@@ -336,7 +336,9 @@ int main(int argc, char** argv) {
 
     std::vector<std::unique_ptr<UserData>> userData;
     if (appData.userModeFile != EMPTY_STRING) {
-        userData = UserDataImplementation::load(appData.userModeFile);
+        userData = UserDataImplementation::loadForMultiMachineMode(
+            appData.userModeFile, rowToRank, appData.worldRank
+        );
         spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
     }
 

@@ -84,7 +84,6 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
                 );
                 // account for user mode in ->get()
                 const float sqrt = std::sqrt(diagonals[j_t]);
-                SPDLOG_TRACE("got sqrt of {0:f}", sqrt);
                 const float newScore = (kernelMatrix->get(i, j_t) - dotProduct) / sqrt;
                 v[i].insert({j_t, newScore});                
                 diagonals[i] -= std::pow(v[i][j_t], 2);

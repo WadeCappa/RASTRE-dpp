@@ -17,6 +17,7 @@ class BaseData {
     virtual const DataRow& getRow(size_t i) const = 0;
     virtual size_t totalRows() const = 0;
     virtual size_t totalColumns() const = 0;
+    virtual size_t getRemoteIndexForRow(const size_t localRowIndex) const = 0; 
 
     Diagnostics DEBUG_getDiagnostics() const {
         size_t rows = this->totalRows();
@@ -114,14 +115,13 @@ class FullyLoadedData : public BaseData {
     size_t totalColumns() const {
         return this->columns;
     }
+
+    size_t getRemoteIndexForRow(const size_t localRowIndex) const {
+        return localRowIndex;
+    }
 };
 
-class SegmentedData : public BaseData {
-    public:
-    virtual size_t getRemoteIndexForRow(const size_t localRowIndex) const = 0; 
-};
-
-class LoadedSegmentedData : public SegmentedData {
+class LoadedSegmentedData : public BaseData {
     private:
     const std::vector<std::unique_ptr<DataRow>> data;
     const std::vector<size_t> localRowToGlobalRow;
@@ -132,7 +132,7 @@ class LoadedSegmentedData : public SegmentedData {
     LoadedSegmentedData(const BaseData&);
 
     public:
-    static std::unique_ptr<SegmentedData> loadInParallel(
+    static std::unique_ptr<BaseData> loadInParallel(
         DataRowFactory &factory, 
         GeneratedLineFactory &getter, 
         const std::vector<unsigned int> &rankMapping, 
@@ -172,10 +172,10 @@ class LoadedSegmentedData : public SegmentedData {
         }
 
         const size_t columns = localRowToGlobalRow.size() > 0 ? data.back()->size() : 0;
-        return std::unique_ptr<SegmentedData>(new LoadedSegmentedData(move(data), move(localRowToGlobalRow), columns));
+        return std::unique_ptr<BaseData>(new LoadedSegmentedData(move(data), move(localRowToGlobalRow), columns));
     }
 
-    static std::unique_ptr<SegmentedData> load(
+    static std::unique_ptr<BaseData> load(
         DataRowFactory &factory, 
         LineFactory &source, 
         const std::vector<unsigned int> &rankMapping, 
@@ -208,7 +208,7 @@ class LoadedSegmentedData : public SegmentedData {
             spdlog::error("sizes did not match, this is likely a serious error");
         }
 
-        return std::unique_ptr<SegmentedData>(new LoadedSegmentedData(move(data), move(localRowToGlobalRow), columns));
+        return std::unique_ptr<BaseData>(new LoadedSegmentedData(move(data), move(localRowToGlobalRow), columns));
     }
 
     LoadedSegmentedData(
@@ -274,5 +274,9 @@ class ReceivedData : public BaseData {
         }
 
         return Subset::of(translatedRows, localSolution->getScore());
+    }
+
+    size_t getRemoteIndexForRow(const size_t localRowIndex) const {
+        return localRowIndex;
     }
 };

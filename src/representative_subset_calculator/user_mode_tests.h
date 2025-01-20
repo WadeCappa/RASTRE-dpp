@@ -12,6 +12,29 @@ TEST_CASE("test decorator mappings") {
     }
 }
 
+TEST_CASE("testing segmented data + user_mode data") {
+    std::unique_ptr<UserData> userData(UserDataImplementation::from(
+        11, 
+        5, 
+        std::vector<unsigned long long>({0, 4}), 
+        std::vector<double>({2.1245, 1.125})));
+    std::vector<std::unique_ptr<DataRow>> data;
+    
+    // only grab every other row
+    for (size_t i = 0; i < DENSE_DATA.size(); i+=2) {
+        std::vector<float> v(DENSE_DATA[i]);
+        data.push_back(std::unique_ptr<DataRow>(new DenseDataRow(move(v))));
+    }
+
+    LoadedSegmentedData segmentedData(move(data), std::vector<size_t>({0, 2, 4}), DENSE_DATA[0].size());
+    UserModeDataDecorator decorator(segmentedData, *userData);
+
+    CHECK(decorator.totalRows() == userData->getCu().size());
+    for (size_t r = 0; r < decorator.totalRows(); r++) {
+        CHECK(decorator.getRemoteIndexForRow(r) == userData->getCu()[r]);
+    }
+}
+
 TEST_CASE("testing user-mode relevance calculator provides valid results") {
     std::unique_ptr<UserData> userData(UserDataImplementation::from(
         11, 

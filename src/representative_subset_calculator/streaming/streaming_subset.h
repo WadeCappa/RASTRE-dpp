@@ -5,7 +5,7 @@
 
 class StreamingSubset : public MutableSubset {
     private:
-    const SegmentedData &data;
+    const BaseData &data;
     Timers &timers;
     
     std::vector<std::unique_ptr<MpiSendRequest>> sends;
@@ -16,7 +16,7 @@ class StreamingSubset : public MutableSubset {
 
     public:
     StreamingSubset(
-        const SegmentedData& data, 
+        const BaseData& data, 
         Timers &timers,
         const unsigned int seedsToSend
     ) : 

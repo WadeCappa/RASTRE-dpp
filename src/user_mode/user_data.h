@@ -44,6 +44,52 @@ class UserDataImplementation : public UserData {
         return move(result);
     }
 
+    static std::vector<std::unique_ptr<UserData>> loadForMultiMachineMode(
+        const std::string path, const std::vector<unsigned int>& rowToRank, unsigned int rank) {
+        std::ifstream inputFile;
+        inputFile.open(path);
+        std::vector<std::unique_ptr<UserData>> result(
+            UserDataImplementation::loadForMultiMachineMode(
+                inputFile, rowToRank, rank
+            )
+        );
+        inputFile.close();
+        return move(result);
+    }
+
+    /**
+     * For multi-machine mode
+     */
+    static std::vector<std::unique_ptr<UserData>> loadForMultiMachineMode(
+        std::istream &input, const std::vector<unsigned int>& rowToRank, unsigned int rank) {
+
+        std::vector<std::unique_ptr<UserData>> raw(UserDataImplementation::load(input));
+
+        std::vector<std::unique_ptr<UserData>> filtered_users;
+        for (size_t u = 0; u < raw.size(); u++) {
+            std::vector<unsigned long long> filtered_cu;
+            std::vector<double> filtered_ru;
+            const std::vector<unsigned long long>& cu(raw[u]->getCu());
+            const std::vector<double>& ru(raw[u]->getRu());
+            for (size_t cu_i = 0; cu_i < cu.size(); cu_i++) {
+                if (rowToRank[cu[cu_i]] != rank) {
+                    continue;
+                }
+
+                filtered_cu.push_back(cu[cu_i]);
+                filtered_ru.push_back(ru[cu_i]);
+            }
+
+            filtered_users.push_back(
+                UserDataImplementation::from(
+                    raw[u]->getUserId(), raw[u]->getTestId(), move(filtered_cu), move(filtered_ru)
+                )
+            );
+        }
+
+        return move(filtered_users);
+    }
+
     /**
      * Visible for testing
      */

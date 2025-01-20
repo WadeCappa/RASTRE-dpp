@@ -69,7 +69,7 @@ static void verifyData(const BaseData& data) {
 }
 
 static void verifyData(
-    const SegmentedData& data,
+    const BaseData& data,
     const std::vector<unsigned int> rankMapping,
     const unsigned int rank
 ) {
@@ -136,7 +136,7 @@ TEST_CASE("Testing segmented dense data") {
     std::vector<unsigned int> rankMapping({0, 1, 2, 3, 2, 1});
     const int rank = 2;
 
-    std::unique_ptr<SegmentedData> data(LoadedSegmentedData::load(factory, getter, rankMapping, rank));
+    std::unique_ptr<BaseData> data(LoadedSegmentedData::load(factory, getter, rankMapping, rank));
     CHECK(data->totalRows() == 2);
     verifyData(*data.get(), rankMapping, rank);
 }

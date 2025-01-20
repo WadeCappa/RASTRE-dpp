@@ -242,7 +242,7 @@ class Orchestrator {
         }
     }
 
-    static std::unique_ptr<SegmentedData> buildMpiData(
+    static std::unique_ptr<BaseData> buildMpiData(
         const AppData& appData, 
         GeneratedLineFactory &getter,
         const std::vector<unsigned int> &rowToRank
@@ -251,7 +251,7 @@ class Orchestrator {
         return LoadedSegmentedData::loadInParallel(*factory, getter, rowToRank, appData.worldRank);
     }
 
-    static std::unique_ptr<SegmentedData> buildMpiData(
+    static std::unique_ptr<BaseData> buildMpiData(
         const AppData& appData, 
         LineFactory &getter,
         const std::vector<unsigned int> &rowToRank

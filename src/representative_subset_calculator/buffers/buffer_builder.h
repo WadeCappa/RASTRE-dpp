@@ -13,7 +13,7 @@ class BufferBuilder : public Buffer {
     private:
     public:
     static unsigned int buildSendBuffer(
-        const SegmentedData &data, 
+        const BaseData &data, 
         const Subset &localSolution, 
         std::vector<float> &buffer
     ) {

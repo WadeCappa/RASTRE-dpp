@@ -127,6 +127,10 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
     }
 
     while (true) {
+        if (user.has_value() && user_set.find(globalRow) == user_set.end()) {
+            factory->skipNext(*getter);
+        }
+
         std::unique_ptr<DataRow> nextRow(factory->maybeGet(*getter));
 
         if (nextRow == nullptr) {
@@ -134,10 +138,8 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
         }
 
         auto element = std::unique_ptr<CandidateSeed>(new CandidateSeed(globalRow, move(nextRow), 1));
+        elements.push_back(move(element));
 
-        if (!user.has_value() || user_set.find(globalRow) != user_set.end()) {
-            elements.push_back(move(element));
-        }
         globalRow++;
     }
     timers.loadingDatasetTime.stopTimer();

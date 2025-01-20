@@ -1,6 +1,6 @@
 
 
-class UserModeDataDecorator : public SegmentedData {
+class UserModeDataDecorator : public BaseData {
     private:
     const BaseData &delegate;
     const UserData &userData;

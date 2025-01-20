@@ -48,6 +48,14 @@ class PerRowRelevanceCalculator {
         size_t totalColumns() const {
             return row.size();
         }
+
+        /**
+         * Not sure if this is safe to call, might want to throw here
+         */
+        size_t getRemoteIndexForRow(const size_t localRowIndex) const {
+            spdlog::error("Not sure if its safe to call this, we might want to throw here instead");
+            return localRowIndex;
+        }
     };
 
     public:
