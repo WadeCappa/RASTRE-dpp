@@ -1,6 +1,5 @@
 #include <vector>
 #include <cstdlib>
-#include "orchestrator.h"
 
 void validateValidRanks(const std::vector<unsigned int> &allRanks, const unsigned int worldSize) {
     for (const auto & rank : allRanks) {

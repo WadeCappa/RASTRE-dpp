@@ -88,10 +88,27 @@ int main(int argc, char** argv) {
         // calc = std::unique_ptr<RelevanceCalculator>(new MemoizedRelevanceCalculator(move(calc)));
 
         const double mrr = UserScore::calculateMRR(*userMap[user_id], *subset);
-        spdlog::info("finished mrr");
-        const double ilad = UserScore::calculateILAD(*userMap[user_id], *calc);
-        spdlog::info("finished ilad");
-        const double ilmd = UserScore::calculateILMD(*userMap[user_id], *calc);
+
+        const std::vector<double> &ru = userMap[user_id]->getRu();
+        std::vector<double> scores(ru.size() * ru.size());
+        #pragma omp parallel for 
+        for (size_t j = 0; j < ru.size(); j++) {
+            for (size_t i = 0; i < ru.size(); i++) {
+                if (j == i) {
+                    continue;
+                }
+
+                scores[j * ru.size() + i] = 1.0 - calc->get(i, j);
+            }
+        }
+
+        double aggregate_scores = 0.0;
+        double ilmd = std::numeric_limits<double>::max();
+        for (const auto & s : scores) {
+            aggregate_scores += s;
+            ilmd = std::min(ilmd, s);
+        }
+        double ilad = aggregate_scores / (double)(ru.size() * 2.0);
         spdlog::info("User {0:d}: MRR = {1:f}, ILAD = {2:f}, ILMD = {3:f}", user_id, mrr, ilad, ilmd);
     }
 

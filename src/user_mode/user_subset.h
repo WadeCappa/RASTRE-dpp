@@ -2,18 +2,20 @@ class UserSubset : public Subset {
     private:
     std::unique_ptr<Subset> delegate;
     unsigned long long userId;
+    unsigned long long testId;
 
     public:
     UserSubset(
         std::unique_ptr<Subset> delegate, 
-        unsigned long long userId
-    ) : delegate(move(delegate)), userId(userId) {}
+        unsigned long long userId,
+        unsigned long long testId 
+    ) : delegate(move(delegate)), userId(userId), testId(testId) {}
 
     static std::unique_ptr<UserSubset> create(
         std::unique_ptr<Subset> delegate, 
         const UserData &userData) {
         
-        return std::unique_ptr<UserSubset>(new UserSubset(move(delegate), userData.getUserId()));
+        return std::unique_ptr<UserSubset>(new UserSubset(move(delegate), userData.getUserId(), userData.getTestId()));
     }
 
     float getScore() const {
@@ -31,6 +33,7 @@ class UserSubset : public Subset {
     nlohmann::json toJson() const {
         nlohmann::json output{
             {"userId", userId},
+            {"testId", testId},
             {"solution", delegate->toJson()}
         };
         return output;

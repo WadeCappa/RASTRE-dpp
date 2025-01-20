@@ -15,23 +15,6 @@ class UserScore {
         return 0.0;
     }
 
-    static double calculateILAD(const UserData& userData, RelevanceCalculator& calc) {
-        double aggregate_scores;
-        const std::vector<double> &ru = userData.getRu();
-        #pragma omp parallel for reduction(+:aggregate_scores)
-        for (size_t j = 0; j < ru.size(); j++) {
-            for (size_t i = 0; i < ru.size(); i++) {
-                if (j == i) {
-                    continue;
-                }
-
-                aggregate_scores += 1.0 - calc.get(i, j);
-            }
-        }
-
-        return aggregate_scores / (double)(ru.size() * 2.0);
-    }
-
     static double calculateILMD(const UserData& userData, RelevanceCalculator& calc) {
         double minimum_score = std::numeric_limits<double>::max();
         const std::vector<double> &ru = userData.getRu();

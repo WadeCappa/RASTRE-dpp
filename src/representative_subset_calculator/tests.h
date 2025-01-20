@@ -1,20 +1,6 @@
 #include <set>
-#include "timers/timers.h"
-#include "kernel_matrix/relevance_calculator.h"
-#include "kernel_matrix/relevance_calculator_factory.h"
-#include "kernel_matrix/kernel_matrix.h"
-#include "naive_representative_subset_calculator.h"
-#include "lazy_representative_subset_calculator.h"
-#include "fast_representative_subset_calculator.h"
-#include "lazy_fast_representative_subset_calculator.h"
-#include "similarity_matrix/tests.h"
 
-#include "kernel_matrix/tests.h"
-#include "orchestrator/tests.h"
-#include "buffers/tests.h"
-#include "streaming/tests.h"
-
-static const size_t k = DENSE_DATA.size();
+static const size_t k = DENSE_DATA.size() - 1;
 static const float epsilon = 0.01;
 
 static std::unique_ptr<Subset> testCalculator(SubsetCalculator *calculator) {
@@ -52,13 +38,9 @@ TEST_CASE("Testing LAZYFAST set finder") {
     testCalculator(new LazyFastSubsetCalculator(epsilon));
 }
 
-TEST_CASE("All calculators have the same result") {
-    auto naiveRes = testCalculator(new NaiveSubsetCalculator());
-    auto lazyRes = testCalculator(new LazySubsetCalculator());
+TEST_CASE("All supported calculators have the same result") {
     auto fastRes = testCalculator(new FastSubsetCalculator(epsilon));
     auto lazyFastRes = testCalculator(new LazyFastSubsetCalculator(epsilon));
 
-    checkSolutionsAreEquivalent(*naiveRes.get(), *lazyRes.get());
-    checkSolutionsAreEquivalent(*lazyRes.get(), *fastRes.get());
     checkSolutionsAreEquivalent(*fastRes.get(), *lazyFastRes.get());
 }

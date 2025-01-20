@@ -1,13 +1,3 @@
-#include "data_row_visitor.h"
-#include "to_binary_visitor.h"
-#include "dot_product_visitor.h"
-#include "data_row.h"
-#include "data_row_factory.h"
-
-#include "../user_mode/user_data.h"
-#include "../representative_subset_calculator/representative_subset.h"
-#include "base_data.h"
-
 #include <utility>
 #include <functional>
 #include <doctest/doctest.h>

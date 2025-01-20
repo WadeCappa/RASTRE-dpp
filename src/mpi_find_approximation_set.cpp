@@ -339,6 +339,10 @@ int main(int argc, char** argv) {
         spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
     }
 
+    for (size_t i = 0; i < userData.size(); i++) {
+        spdlog::debug("user {0:d} has ru of {1:d} and test of {2:d}", userData[i]->getUserId(), userData[i]->getRu().size(), userData[i]->getTestId());
+    }
+
     std::vector<std::unique_ptr<Subset>> solutions;
     if (userData.size() == 0) {
         solutions = getSolutions(appData, *data, rowToRank, std::nullopt, timers, comparisonTimers);

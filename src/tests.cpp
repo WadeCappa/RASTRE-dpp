@@ -1,8 +1,36 @@
 #include "log_macros.h"
 
+#include "user_mode/user_data.h"
+#include "representative_subset_calculator/streaming/communication_constants.h"
+#include "representative_subset_calculator/representative_subset.h"
+#include "data_tools/data_row_visitor.h"
+#include "data_tools/to_binary_visitor.h"
+#include "data_tools/dot_product_visitor.h"
+#include "data_tools/data_row.h"
+#include "data_tools/data_row_factory.h"
+#include "data_tools/base_data.h"
+#include "representative_subset_calculator/timers/timers.h"
+#include "representative_subset_calculator/kernel_matrix/relevance_calculator.h"
+#include "representative_subset_calculator/kernel_matrix/relevance_calculator_factory.h"
+#include "representative_subset_calculator/kernel_matrix/kernel_matrix.h"
+#include "representative_subset_calculator/naive_representative_subset_calculator.h"
+#include "representative_subset_calculator/lazy_representative_subset_calculator.h"
+#include "representative_subset_calculator/fast_representative_subset_calculator.h"
+#include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
+#include "representative_subset_calculator/orchestrator/orchestrator.h"
+#include "representative_subset_calculator/memoryProfiler/MemUsage.h"
+#include "user_mode/user_score.h"
+#include "user_mode/user_subset.h"
+
+#include "data_tools/user_mode_data.h"
+
+#include <CLI/CLI.hpp>
+#include <nlohmann/json.hpp>
+
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
-#include "representative_subset_calculator/streaming/communication_constants.h"
+
+// TODO: Verify that streaming and lazy-lazy give us the same scores and results on a toy dataset, write test
 
 static const std::vector<std::vector<float>> DENSE_DATA = {
     {4,17,20,1,4,21},
@@ -59,8 +87,6 @@ static const std::vector<std::map<size_t, float>> SPARSE_DATA_AS_MAP = toMap();
 // Do to rounding errors, these results may not always be exactly equivalent
 static const float LARGEST_ACCEPTABLE_ERROR = 0.001;
 
-#include "data_tools/tests.h"
-
 void checkSolutionsAreEquivalent(const Subset &a, const Subset &b) {
     CHECK(a.size() == b.size());
     for (size_t i = 0; i < a.size() && i < b.size(); i++) {
@@ -72,3 +98,12 @@ void checkSolutionsAreEquivalent(const Subset &a, const Subset &b) {
 }
 
 #include "representative_subset_calculator/tests.h"
+#include "data_tools/tests.h"
+
+#include "representative_subset_calculator/similarity_matrix/tests.h"
+
+#include "representative_subset_calculator/kernel_matrix/tests.h"
+#include "representative_subset_calculator/orchestrator/tests.h"
+#include "representative_subset_calculator/buffers/tests.h"
+#include "representative_subset_calculator/streaming/tests.h"
+#include "user_mode/test.h"
