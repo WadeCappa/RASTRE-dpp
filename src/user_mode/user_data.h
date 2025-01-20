@@ -76,11 +76,22 @@ class UserDataImplementation : public UserData {
                 }
                 i++;
             }
-
-            result.push_back(std::unique_ptr<UserData>(new UserDataImplementation(uid, tid, move(cu), move(ru))));
+            result.push_back(UserDataImplementation::from(uid, tid, move(cu), move(ru)));
         }
 
         return result;
+    }
+
+    /**
+     * Visible for testing
+     */
+    static std::unique_ptr<UserData> from(
+        const unsigned long long uid, 
+        const unsigned long long tid, 
+        const std::vector<unsigned long long> cu, 
+        const std::vector<double> ru
+    ) {
+        return std::unique_ptr<UserData>(new UserDataImplementation(uid, tid, move(cu), move(ru)));
     }
 
     unsigned long long getUserId() const {

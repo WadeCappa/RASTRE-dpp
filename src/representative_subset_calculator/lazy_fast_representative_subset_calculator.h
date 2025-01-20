@@ -19,12 +19,12 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
 
     static std::vector<float> getSlice(
         const std::unordered_map<size_t, float> &row, 
-        const MutableSubset* subset, 
+        const std::vector<size_t>& subset, 
         size_t count
     ) {
         std::vector<float> res(count);
         for (size_t i = 0; i < count ; i++) {
-            res[i] = row.at(subset->getRow(i));
+            res[i] = row.at(subset[i]);
         }
 
         return res;
@@ -65,36 +65,44 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
 
         HeapComparitor comparitor(diagonals);
         std::make_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
-        
+
+        spdlog::debug("built priority queue");
+
+        std::vector<size_t> in_subset;
+
         while (consumer->size() < k) {
-            size_t i = priorityQueue.front();
+            const size_t i = priorityQueue.front();
             std::pop_heap(priorityQueue.begin(),priorityQueue.end(), comparitor); 
             priorityQueue.pop_back();
             
             // update row
             for (size_t t = u[i]; t < consumer->size(); t++) {
-
-                size_t j_t = consumer->getRow(t); 
-                float dotProduct = KernelMatrix::getDotProduct(this->getSlice(v[i], consumer.get(), t), this->getSlice(v[j_t], consumer.get(), t));                
+                const size_t j_t = in_subset[t]; 
+                const float dotProduct = KernelMatrix::getDotProduct(
+                    this->getSlice(v[i], in_subset, t), 
+                    this->getSlice(v[j_t], in_subset, t)
+                );
                 // account for user mode in ->get()
-                float newScore = (kernelMatrix->get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t]);
+                const float sqrt = std::sqrt(diagonals[j_t]);
+                SPDLOG_TRACE("got sqrt of {0:f}", sqrt);
+                const float newScore = (kernelMatrix->get(i, j_t) - dotProduct) / sqrt;
                 v[i].insert({j_t, newScore});                
                 diagonals[i] -= std::pow(v[i][j_t], 2);
             }
             
             u[i] = consumer->size();
             
-            // To ensure "Numerical stability" ¯\_(ツ)_/¯
             if (diagonals[i] < this->epsilon) {
                 spdlog::info("breaking to ensure Numerical stability");
                 break;
             }
             
-            float marginalGain = std::log(diagonals[i]);
-            float nextScore = std::log(diagonals[priorityQueue.front()]);
+            const float marginalGain = std::log(diagonals[i]);
+            const float nextScore = std::log(diagonals[priorityQueue.front()]);
 
             if (marginalGain >= nextScore || consumer->size() == data.totalRows() - 1) {
                 consumer->addRow(i, marginalGain);
+                in_subset.push_back(i);
             } else {
                 priorityQueue.push_back(i);
                 std::push_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);

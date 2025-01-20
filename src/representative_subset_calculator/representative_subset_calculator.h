@@ -9,18 +9,6 @@ class SubsetCalculator {
         const BaseData &data, 
         size_t k
     ) = 0; 
-
-    std::unique_ptr<Subset> getApproximationSet(
-        RelevanceCalculator& calc, 
-        const BaseData &data, 
-        size_t k) {
-        return this->getApproximationSet(
-            NaiveMutableSubset::makeNew(), 
-            calc,
-            data, 
-            k
-        );
-    }
 };
 
 /**

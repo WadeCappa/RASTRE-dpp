@@ -10,6 +10,7 @@
 #include "data_tools/data_row_factory.h"
 #include "data_tools/base_data.h"
 #include "representative_subset_calculator/timers/timers.h"
+#include "data_tools/user_mode_data.h"
 #include "representative_subset_calculator/kernel_matrix/relevance_calculator.h"
 #include "representative_subset_calculator/kernel_matrix/relevance_calculator_factory.h"
 #include "representative_subset_calculator/kernel_matrix/kernel_matrix.h"
@@ -42,8 +43,6 @@
 #include "user_mode/user_score.h"
 #include "user_mode/user_subset.h"
 
-#include "data_tools/user_mode_data.h"
-
 #include <thread>
 
 std::unique_ptr<Subset> randGreedi(
@@ -66,7 +65,9 @@ std::unique_ptr<Subset> randGreedi(
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         
         timers.localCalculationTime.startTimer();
-        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(*calc, data, appData.outputSetSize));
+        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(
+            NaiveMutableSubset::makeNew(), *calc, data, appData.outputSetSize)
+        );
         timers.localCalculationTime.stopTimer();
         
         // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
@@ -354,7 +355,7 @@ int main(int argc, char** argv) {
             );
             spdlog::info("finished getting {0:d} solutions", new_solutions.size());
             for (size_t i = 0; i < new_solutions.size(); i++) {
-                solutions.push_back(UserSubset::create(move(new_solutions[i]), *user));
+                solutions.push_back(UserOutputInformationSubset::create(move(new_solutions[i]), *user));
             }
         }
     }

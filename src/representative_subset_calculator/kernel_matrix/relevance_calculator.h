@@ -67,18 +67,14 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
     ) {
         const double alpha = calcAlpha(theta);
         SPDLOG_TRACE("calculated alpha of {0:f}", alpha);
-        return std::make_unique<UserModeRelevanceCalculator>(
-            NaiveRelevanceCalculator::from(data), 
-            userData.getRu(), 
-            alpha
+        return std::unique_ptr<UserModeRelevanceCalculator>(
+            new UserModeRelevanceCalculator(
+                NaiveRelevanceCalculator::from(data), 
+                userData.getRu(), 
+                alpha
+            )
         );
     }
-
-    UserModeRelevanceCalculator(
-        std::unique_ptr<RelevanceCalculator> delegate, 
-        const std::vector<double> &ru,
-        const double alpha
-    ) : delegate(move(delegate)), ru(ru), alpha(alpha) {}
 
     float get(const size_t i, const size_t j) {
         const double s_ij = this->delegate->get(i, j);
@@ -90,6 +86,12 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
     }
 
     private:
+    UserModeRelevanceCalculator(
+        std::unique_ptr<RelevanceCalculator> delegate, 
+        const std::vector<double> &ru,
+        const double alpha
+    ) : delegate(move(delegate)), ru(ru), alpha(alpha) {}
+
     double getRu(size_t i) const {
         return std::exp(this->alpha * this->ru[i]);
     }

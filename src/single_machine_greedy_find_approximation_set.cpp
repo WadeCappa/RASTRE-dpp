@@ -10,6 +10,7 @@
 #include "data_tools/data_row_factory.h"
 #include "data_tools/base_data.h"
 #include "representative_subset_calculator/timers/timers.h"
+#include "data_tools/user_mode_data.h"
 #include "representative_subset_calculator/kernel_matrix/relevance_calculator.h"
 #include "representative_subset_calculator/kernel_matrix/relevance_calculator_factory.h"
 #include "representative_subset_calculator/kernel_matrix/kernel_matrix.h"
@@ -21,8 +22,6 @@
 #include "representative_subset_calculator/memoryProfiler/MemUsage.h"
 #include "user_mode/user_score.h"
 #include "user_mode/user_subset.h"
-
-#include "data_tools/user_mode_data.h"
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
@@ -77,13 +76,16 @@ int main(int argc, char** argv) {
     std::unique_ptr<SubsetCalculator> calculator(Orchestrator::getCalculator(appData));
     if (userData.size() == 0) {
         NaiveRelevanceCalculator calc(*data);
-        solutions.push_back(calculator->getApproximationSet(calc, *data, appData.outputSetSize));
+        solutions.push_back(calculator->getApproximationSet(NaiveMutableSubset::makeNew(), calc, *data, appData.outputSetSize));
         spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
     } else {
         for (const auto & user : userData) {
-            std::unique_ptr<RelevanceCalculator> userCalc(UserModeRelevanceCalculator::from(*data, *user.get(), appData.theta));
-            std::unique_ptr<Subset> solution(calculator->getApproximationSet(*userCalc, *data, appData.outputSetSize));
-            solutions.push_back(UserSubset::create(move(solution), *user));
+            UserModeDataDecorator decorator(*data, *user);
+            std::unique_ptr<RelevanceCalculator> userCalc(UserModeRelevanceCalculator::from(decorator, *user, appData.theta));
+            std::unique_ptr<Subset> solution(calculator->getApproximationSet(
+                TranslatingUserSubset::create(decorator), *userCalc, decorator, appData.outputSetSize)
+            );
+            solutions.push_back(UserOutputInformationSubset::create(move(solution), *user));
             spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
         }
     }
