@@ -9,7 +9,7 @@ class StreamingSubset : public MutableSubset {
     Timers &timers;
     
     std::vector<std::unique_ptr<MpiSendRequest>> sends;
-    std::unique_ptr<MutableSubset> base;
+    std::unique_ptr<MutableSubset> delegate;
 
     const unsigned int seedsToSend;
     unsigned int seedsSent;
@@ -17,11 +17,12 @@ class StreamingSubset : public MutableSubset {
     public:
     StreamingSubset(
         const BaseData& data, 
+        std::unique_ptr<MutableSubset> delegate,
         Timers &timers,
         const unsigned int seedsToSend
     ) : 
         data(data), 
-        base(NaiveMutableSubset::makeNew()),
+        delegate(move(delegate)),
         timers(timers),
         seedsToSend(seedsToSend)
     {
@@ -29,27 +30,27 @@ class StreamingSubset : public MutableSubset {
     }
 
     float getScore() const {
-        return base->getScore();
+        return delegate->getScore();
     }
 
     size_t getRow(const size_t index) const {
-        return base->getRow(index);
+        return delegate->getRow(index);
     }
 
     size_t size() const {
-        return base->size();
+        return delegate->size();
     }
 
     nlohmann::json toJson() const {
-        return base->toJson();
+        return delegate->toJson();
     }
 
     const size_t* begin() const {
-        return base->begin();
+        return delegate->begin();
     }
 
     const size_t* end() const {
-        return base->end();
+        return delegate->end();
     }
 
     void finalize() {
@@ -63,12 +64,12 @@ class StreamingSubset : public MutableSubset {
         // to stop receiving
         SPDLOG_DEBUG("sending stop metadata");
         std::vector<float> localSubset;
-        for (size_t r : *this->base) {
+        for (size_t r : *this->delegate) {
             localSubset.push_back(this->data.getRemoteIndexForRow(r));
         }
 
         // Include total marginal gain
-        localSubset.push_back(this->base->getScore());
+        localSubset.push_back(this->delegate->getScore());
         
         localSubset.push_back(CommunicationConstants::endOfSendTag());
 
@@ -79,9 +80,9 @@ class StreamingSubset : public MutableSubset {
     }
 
     void addRow(const size_t row, const float marginalGain) {
-        this->base->addRow(row, marginalGain);
+        this->delegate->addRow(row, marginalGain);
 
-        if (this->base->size() <= this->seedsToSend) {
+        if (this->delegate->size() <= this->seedsToSend) {
             ToBinaryVisitor visitor;
             std::vector<float> rowToSend(move(this->data.getRow(row).visit(visitor)));
 
@@ -91,7 +92,7 @@ class StreamingSubset : public MutableSubset {
             // Mark the end of the send buffer
             rowToSend.push_back(CommunicationConstants::endOfSendTag());
 
-            if(this->base->size() == 1) {
+            if(this->delegate->size() == 1) {
                 timers.firstSeedTime.stopTimer();
             }
 
@@ -99,7 +100,7 @@ class StreamingSubset : public MutableSubset {
 
             // Since we are now sending a summary of the local subset after finding all seeds, we
             // can just send seeds as we find them. We do not need to wait to send the first seed
-            bool sendingLastSeed = this->base->size() == this->seedsToSend;
+            bool sendingLastSeed = this->delegate->size() == this->seedsToSend;
             const int tag = CommunicationConstants::getContinueTag();
             this->sends.back()->isend(tag);
         }

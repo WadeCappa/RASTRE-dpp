@@ -4,6 +4,8 @@ from scipy.sparse import coo_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 import multiprocessing as mp
 import sys
+import random
+import math
 
 def calcualteRU(PU, CU, similarities):
     RU = {}
@@ -42,14 +44,21 @@ def outputUserData(topN, topU, infile, outfile):
     # Dict of items rated by every user
     PU_allUsers = df.groupby('Users')['Items'].apply(set).to_dict()
 
+    # Sample and retain only topU% of users
+    d = dict.fromkeys(range(df['Users'].max()))
+    keys = random.sample(list(d), math.floor(df['Users'].max() * topU / 100))
+
+    PU = {}
+    for k in keys:
+        print(k)
+        PU[k] = PU_allUsers[k]
+
+    print(len(PU))
     PU_test = {}
 
-    for user,items in PU_allUsers.items():
-        PU_test[user] = items.pop()
-
-    # Retain only topU active users. We should also be able to support looking at specific 
-    # rows here too
-    PU = dict(sorted(PU_allUsers.items(), key=lambda x: len(x[1]), reverse=True)[:topU])
+    for user,items in PU.items():
+        PU_test[user] = random.choice(list(items))
+        items.remove(PU_test[user])
 
     print("PU constructed")
 
@@ -107,7 +116,7 @@ def getDataset(filepath_input):
 
 if __name__ == "__main__":
     topN = int(sys.argv[1])
-    topU = int(sys.argv[2])
+    topU = float(sys.argv[2])
     # Read CSV file into a pandas DataFrame
     filepath_input = sys.argv[3]
     filepath_output = sys.argv[4]

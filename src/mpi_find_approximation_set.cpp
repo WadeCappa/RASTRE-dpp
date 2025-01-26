@@ -48,8 +48,8 @@
 std::unique_ptr<Subset> randGreedi(
     const AppData &appData, 
     const BaseData &data, 
-    const std::vector<unsigned int> &rowToRank, 
-    const std::optional<UserData*> user,
+    RelevanceCalculatorFactory& calcFactory,
+    std::unique_ptr<MutableSubset> consumer,
     Timers &timers
 ) {
     unsigned int sendDataSize = 0;
@@ -57,16 +57,12 @@ std::unique_ptr<Subset> randGreedi(
     std::vector<float> sendBuffer;
     timers.totalCalculationTime.startTimer();
     if (appData.worldRank != 0) {
-        std::unique_ptr<RelevanceCalculator> calc(new NaiveRelevanceCalculator(data));
-        if (user.has_value()) {
-            calc = std::unique_ptr<RelevanceCalculator>(UserModeRelevanceCalculator::from(data, *user.value(), appData.theta));
-        }
-
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         
+        std::unique_ptr<RelevanceCalculator> calc(calcFactory.build(data));
         timers.localCalculationTime.startTimer();
         std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(
-            NaiveMutableSubset::makeNew(), *calc, data, appData.outputSetSize)
+            move(consumer), *calc, data, appData.outputSetSize)
         );
         timers.localCalculationTime.stopTimer();
         
@@ -117,15 +113,8 @@ std::unique_ptr<Subset> randGreedi(
         std::unique_ptr<SubsetCalculator> globalCalculator(MpiOrchestrator::getCalculator(appData));
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
 
-        std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
-        if (user.has_value()) {
-            calcFactory = std::unique_ptr<RelevanceCalculatorFactory>(
-                new UserModeNaiveRelevanceCalculatorFactory(*user.value(), appData.theta)
-            );
-        }
-
         spdlog::debug("building buffer on rank 0");
-        GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers, *calcFactory);
+        GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers, calcFactory);
 
         spdlog::debug("getting global solution");
         std::unique_ptr<Subset> globalSolution(bufferLoader.getSolution(move(globalCalculator), appData.outputSetSize, *factory.get()));
@@ -144,8 +133,8 @@ std::unique_ptr<Subset> randGreedi(
 std::unique_ptr<Subset> streaming(
     const AppData &appData, 
     const BaseData &data, 
-    const std::vector<unsigned int> &rowToRank, 
-    const std::optional<UserData*> user,
+    RelevanceCalculatorFactory& calcFactory,
+    std::unique_ptr<MutableSubset> consumer,
     Timers &timers
 ) {
     // This is hacky. We only do this because the receiver doesn't load any data and therefore
@@ -166,17 +155,11 @@ std::unique_ptr<Subset> streaming(
         rowSize = appData.adjacencyListColumnCount > 0 ? rowSizes.back() : rowSizes.back() * 2;
 
         std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData));
-        std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
-        if (user.has_value()) {
-            calcFactory = std::unique_ptr<RelevanceCalculatorFactory>(
-                new UserModeNaiveRelevanceCalculatorFactory(*user.value(), appData.theta)
-            );
-        }
         std::unique_ptr<Receiver> receiver(
             MpiReceiver::buildReceiver(appData.worldSize, rowSize, *factory)
         );
         std::unique_ptr<CandidateConsumer> consumer(MpiOrchestrator::buildConsumer(
-            appData, omp_get_num_threads() - 1, appData.worldSize - 1, *calcFactory)
+            appData, omp_get_num_threads() - 1, appData.worldSize - 1, calcFactory)
         );
         SeiveGreedyStreamer streamer(*receiver.get(), *consumer.get(), timers, !appData.stopEarly);
 
@@ -192,16 +175,15 @@ std::unique_ptr<Subset> streaming(
         spdlog::info("rank {0:d} entered streaming function and know the total columns of {1:d}", appData.worldRank, data.totalColumns());
         timers.totalCalculationTime.startTimer();
         
-        std::unique_ptr<MutableSubset> subset(new StreamingSubset(data, timers, std::floor(appData.outputSetSize * appData.alpha)));
+        std::unique_ptr<MutableSubset> subset(
+            new StreamingSubset(data, move(consumer), timers, std::floor(appData.outputSetSize * appData.alpha))
+        );
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         spdlog::info("rank {0:d} is ready to start streaming local seeds", appData.worldRank);
 
-        std::unique_ptr<RelevanceCalculator> calc(new NaiveRelevanceCalculator(data));
-        if (user.has_value()) {
-            calc = std::unique_ptr<RelevanceCalculator>(UserModeRelevanceCalculator::from(data, *user.value(), appData.theta));
-        }
-
         timers.localCalculationTime.startTimer();
+
+        std::unique_ptr<RelevanceCalculator> calc(calcFactory.build(data));
         std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), *calc, data, appData.outputSetSize));
 
         spdlog::info("rank {0:d} finished streaming local seeds. Found {1:d} seeds of score {2:f}", appData.worldRank, localSolution->size(), localSolution->getScore());
@@ -218,17 +200,23 @@ std::unique_ptr<Subset> streaming(
 std::vector<std::unique_ptr<Subset>> getSolutions(
     AppData& appData, // ideally this should be const
     const BaseData &data, 
-    const std::vector<unsigned int> &rowToRank, 
-    const std::optional<UserData*> user,
+    RelevanceCalculatorFactory& calc,
+    std::unique_ptr<MutableSubset> consumer,
     Timers &timers,
     std::vector<Timers> comparisonTimers
 ) {
     std::vector<std::unique_ptr<Subset>> solutions;
     if (appData.distributedAlgorithm == 0) {
-        solutions.push_back(randGreedi(appData, data, rowToRank, user, timers));
+        solutions.push_back(randGreedi(appData, data, calc, move(consumer), timers));
     } else if (appData.distributedAlgorithm == 1 || appData.distributedAlgorithm == 2) {
-        solutions.push_back(streaming(appData, data, rowToRank, user, timers));
+        solutions.push_back(streaming(appData, data, calc, move(consumer), timers));
     } else if (appData.distributedAlgorithm == 3) {
+
+        spdlog::error("currently not supported");
+        exit(1);
+    }
+
+        /**
 
         std::string output = appData.outputFile;
         spdlog::info("Starting Baseline RandGreedI...");
@@ -252,6 +240,8 @@ std::vector<std::unique_ptr<Subset>> getSolutions(
     } else {
         spdlog::error("did not recognize distributed Algorithm of {0:d}", appData.distributedAlgorithm);
     }
+         * 
+         */
 
     return move(solutions);
 }
@@ -348,12 +338,25 @@ int main(int argc, char** argv) {
 
     std::vector<std::unique_ptr<Subset>> solutions;
     if (userData.size() == 0) {
-        solutions = getSolutions(appData, *data, rowToRank, std::nullopt, timers, comparisonTimers);
+        std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
+        solutions = getSolutions(appData, *data, *calcFactory, NaiveMutableSubset::makeNew(), timers, comparisonTimers);
     } else {
         for (const auto & user : userData) {
             spdlog::info("rank {0:d} starting to process user {1:d}", appData.worldRank, user->getUserId());
+            UserModeDataDecorator userModeDataDecorator(*data, *user.get());
+
+            std::unique_ptr<RelevanceCalculatorFactory> calcFactory (
+                new UserModeNaiveRelevanceCalculatorFactory(*user, appData.theta)
+            );
             std::vector<std::unique_ptr<Subset>> new_solutions(
-                getSolutions(appData, *data, rowToRank, user.get(), timers, comparisonTimers)
+                getSolutions(
+                    appData, 
+                    userModeDataDecorator, 
+                    *calcFactory, 
+                    TranslatingUserSubset::create(userModeDataDecorator), 
+                    timers, 
+                    comparisonTimers
+                )
             );
             spdlog::info("finished getting {0:d} solutions", new_solutions.size());
             for (size_t i = 0; i < new_solutions.size(); i++) {

@@ -76,7 +76,8 @@ int main(int argc, char** argv) {
     std::ifstream file(userModeOutputFile);
     nlohmann::json userModeOutputData(nlohmann::json::parse(file));
 
-    std::vector<std::unique_ptr<Subset>> subsets;
+    double total_mrr = 0.0, total_ilad = 0.0, total_ilmd = 0.0;
+    size_t total_solutions = userModeOutputData["solutions"].size();
     for (const auto & solution : userModeOutputData["solutions"]) {
         unsigned long long user_id = solution["userId"];
         auto userSolution = solution["solution"];
@@ -109,7 +110,14 @@ int main(int argc, char** argv) {
         }
         double ilad = aggregate_scores / (double)(ru.size() * 2.0);
         spdlog::info("User {0:d}: MRR = {1:f}, ILAD = {2:f}, ILMD = {3:f}", user_id, mrr, ilad, ilmd);
+        total_mrr += mrr;
+        total_ilad += ilad; 
+        total_ilmd += ilmd;
     }
+
+    spdlog::info(
+        "RESULT: MRR = {0:f}, ILAD = {1:f}, ILMD = {2:f}", total_mrr / (double)total_solutions, total_ilad / (double)total_solutions, total_ilmd / (double)total_solutions
+    );
 
     return 0;
 }

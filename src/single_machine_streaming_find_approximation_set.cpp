@@ -127,14 +127,15 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
     }
 
     while (true) {
-        if (user.has_value() && user_set.find(globalRow) == user_set.end()) {
-            factory->skipNext(*getter);
-        }
-
         std::unique_ptr<DataRow> nextRow(factory->maybeGet(*getter));
 
         if (nextRow == nullptr) {
             break;
+        }
+
+        if (user.has_value() && user_set.find(globalRow) == user_set.end()) {
+            globalRow++;
+            continue;
         }
 
         auto element = std::unique_ptr<CandidateSeed>(new CandidateSeed(globalRow, move(nextRow), 1));
