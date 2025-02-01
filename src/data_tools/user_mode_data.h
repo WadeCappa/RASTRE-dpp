@@ -4,10 +4,22 @@ class UserModeDataDecorator : public BaseData {
     private:
     const BaseData &delegate;
     const UserData &userData;
+    const std::unordered_map<size_t, size_t> globalRowToLocalRow;
 
     public:
-    UserModeDataDecorator(const BaseData &delegate, const UserData &userData) 
-    : delegate(delegate), userData(userData) {}
+    static std::unique_ptr<UserModeDataDecorator> create(
+        const BaseData &delegate, const UserData &userData
+    ) {
+        std::unordered_map<size_t, size_t> globalRowToLocalRow;
+        const std::vector<unsigned long long> & cu(userData.getCu());
+        for (size_t i = 0; i < cu.size(); i++) {
+            globalRowToLocalRow.insert({cu[i], i});
+        }
+
+        return std::unique_ptr<UserModeDataDecorator>(
+            new UserModeDataDecorator(delegate, userData, move(globalRowToLocalRow))
+        );
+    }
 
     /**
      * TODO: This might be out of range if we parallelize a user accross many machines. Will
@@ -28,4 +40,13 @@ class UserModeDataDecorator : public BaseData {
     size_t getRemoteIndexForRow(const size_t localRowIndex) const {
         return this->userData.getCu()[localRowIndex];
     }
+
+    size_t getLocalIndexFromGlobalIndex(const size_t globalIndex) const {
+        return globalRowToLocalRow.at(globalIndex);
+    }
+
+    private:
+    UserModeDataDecorator(
+        const BaseData &delegate, const UserData &userData, std::unordered_map<size_t, size_t> globalRowToLocalRow
+    ) : delegate(delegate), userData(userData), globalRowToLocalRow(globalRowToLocalRow) {}
 };

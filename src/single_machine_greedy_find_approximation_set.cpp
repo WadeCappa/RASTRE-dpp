@@ -80,12 +80,14 @@ int main(int argc, char** argv) {
         spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
     } else {
         for (const auto & user : userData) {
-            UserModeDataDecorator decorator(*data, *user);
-            std::unique_ptr<RelevanceCalculator> userCalc(UserModeRelevanceCalculator::from(decorator, *user, appData.theta));
-            std::unique_ptr<Subset> solution(calculator->getApproximationSet(
-                TranslatingUserSubset::create(decorator), *userCalc, decorator, appData.outputSetSize)
+            std::unique_ptr<UserModeDataDecorator> decorator(
+                UserModeDataDecorator::create(*data, *user)
             );
-            solutions.push_back(UserOutputInformationSubset::create(move(solution), *user));
+            std::unique_ptr<RelevanceCalculator> userCalc(UserModeRelevanceCalculator::from(*decorator, *user, appData.theta));
+            std::unique_ptr<Subset> solution(calculator->getApproximationSet(
+                NaiveMutableSubset::makeNew(), *userCalc, *decorator, appData.outputSetSize)
+            );
+            solutions.push_back(UserOutputInformationSubset::translate(move(solution), *user));
             spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
         }
     }

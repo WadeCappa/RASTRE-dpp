@@ -78,14 +78,13 @@ int main(int argc, char** argv) {
 
     double total_mrr = 0.0, total_ilad = 0.0, total_ilmd = 0.0;
     size_t total_solutions = userModeOutputData["solutions"].size();
+    std::unique_ptr<RelevanceCalculator> calc(NaiveRelevanceCalculator::from(*data));
+
     for (const auto & solution : userModeOutputData["solutions"]) {
         unsigned long long user_id = solution["userId"];
         auto userSolution = solution["solution"];
         std::vector<size_t> rows(userSolution["rows"].begin(), userSolution["rows"].end());
         std::unique_ptr<Subset> subset(Subset::of(rows, userSolution["totalCoverage"]));
-
-        std::unique_ptr<RelevanceCalculator> calc(UserModeRelevanceCalculator::from(*data, *userMap[user_id], appData.theta));
-        // calc = std::unique_ptr<RelevanceCalculator>(new MemoizedRelevanceCalculator(move(calc)));
 
         const double mrr = UserScore::calculateMRR(*userMap[user_id], *subset);
 

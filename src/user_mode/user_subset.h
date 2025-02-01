@@ -24,6 +24,24 @@ class UserOutputInformationSubset : public Subset {
         );
     }
 
+    static std::unique_ptr<UserOutputInformationSubset> translate(
+        std::unique_ptr<Subset> delegate, 
+        const UserData &userData) {
+
+        std::vector<size_t> globalRows;
+        for (const size_t r : *delegate) {
+            globalRows.push_back(userData.getCu()[r]);
+        }
+        
+        return std::unique_ptr<UserOutputInformationSubset>(
+            new UserOutputInformationSubset(
+                Subset::ofCopy(move(globalRows), delegate->getScore()), 
+                userData.getUserId(), 
+                userData.getTestId()
+            )
+        );
+    }
+
     float getScore() const {
         return delegate->getScore();
     }
@@ -43,73 +61,6 @@ class UserOutputInformationSubset : public Subset {
             {"solution", delegate->toJson()}
         };
         return output;
-    }
-
-    const size_t* begin() const {
-        return delegate->begin();
-    }
-
-    const size_t* end() const {
-        return delegate->end();
-    }
-};
-
-class TranslatingUserSubset : public MutableSubset {
-    private:
-    std::unique_ptr<MutableSubset> delegate;
-    const UserModeDataDecorator &userDataDecorator;
-
-    public:
-    TranslatingUserSubset(
-        std::unique_ptr<MutableSubset> delegate, 
-        const UserModeDataDecorator &userDataDecorator
-    ) : 
-        delegate(move(delegate)), 
-        userDataDecorator(userDataDecorator) {}
-
-    static std::unique_ptr<TranslatingUserSubset> create(
-        const UserModeDataDecorator &userDataDecorator) {
-        
-        return std::unique_ptr<TranslatingUserSubset>(
-            new TranslatingUserSubset(NaiveMutableSubset::makeNew(), userDataDecorator)
-        );
-    }
-
-    static std::unique_ptr<TranslatingUserSubset> create(
-        std::unique_ptr<MutableSubset> delegate, 
-        const UserModeDataDecorator &userDataDecorator) {
-        
-        return std::unique_ptr<TranslatingUserSubset>(
-            new TranslatingUserSubset(
-                move(delegate), 
-                userDataDecorator
-            )
-        );
-    }
-
-    void addRow(const size_t row, const float marginalGain) {
-        size_t global_row = userDataDecorator.getRemoteIndexForRow(row);
-        delegate->addRow(global_row, marginalGain);
-    }
-
-    void finalize() {
-        delegate->finalize();
-    }
-
-    float getScore() const {
-        return delegate->getScore();
-    }
-
-    size_t getRow(const size_t index) const {
-        return delegate->getRow(index);
-    }
-
-    size_t size() const {
-        return delegate->size();
-    }
-
-    nlohmann::json toJson() const {
-        return delegate->toJson();
     }
 
     const size_t* begin() const {

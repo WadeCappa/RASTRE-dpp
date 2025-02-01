@@ -14,10 +14,18 @@ struct diagnostics {
 class BaseData {
     public:
     virtual ~BaseData() {}
+    /**
+     * there is a semantic bug with this method that needs to get fixed. This 
+     * method incorrectly assumes that local rows will be used instead of global
+     * rows. We should eradicate the concept of local rows from this concept 
+     * and always use global rows for sanity reasons
+     */
     virtual const DataRow& getRow(size_t i) const = 0;
     virtual size_t totalRows() const = 0;
     virtual size_t totalColumns() const = 0;
+
     virtual size_t getRemoteIndexForRow(const size_t localRowIndex) const = 0; 
+    virtual size_t getLocalIndexFromGlobalIndex(const size_t globalIndex) const = 0;
 
     Diagnostics DEBUG_getDiagnostics() const {
         size_t rows = this->totalRows();
@@ -119,12 +127,21 @@ class FullyLoadedData : public BaseData {
     size_t getRemoteIndexForRow(const size_t localRowIndex) const {
         return localRowIndex;
     }
+
+    size_t getLocalIndexFromGlobalIndex(const size_t globalIndex) const {
+        return globalIndex;
+    }
 };
 
 class LoadedSegmentedData : public BaseData {
     private:
     const std::vector<std::unique_ptr<DataRow>> data;
     const std::vector<size_t> localRowToGlobalRow;
+    /**
+     * this is a hack, we should not need to maintain this datastructure, refactor needed.
+     * We're logically coupled to local rows which should not be a thing
+     */
+    const std::unordered_map<size_t, size_t> globalRowToLocalRow;
     const size_t columns;
 
     // Disable pass by value. This object is too large for pass by value to make sense implicitly.
@@ -139,8 +156,10 @@ class LoadedSegmentedData : public BaseData {
         const unsigned int rank) {
 
         std::vector<size_t> localRowToGlobalRow;
+        std::unordered_map<size_t, size_t> globalRowToLocalRow;
         for (size_t globalRow = 0; globalRow < rankMapping.size(); globalRow++) {
             if (rankMapping[globalRow] == rank) {
+                globalRowToLocalRow.insert({globalRow, localRowToGlobalRow.size()});
                 localRowToGlobalRow.push_back(globalRow);
             }
         }
@@ -172,7 +191,9 @@ class LoadedSegmentedData : public BaseData {
         }
 
         const size_t columns = localRowToGlobalRow.size() > 0 ? data.back()->size() : 0;
-        return std::unique_ptr<BaseData>(new LoadedSegmentedData(move(data), move(localRowToGlobalRow), columns));
+        return std::unique_ptr<BaseData>(
+            new LoadedSegmentedData(move(data), move(localRowToGlobalRow), move(globalRowToLocalRow), columns)
+        );
     }
 
     static std::unique_ptr<BaseData> load(
@@ -184,6 +205,7 @@ class LoadedSegmentedData : public BaseData {
         size_t columns = 0;
         std::vector<std::unique_ptr<DataRow>> data;
         std::vector<size_t> localRowToGlobalRow;
+        std::unordered_map<size_t, size_t> globalRowToLocalRow;
 
         for (size_t globalRow = 0; globalRow < rankMapping.size(); globalRow++) {
             if (rankMapping[globalRow] != rank) {
@@ -200,6 +222,7 @@ class LoadedSegmentedData : public BaseData {
                 }
 
                 data.push_back(move(nextRow));
+                globalRowToLocalRow.insert({globalRow, localRowToGlobalRow.size()});
                 localRowToGlobalRow.push_back(globalRow);
             }
         }
@@ -208,14 +231,17 @@ class LoadedSegmentedData : public BaseData {
             spdlog::error("sizes did not match, this is likely a serious error");
         }
 
-        return std::unique_ptr<BaseData>(new LoadedSegmentedData(move(data), move(localRowToGlobalRow), columns));
+        return std::unique_ptr<BaseData>(
+            new LoadedSegmentedData(move(data), move(localRowToGlobalRow), move(globalRowToLocalRow), columns)
+        );
     }
 
     LoadedSegmentedData(
         std::vector<std::unique_ptr<DataRow>> raw,
         std::vector<size_t> localRowToGlobalRow,
+        std::unordered_map<size_t, size_t> globalRowToLocalRow,
         size_t columns
-    ) : data(move(raw)), localRowToGlobalRow(move(localRowToGlobalRow)), columns(columns) {}
+    ) : data(move(raw)), localRowToGlobalRow(move(localRowToGlobalRow)), globalRowToLocalRow(move(globalRowToLocalRow)), columns(columns) {}
 
     const DataRow& getRow(size_t i) const {
         return *(this->data[i]);
@@ -232,11 +258,19 @@ class LoadedSegmentedData : public BaseData {
     size_t getRemoteIndexForRow(const size_t localRowIndex) const {
         return this->localRowToGlobalRow[localRowIndex];
     }
+
+    size_t getLocalIndexFromGlobalIndex(const size_t globalIndex) const {
+        if (globalRowToLocalRow.find(globalIndex) == globalRowToLocalRow.end()) {
+            spdlog::error("failed mapping for {0:d} out of {1:d} possible mappings", globalIndex, globalRowToLocalRow.size());
+        }
+        return globalRowToLocalRow.at(globalIndex);
+    }
 };
 
 class ReceivedData : public BaseData {
     private:
     std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> base;
+    const std::unordered_map<size_t, size_t> globalRowToLocalRow;
     const size_t rows;
     const size_t columns;
 
@@ -245,13 +279,20 @@ class ReceivedData : public BaseData {
     ReceivedData(const BaseData&);
 
     public:
-    ReceivedData(
+    static std::unique_ptr<ReceivedData> create(
         std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> input
-    ) : 
-        base(move(input)),
-        rows(this->base->size()), 
-        columns(this->base->at(0).second->size())
-    {}
+    ) {
+        std::unordered_map<size_t, size_t> globalRowToLocalRow;
+        size_t i = 0;
+        for (const std::pair<size_t, std::unique_ptr<DataRow>> & p : *input) {
+            globalRowToLocalRow.insert({p.first, i++});
+        }
+
+        return std::unique_ptr<ReceivedData>(
+            new ReceivedData(move(input), move(globalRowToLocalRow))
+        );
+    }
+
 
     const DataRow& getRow(size_t i) const {
         return *(this->base->at(i).second);
@@ -279,4 +320,19 @@ class ReceivedData : public BaseData {
     size_t getRemoteIndexForRow(const size_t localRowIndex) const {
         return localRowIndex;
     }
+
+    size_t getLocalIndexFromGlobalIndex(const size_t globalIndex) const {
+        return globalRowToLocalRow.at(globalIndex);
+    }
+    
+    private:
+    ReceivedData(
+        std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> input,
+        std::unordered_map<size_t, size_t> globalRowToLocalRow
+    ) : 
+        base(move(input)),
+        globalRowToLocalRow(move(globalRowToLocalRow)),
+        rows(this->base->size()), 
+        columns(this->base->at(0).second->size())
+    {}
 };

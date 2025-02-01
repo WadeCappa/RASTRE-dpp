@@ -158,22 +158,22 @@ TEST_CASE("Testing ReceivedData translation and construction") {
         );
     }
 
-    ReceivedData data(move(mockReceiveData));
+    std::unique_ptr<ReceivedData> data(ReceivedData::create(move(mockReceiveData)));
 
-    CHECK(data.totalRows() == mockSolutionIndicies.size());
-    CHECK(data.totalColumns() == DENSE_DATA[0].size());
+    CHECK(data->totalRows() == mockSolutionIndicies.size());
+    CHECK(data->totalColumns() == DENSE_DATA[0].size());
 
-    for (size_t i = 0; i < data.totalRows(); i++) {
-        verifyData(data.getRow(i), mockSolutionIndicies[i]);
+    for (size_t i = 0; i < data->totalRows(); i++) {
+        verifyData(data->getRow(i), mockSolutionIndicies[i]);
     }
 
     std::unique_ptr<MutableSubset> mockSolution(NaiveMutableSubset::makeNew());
 
-    for (size_t i = 0; i < data.totalRows(); i++) {
+    for (size_t i = 0; i < data->totalRows(); i++) {
         mockSolution->addRow(i, 0);
     }
 
-    auto translated = data.translateSolution(MutableSubset::upcast(move(mockSolution)));
+    auto translated = data->translateSolution(MutableSubset::upcast(move(mockSolution)));
     CHECK(mockSolutionIndicies.size() == translated->size());
 
     int i = 0;

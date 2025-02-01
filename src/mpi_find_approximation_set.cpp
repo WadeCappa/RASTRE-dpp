@@ -49,7 +49,6 @@ std::unique_ptr<Subset> randGreedi(
     const AppData &appData, 
     const BaseData &data, 
     RelevanceCalculatorFactory& calcFactory,
-    std::unique_ptr<MutableSubset> consumer,
     Timers &timers
 ) {
     unsigned int sendDataSize = 0;
@@ -62,9 +61,10 @@ std::unique_ptr<Subset> randGreedi(
         std::unique_ptr<RelevanceCalculator> calc(calcFactory.build(data));
         timers.localCalculationTime.startTimer();
         std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(
-            move(consumer), *calc, data, appData.outputSetSize)
+            NaiveMutableSubset::makeNew(), *calc, data, appData.outputSetSize)
         );
         timers.localCalculationTime.stopTimer();
+        spdlog::info("finished finding solution for rank {0:d} of score {1:f}", appData.worldRank, localSolution->getScore());
         
         // TODO: batch this into blocks using a custom MPI type to send higher volumes of data.
         timers.bufferEncodingTime.startTimer();
@@ -134,7 +134,6 @@ std::unique_ptr<Subset> streaming(
     const AppData &appData, 
     const BaseData &data, 
     RelevanceCalculatorFactory& calcFactory,
-    std::unique_ptr<MutableSubset> consumer,
     Timers &timers
 ) {
     // This is hacky. We only do this because the receiver doesn't load any data and therefore
@@ -176,7 +175,7 @@ std::unique_ptr<Subset> streaming(
         timers.totalCalculationTime.startTimer();
         
         std::unique_ptr<MutableSubset> subset(
-            new StreamingSubset(data, move(consumer), timers, std::floor(appData.outputSetSize * appData.alpha))
+            new StreamingSubset(data, NaiveMutableSubset::makeNew(), timers, std::floor(appData.outputSetSize * appData.alpha))
         );
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         spdlog::info("rank {0:d} is ready to start streaming local seeds", appData.worldRank);
@@ -201,15 +200,14 @@ std::vector<std::unique_ptr<Subset>> getSolutions(
     AppData& appData, // ideally this should be const
     const BaseData &data, 
     RelevanceCalculatorFactory& calc,
-    std::unique_ptr<MutableSubset> consumer,
     Timers &timers,
     std::vector<Timers> comparisonTimers
 ) {
     std::vector<std::unique_ptr<Subset>> solutions;
     if (appData.distributedAlgorithm == 0) {
-        solutions.push_back(randGreedi(appData, data, calc, move(consumer), timers));
+        solutions.push_back(randGreedi(appData, data, calc, timers));
     } else if (appData.distributedAlgorithm == 1 || appData.distributedAlgorithm == 2) {
-        solutions.push_back(streaming(appData, data, calc, move(consumer), timers));
+        solutions.push_back(streaming(appData, data, calc, timers));
     } else if (appData.distributedAlgorithm == 3) {
 
         spdlog::error("currently not supported");
@@ -339,11 +337,11 @@ int main(int argc, char** argv) {
     std::vector<std::unique_ptr<Subset>> solutions;
     if (userData.size() == 0) {
         std::unique_ptr<RelevanceCalculatorFactory> calcFactory(new NaiveRelevanceCalculatorFactory());
-        solutions = getSolutions(appData, *data, *calcFactory, NaiveMutableSubset::makeNew(), timers, comparisonTimers);
+        solutions = getSolutions(appData, *data, *calcFactory, timers, comparisonTimers);
     } else {
         for (const auto & user : userData) {
-            spdlog::info("rank {0:d} starting to process user {1:d}", appData.worldRank, user->getUserId());
-            UserModeDataDecorator userModeDataDecorator(*data, *user.get());
+            std::unique_ptr<UserModeDataDecorator> userModeDataDecorator(UserModeDataDecorator::create(*data, *user.get()));
+            spdlog::info("rank {0:d} starting to process user {1:d} of size {2:d}", appData.worldRank, user->getUserId(), userModeDataDecorator->totalRows());
 
             std::unique_ptr<RelevanceCalculatorFactory> calcFactory (
                 new UserModeNaiveRelevanceCalculatorFactory(*user, appData.theta)
@@ -351,9 +349,8 @@ int main(int argc, char** argv) {
             std::vector<std::unique_ptr<Subset>> new_solutions(
                 getSolutions(
                     appData, 
-                    userModeDataDecorator, 
+                    *userModeDataDecorator, 
                     *calcFactory, 
-                    TranslatingUserSubset::create(userModeDataDecorator), 
                     timers, 
                     comparisonTimers
                 )

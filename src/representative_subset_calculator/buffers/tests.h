@@ -41,13 +41,18 @@ static std::unique_ptr<BaseData> getData(
     size_t rows,
     size_t columns
 ) {
+    spdlog::info("looking at {0:d} rows", base.size());
     std::vector<size_t> localRowToGlobalRow;
+    std::unordered_map<size_t, size_t> globalRowToLocal;
     for (size_t i = 0; i < rows; i++) {
+        globalRowToLocal.insert({i, localRowToGlobalRow.size()});
         localRowToGlobalRow.push_back(i);
     }
 
     return std::unique_ptr<BaseData>(
-        new LoadedSegmentedData(move(base), localRowToGlobalRow, columns)
+        new LoadedSegmentedData(
+            move(base), move(localRowToGlobalRow), move(globalRowToLocal), columns
+        )
     );
 };
 
@@ -67,6 +72,7 @@ static std::unique_ptr<BaseData> getSparseData() {
 
 TEST_CASE("Testing the get total send dense data method") {
     std::unique_ptr<BaseData> denseData(getDenseData());
+    spdlog::info("dense data size of {0:d}", denseData->totalRows());
 
     std::vector<float> sendBuffer;
     unsigned int totalSendData = BufferBuilder::buildSendBuffer(*denseData, *MOCK_SOLUTION.get(), sendBuffer);

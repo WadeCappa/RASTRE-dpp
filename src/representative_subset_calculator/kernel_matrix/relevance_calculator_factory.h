@@ -56,6 +56,11 @@ class PerRowRelevanceCalculator {
             spdlog::error("Not sure if its safe to call this, we might want to throw here instead");
             return localRowIndex;
         }
+
+        size_t getLocalIndexFromGlobalIndex(const size_t globalIndex) const {
+            spdlog::error("Not sure if its safe to call this, we might want to throw here instead");
+            return globalIndex;
+        }
     };
 
     public:

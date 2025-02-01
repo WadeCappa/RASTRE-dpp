@@ -221,15 +221,18 @@ int main(int argc, char** argv) {
                     loadWhileCalculating(appData, user.get(), timers) : 
                     loadThenCalculate(appData, user.get(), timers);
             spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution.first->size(), solution.first->getScore());
-            solutions.push_back(UserOutputInformationSubset::create(move(solution.first), *user));
+            solutions.push_back(UserOutputInformationSubset::translate(move(solution.first), *user));
         }
     }
     
     std::vector<std::unique_ptr<DataRow>> dummyData;
     std::vector<size_t> dummyRowMapping;
+    std::unordered_map<size_t, size_t> emptyMapping;
     size_t dummyColumns = 0;  // A placeholder for columns, set to 0 or any valid number.
 
-    LoadedSegmentedData dummySegmentedData(std::move(dummyData), std::move(dummyRowMapping), dummyColumns);
+    LoadedSegmentedData dummySegmentedData(
+        std::move(dummyData), std::move(dummyRowMapping), move(emptyMapping), dummyColumns
+    );
 
     nlohmann::json result = Orchestrator::buildOutput(
         appData, solutions, dummySegmentedData, timers
