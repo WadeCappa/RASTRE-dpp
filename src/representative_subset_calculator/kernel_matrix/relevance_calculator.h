@@ -22,37 +22,11 @@ class NaiveRelevanceCalculator : public RelevanceCalculator {
     }
 };
 
-/**
- * TODO: needs to be threadsafe
- */
-class MemoizedRelevanceCalculator : public RelevanceCalculator {
-    private:
-    std::unique_ptr<RelevanceCalculator> delegate;
-    std::unordered_map<std::string, float> memo;
-
-    static std::string get_key(const size_t i, const size_t j) {
-        return std::to_string(i) + "," + std::to_string(j);
-    }
-
-    public:
-    MemoizedRelevanceCalculator(std::unique_ptr<RelevanceCalculator> delegate) 
-    : delegate(move(delegate)) {}
-
-    float get(const size_t i, const size_t j) {
-        std::string key = get_key(i, j);
-        if (memo.find(key) != memo.end()) {
-            return memo.at(key);
-        }
-
-        memo[key] = delegate->get(i, j);
-        return memo.at(key);
-    }
-};
-
 class UserModeRelevanceCalculator : public RelevanceCalculator {
     private:
     std::unique_ptr<RelevanceCalculator> delegate;
-    const std::vector<double> &ru;
+    // not a reference
+    const std::vector<double> ru;
     const double alpha;
 
     public:
@@ -61,7 +35,7 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
      */
     static std::unique_ptr<UserModeRelevanceCalculator> from(
         const BaseData &data, 
-        const UserData &userData, 
+        const std::vector<double> userData, 
         const double theta
     ) {
         const double alpha = calcAlpha(theta);
@@ -69,7 +43,7 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
         return std::unique_ptr<UserModeRelevanceCalculator>(
             new UserModeRelevanceCalculator(
                 NaiveRelevanceCalculator::from(data), 
-                userData.getRu(), 
+                move(userData), 
                 alpha
             )
         );
@@ -87,9 +61,9 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
     private:
     UserModeRelevanceCalculator(
         std::unique_ptr<RelevanceCalculator> delegate, 
-        const std::vector<double> &ru,
+        const std::vector<double> ru,
         const double alpha
-    ) : delegate(move(delegate)), ru(ru), alpha(alpha) {}
+    ) : delegate(move(delegate)), ru(move(ru)), alpha(alpha) {}
 
     double getRu(size_t i) const {
         return std::exp(this->alpha * this->ru[i]);

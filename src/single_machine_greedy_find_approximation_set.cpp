@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
             std::unique_ptr<UserModeDataDecorator> decorator(
                 UserModeDataDecorator::create(*data, *user)
             );
-            std::unique_ptr<RelevanceCalculator> userCalc(UserModeRelevanceCalculator::from(*decorator, *user, appData.theta));
+            std::unique_ptr<RelevanceCalculator> userCalc(UserModeRelevanceCalculator::from(*decorator, user->getRu(), appData.theta));
             std::unique_ptr<Subset> solution(calculator->getApproximationSet(
                 NaiveMutableSubset::makeNew(), *userCalc, *decorator, appData.outputSetSize)
             );

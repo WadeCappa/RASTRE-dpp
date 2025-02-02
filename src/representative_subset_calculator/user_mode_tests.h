@@ -56,7 +56,7 @@ TEST_CASE("testing user-mode relevance calculator provides valid results") {
     );
     const double theta = 0.7;
     std::unique_ptr<UserModeRelevanceCalculator> calc(
-        UserModeRelevanceCalculator::from(*decorator, *userData, theta)
+        UserModeRelevanceCalculator::from(*decorator, userData->getRu(), theta)
     );
     for (size_t j = 0; j < decorator->totalRows(); j++) {
         for (size_t i = 0; i < decorator->totalRows(); i++) {
@@ -107,7 +107,7 @@ TEST_CASE("testing kernel matricies with user-mode classes") {
 
     const double theta = 0.7;
     std::unique_ptr<UserModeRelevanceCalculator> calc(
-        UserModeRelevanceCalculator::from(*decorator, *userData, theta)
+        UserModeRelevanceCalculator::from(*decorator, userData->getRu(), theta)
     );
     std::unique_ptr<LazyKernelMatrix> lazyKernelMatrix(LazyKernelMatrix::from(*decorator, *calc));
     std::unique_ptr<NaiveKernelMatrix> naiveKernelMatrix(NaiveKernelMatrix::from(*decorator, *calc));
@@ -147,7 +147,7 @@ TEST_CASE("testing calculators with user-data") {
 
     auto fastRes = testCalculator(
         new FastSubsetCalculator(epsilon), 
-        UserModeRelevanceCalculator::from(*decorator, *userData, theta),
+        UserModeRelevanceCalculator::from(*decorator, userData->getRu(), theta),
         *decorator, 
         NaiveMutableSubset::makeNew(), 
         k, 
@@ -155,7 +155,7 @@ TEST_CASE("testing calculators with user-data") {
 
     auto lazyFastRes = testCalculator(
         new LazyFastSubsetCalculator(epsilon), 
-        UserModeRelevanceCalculator::from(*decorator, *userData, theta),
+        UserModeRelevanceCalculator::from(*decorator, userData->getRu(), theta),
         *decorator, 
         NaiveMutableSubset::makeNew(), 
         k, 
