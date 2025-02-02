@@ -40,7 +40,7 @@ class UserDataImplementation : public UserData {
     const unsigned long long uid, tid;
     const std::vector<unsigned long long> cu;
     const std::vector<double> ru;
-    const std::unordered_map<unsigned long long, double> globalRowToRu;
+    const std::unordered_map<unsigned long long, double> cuToRuMapping;
 
     public:
     static std::vector<std::unique_ptr<UserData>> load(const std::string path) {
@@ -147,14 +147,14 @@ class UserDataImplementation : public UserData {
         const std::vector<unsigned long long> cu, 
         const std::vector<double> ru
     ) {
-        std::unordered_map<unsigned long long, double> globalRowToRu;
+        std::unordered_map<unsigned long long, double> cuToRuMapping;
 
         for (size_t i = 0; i < cu.size(); i++) {
-            globalRowToRu.insert({cu[i], ru[i]});
+            cuToRuMapping.insert({cu[i], ru[i]});
         }
 
         return std::unique_ptr<UserData>(
-            new UserDataImplementation(uid, tid, move(cu), move(ru), move(globalRowToRu))
+            new UserDataImplementation(uid, tid, move(cu), move(ru), move(cuToRuMapping))
         );
     }
 
@@ -174,17 +174,21 @@ class UserDataImplementation : public UserData {
         return this->ru;
     }
 
+    const std::unordered_map<unsigned long long, double> & getCuToRuMapping() const {
+        return this->cuToRuMapping;
+    }
+
     private:
     UserDataImplementation(
         const unsigned long long uid, 
         const unsigned long long tid, 
         const std::vector<unsigned long long> cu, 
         const std::vector<double> ru,
-        const std::unordered_map<unsigned long long, double> globalRowToRu
+        const std::unordered_map<unsigned long long, double> cuToRuMapping
     ) : 
         uid(uid), 
         tid(tid), 
         cu(move(cu)), 
         ru(move(ru)),
-        globalRowToRu(move(globalRowToRu)) {}
+        cuToRuMapping(move(cuToRuMapping)) {}
 };
