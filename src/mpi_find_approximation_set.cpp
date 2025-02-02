@@ -48,7 +48,7 @@
 std::unique_ptr<Subset> randGreedi(
     const AppData &appData, 
     const BaseData &data, 
-    RelevanceCalculatorFactory& calcFactory,
+    const RelevanceCalculatorFactory& calcFactory,
     Timers &timers
 ) {
     unsigned int sendDataSize = 0;
@@ -56,6 +56,7 @@ std::unique_ptr<Subset> randGreedi(
     std::vector<float> sendBuffer;
     timers.totalCalculationTime.startTimer();
     if (appData.worldRank != 0) {
+        spdlog::info("attempting to calculate global solution on rank {0:d}", appData.worldRank);
         std::unique_ptr<SubsetCalculator> calculator(MpiOrchestrator::getCalculator(appData));
         
         std::unique_ptr<RelevanceCalculator> calc(calcFactory.build(data));
@@ -324,9 +325,11 @@ int main(int argc, char** argv) {
 
     std::vector<std::unique_ptr<UserData>> userData;
     if (appData.userModeFile != EMPTY_STRING) {
-        userData = UserDataImplementation::loadForMultiMachineMode(
-            appData.userModeFile, rowToRank, appData.worldRank
-        );
+        // load all user-data for the global node since we don't know what we'll be evaluating when 
+        // data ends up on node 0
+        userData = appData.worldRank != 0 ? 
+            UserDataImplementation::loadForMultiMachineMode(appData.userModeFile, rowToRank, appData.worldRank) : 
+            UserDataImplementation::load(appData.userModeFile);
         spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
     }
 
@@ -359,6 +362,7 @@ int main(int argc, char** argv) {
             for (size_t i = 0; i < new_solutions.size(); i++) {
                 solutions.push_back(UserOutputInformationSubset::create(move(new_solutions[i]), *user));
             }
+            MPI_Barrier(MPI_COMM_WORLD);
         }
     }
 

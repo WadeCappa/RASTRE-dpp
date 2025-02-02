@@ -98,6 +98,7 @@ class GlobalBufferLoader : public BufferLoader {
         const DataRowFactory &factory
     ) {
         this->timers.bufferDecodingTime.startTimer();
+        spdlog::debug("getting best rows");
         std::unique_ptr<ReceivedData> bestRows(
             ReceivedData::create(
                 move(this->rebuildData(factory))
@@ -107,6 +108,7 @@ class GlobalBufferLoader : public BufferLoader {
 
         timers.globalCalculationTime.startTimer();
 
+        spdlog::debug("calculating global solution on received rows of size {0:d}", bestRows->totalRows());
         std::unique_ptr<RelevanceCalculator> calc(calcFactory.build(*bestRows));
         std::unique_ptr<Subset> untranslatedSolution(calculator->getApproximationSet(
             NaiveMutableSubset::makeNew(), *calc, *bestRows, k)

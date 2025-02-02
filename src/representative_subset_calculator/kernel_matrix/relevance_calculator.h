@@ -1,5 +1,4 @@
 #include <unordered_map>
-#include <format>
 
 class RelevanceCalculator {
     public:
