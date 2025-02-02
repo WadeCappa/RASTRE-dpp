@@ -71,9 +71,8 @@ class FastSubsetCalculator : public SubsetCalculator {
 
             bestScore = getNextHighestScore(diagonals, seen);
 
-            // To ensure "Numerical stability" ¯\_(ツ)_/¯
             if (bestScore.second <= this->epsilon) {
-                spdlog::info("score of {0:f} was less than {1:f}", bestScore.second, this->epsilon);
+                spdlog::warn("score of {0:f} was less than {1:f}", bestScore.second, this->epsilon);
                 return MutableSubset::upcast(move(consumer));
             }
 

@@ -91,15 +91,15 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
             
             u[i] = consumer->size();
             
-            if (diagonals[i] < this->epsilon) {
-                spdlog::info("breaking to ensure Numerical stability");
-                break;
-            }
-            
             const float marginalGain = std::log(diagonals[i]);
             const float nextScore = std::log(diagonals[priorityQueue.front()]);
 
             if (marginalGain >= nextScore || consumer->size() == data.totalRows() - 1) {
+                if (marginalGain < this->epsilon) {
+                    spdlog::warn("breaking to ensure Numerical stability; score of {0:f} and size {1:d} was less than {2:f}", marginalGain, consumer->size(), this->epsilon);
+                    break;
+                }
+
                 consumer->addRow(i, marginalGain);
                 in_subset.push_back(i);
             } else {
