@@ -54,7 +54,7 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
         const double r_i = getRu(i);
         const double r_j = getRu(j);
         const double result = r_i * s_ij * r_j;
-        SPDLOG_TRACE("result for user mode of {0:f} from {1:d} of value {2:f} and {3:d} of value {4:f}", result, i, r_i, j, r_j);
+        SPDLOG_TRACE("result for user mode of {0:f} from s_ij of {1:f}, r_i {2:d} of value {3:f}, and r_j {4:d} of value {5:f}", result, s_ij, i, r_i, j, r_j);
         return result;
     }
 
