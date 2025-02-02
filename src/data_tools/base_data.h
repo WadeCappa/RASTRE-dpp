@@ -293,7 +293,6 @@ class ReceivedData : public BaseData {
         );
     }
 
-
     const DataRow& getRow(size_t i) const {
         return *(this->base->at(i).second);
     }
@@ -318,7 +317,7 @@ class ReceivedData : public BaseData {
     }
 
     size_t getRemoteIndexForRow(const size_t localRowIndex) const {
-        return localRowIndex;
+        return base->at(localRowIndex).first;
     }
 
     size_t getLocalIndexFromGlobalIndex(const size_t globalIndex) const {

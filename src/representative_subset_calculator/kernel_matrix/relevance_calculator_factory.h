@@ -3,17 +3,12 @@ class RelevanceCalculatorFactory {
     public:
     virtual ~RelevanceCalculatorFactory() {}
     virtual std::unique_ptr<RelevanceCalculator> build(const BaseData& d) const = 0;
-    virtual std::unique_ptr<RelevanceCalculator> buildRelative(const ReceivedData& d) = 0;
 };
 
 class NaiveRelevanceCalculatorFactory : public RelevanceCalculatorFactory {
     public:
     std::unique_ptr<RelevanceCalculator> build(const BaseData& d) const {
         return NaiveRelevanceCalculator::from(d);
-    }
-
-    std::unique_ptr<RelevanceCalculator> buildRelative(const ReceivedData& d) {
-        return build(d);
     }
 };
 
@@ -29,10 +24,6 @@ class UserModeNaiveRelevanceCalculatorFactory : public RelevanceCalculatorFactor
     ) : user(user), theta(theta) {}
 
     std::unique_ptr<RelevanceCalculator> build(const BaseData& d) const {
-        return UserModeRelevanceCalculator::from(d, user.getRu(), theta);
-    }
-
-    std::unique_ptr<RelevanceCalculator> buildRelative(const ReceivedData& d) {
         std::unordered_map<unsigned long long, double> globalRowToRu;
 
         for (size_t i = 0; i < user.getCu().size(); i++) {
@@ -42,6 +33,7 @@ class UserModeNaiveRelevanceCalculatorFactory : public RelevanceCalculatorFactor
         std::vector<double> relativeRu;
         for (size_t s = 0; s < d.totalRows(); s++) {
             size_t globalRow = d.getRemoteIndexForRow(s);
+            SPDLOG_TRACE("looking at {0:d} for local of {1:d}", globalRow, s);
             relativeRu.push_back(globalRowToRu.at(globalRow));
         }
 
