@@ -46,9 +46,11 @@ class PerRowRelevanceCalculator {
     class DummyData : public BaseData {
         private:
         const DataRow &row;
+        const size_t globalRow;
 
         public:
-        DummyData(const DataRow& row) : row(row) {}
+        DummyData(const DataRow& row, const size_t globalRow) 
+        : row(row), globalRow(globalRow) {}
 
         const DataRow& getRow(size_t _i) const {
             return row;
@@ -62,23 +64,29 @@ class PerRowRelevanceCalculator {
             return row.size();
         }
 
-        /**
-         * Not sure if this is safe to call, might want to throw here
-         */
         size_t getRemoteIndexForRow(const size_t localRowIndex) const {
-            spdlog::error("Not sure if its safe to call this, we might want to throw here instead");
-            return localRowIndex;
+            if (localRowIndex != 0) {
+                spdlog::error("This dummy data object only has one row, cannot return mapping for {0:d}", localRowIndex);
+            }
+            return globalRow;
         }
 
         size_t getLocalIndexFromGlobalIndex(const size_t globalIndex) const {
-            spdlog::error("Not sure if its safe to call this, we might want to throw here instead");
-            return globalIndex;
+            if (globalIndex != globalRow) {
+                spdlog::error("Unrecognized global row of {0:d} but expected {1:d}", globalIndex, globalRow);
+            }
+
+            return globalRow;
         }
     };
 
     public:
-    static float getScore(const DataRow &row, const RelevanceCalculatorFactory &factory) {
-        DummyData data(row);
+    static float getScore(
+        const DataRow &row, 
+        const RelevanceCalculatorFactory &factory,
+        const size_t globalRow
+    ) {
+        DummyData data(row, globalRow);
         return factory.build(data)->get(0, 0);
     }
 };

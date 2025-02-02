@@ -34,7 +34,11 @@ class BucketTitrator {
             return 0.0;
         }
 
-        return std::log(std::sqrt(PerRowRelevanceCalculator::getScore(seed.getData(), calcFactory))) * 2;
+        return std::log(
+            std::sqrt(
+                PerRowRelevanceCalculator::getScore(seed.getData(), calcFactory, seed.getRow())
+            )
+        ) * 2;
     }
 };
 
@@ -60,7 +64,7 @@ class LazyInitializingBucketTitrator : public BucketTitrator {
         float deltaZero = 0.0;
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[i]);
-            deltaZero = std::max(deltaZero, std::log(std::sqrt(PerRowRelevanceCalculator::getScore(seed->getData(), calcFactory))) * 2);
+            deltaZero = std::max(deltaZero, std::log(std::sqrt(PerRowRelevanceCalculator::getScore(seed->getData(), calcFactory, seed->getRow()))) * 2);
         }
 
         seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
