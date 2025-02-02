@@ -24,11 +24,9 @@ class UserModeNaiveRelevanceCalculatorFactory : public RelevanceCalculatorFactor
     ) : user(user), theta(theta) {}
 
     std::unique_ptr<RelevanceCalculator> build(const BaseData& d) const {
-        std::unordered_map<unsigned long long, double> globalRowToRu;
-
-        for (size_t i = 0; i < user.getCu().size(); i++) {
-            globalRowToRu.insert({user.getCu()[i], user.getRu()[i]});
-        }
+        const std::unordered_map<unsigned long long, double>& globalRowToRu(
+            user.getCuToRuMapping()
+        );
 
         std::vector<double> relativeRu;
         for (size_t s = 0; s < d.totalRows(); s++) {

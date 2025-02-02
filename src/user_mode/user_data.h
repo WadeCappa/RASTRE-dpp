@@ -27,6 +27,12 @@ class UserData {
      * used while calculating scores while finding the reccomendation subset.
      */
     virtual const std::vector<double> & getRu() const = 0;
+
+    /**
+     * We sometimes might need the exact mapping of cu to ru in a lookup table 
+     * instead of two arrays.
+     */
+    virtual const std::unordered_map<unsigned long long, double> & getCuToRuMapping() const = 0;
 };
 
 class UserDataImplementation : public UserData {
@@ -34,6 +40,7 @@ class UserDataImplementation : public UserData {
     const unsigned long long uid, tid;
     const std::vector<unsigned long long> cu;
     const std::vector<double> ru;
+    const std::unordered_map<unsigned long long, double> globalRowToRu;
 
     public:
     static std::vector<std::unique_ptr<UserData>> load(const std::string path) {
@@ -140,7 +147,15 @@ class UserDataImplementation : public UserData {
         const std::vector<unsigned long long> cu, 
         const std::vector<double> ru
     ) {
-        return std::unique_ptr<UserData>(new UserDataImplementation(uid, tid, move(cu), move(ru)));
+        std::unordered_map<unsigned long long, double> globalRowToRu;
+
+        for (size_t i = 0; i < cu.size(); i++) {
+            globalRowToRu.insert({cu[i], ru[i]});
+        }
+
+        return std::unique_ptr<UserData>(
+            new UserDataImplementation(uid, tid, move(cu), move(ru), move(globalRowToRu))
+        );
     }
 
     unsigned long long getUserId() const {
@@ -164,10 +179,12 @@ class UserDataImplementation : public UserData {
         const unsigned long long uid, 
         const unsigned long long tid, 
         const std::vector<unsigned long long> cu, 
-        const std::vector<double> ru
-        ) : 
+        const std::vector<double> ru,
+        const std::unordered_map<unsigned long long, double> globalRowToRu
+    ) : 
         uid(uid), 
         tid(tid), 
         cu(move(cu)), 
-        ru(move(ru)) {}
+        ru(move(ru)),
+        globalRowToRu(move(globalRowToRu)) {}
 };
