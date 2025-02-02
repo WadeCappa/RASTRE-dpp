@@ -21,12 +21,10 @@ class UserModeDataDecorator : public BaseData {
         );
     }
 
-    /**
-     * TODO: This might be out of range if we parallelize a user accross many machines. Will
-     * need to fix.
-     */
     const DataRow& getRow(size_t i) const {
-        return this->delegate.getRow(this->userData.getCu()[i]);
+        size_t globalRow = this->userData.getCu()[i];
+        size_t localRow = this->delegate.getLocalIndexFromGlobalIndex(globalRow);
+        return this->delegate.getRow(localRow);
     }
 
     size_t totalRows() const {
@@ -48,5 +46,5 @@ class UserModeDataDecorator : public BaseData {
     private:
     UserModeDataDecorator(
         const BaseData &delegate, const UserData &userData, std::unordered_map<size_t, size_t> globalRowToLocalRow
-    ) : delegate(delegate), userData(userData), globalRowToLocalRow(globalRowToLocalRow) {}
+    ) : delegate(delegate), userData(userData), globalRowToLocalRow(move(globalRowToLocalRow)) {}
 };

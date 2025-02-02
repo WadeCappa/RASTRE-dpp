@@ -334,7 +334,7 @@ int main(int argc, char** argv) {
     }
 
     for (size_t i = 0; i < userData.size(); i++) {
-        spdlog::debug("user {0:d} has ru of {1:d} and test of {2:d}", userData[i]->getUserId(), userData[i]->getRu().size(), userData[i]->getTestId());
+        spdlog::debug("user {0:d} has cu size {1:d}, ru size {2:d}, and test of {3:d}", userData[i]->getUserId(), userData[i]->getRu().size(), userData[i]->getCu().size(), userData[i]->getTestId());
     }
 
     std::vector<std::unique_ptr<Subset>> solutions;
@@ -344,7 +344,8 @@ int main(int argc, char** argv) {
     } else {
         for (const auto & user : userData) {
             std::unique_ptr<UserModeDataDecorator> userModeDataDecorator(UserModeDataDecorator::create(*data, *user.get()));
-            spdlog::info("rank {0:d} starting to process user {1:d} of size {2:d}", appData.worldRank, user->getUserId(), userModeDataDecorator->totalRows());
+            spdlog::info("rank {0:d} starting to process user {1:d} of size {2:d} (original user size of {3:d})", 
+                appData.worldRank, user->getUserId(), userModeDataDecorator->totalRows(), user->getCu().size());
 
             std::unique_ptr<RelevanceCalculatorFactory> calcFactory (
                 new UserModeNaiveRelevanceCalculatorFactory(*user, appData.theta)

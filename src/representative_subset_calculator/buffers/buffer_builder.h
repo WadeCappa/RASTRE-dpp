@@ -26,9 +26,7 @@ class BufferBuilder : public Buffer {
             
             // This is terrible tech debt. We should remove the concept of 'local seeds' from this repo
             const size_t global_seed = data.getRemoteIndexForRow(localSolution.getRow(localRowIndex));
-            spdlog::info("global row of {0:d}", global_seed);
             const size_t local_seed = data.getLocalIndexFromGlobalIndex(global_seed);
-            spdlog::info("global row of {0:d} and local row of {1:d}", global_seed, local_seed);
             buffers[localRowIndex] = data.getRow(local_seed).visit(v);
             buffers[localRowIndex].push_back(global_seed);
             buffers[localRowIndex].push_back(CommunicationConstants::endOfSendTag());

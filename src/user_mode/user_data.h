@@ -122,6 +122,9 @@ class UserDataImplementation : public UserData {
                 }
                 i++;
             }
+            if (cu.size() != ru.size()) {
+                spdlog::error("cu and ru are not the same size :: ru size of {0:d} and cu size of {1:d}", ru.size(), cu.size());
+            }
             result.push_back(UserDataImplementation::from(uid, tid, move(cu), move(ru)));
         }
 
