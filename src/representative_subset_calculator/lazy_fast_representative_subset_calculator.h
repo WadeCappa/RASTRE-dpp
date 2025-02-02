@@ -90,6 +90,11 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
             }
             
             u[i] = consumer->size();
+
+            if (priorityQueue.size() == 0) {
+                spdlog::warn("Out of elements!");
+                break;
+            }
             
             const float marginalGain = std::log(diagonals[i]);
             const float nextScore = std::log(diagonals[priorityQueue.front()]);
