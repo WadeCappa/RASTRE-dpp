@@ -4,6 +4,7 @@
 #include <memory>
 #include <map>
 #include <optional>
+#include <numeric>
 
 #include <random>
 
@@ -331,6 +332,88 @@ class DataRowFactory {
     
     // Also pretty bad that I need this method
     virtual std::unique_ptr<DataRowFactory> copy() = 0;
+};
+
+class NormalizedDataRowFactory : public DataRowFactory {
+    private:
+    std::unique_ptr<DataRowFactory> delegate;
+
+    class NormalizingDataRow : public ReturningDataRowVisitor<std::unique_ptr<DataRow>> {
+        private:
+        std::unique_ptr<DataRow> result;
+
+        long double calcEuclidianNorm(const std::vector<float>& data) {
+            return std::sqrt(
+                std::inner_product(data.begin(), data.end(), data.begin(), 0.0L)
+            );
+        }
+
+        public:
+        NormalizingDataRow() : result(nullptr) {}
+
+        std::unique_ptr<DataRow> get() {
+            return move(result);
+        }
+
+        void visitDenseDataRow(const std::vector<float>& data) {
+            const long double eclidian_norm = calcEuclidianNorm(data);
+
+            std::vector<float> res;
+            for (const float d : data) {
+                res.push_back(d / eclidian_norm);
+            }
+            result = DenseDataRow::of(move(res));
+        }
+
+        void visitSparseDataRow(const std::map<size_t, float>& data, size_t totalColumns) {
+            std::vector<float> values;
+            for (const auto d : data) {
+                values.push_back(d.second);
+            }
+            const long double eclidian_norm = calcEuclidianNorm(values);
+
+            std::map<size_t, float> res;
+            for (const auto d : data) {
+                res.insert({d.first, d.second / eclidian_norm});
+            }
+            result = std::unique_ptr<SparseDataRow>(new SparseDataRow(move(res), totalColumns));
+        }
+    };
+
+    public:
+    NormalizedDataRowFactory(std::unique_ptr<DataRowFactory> delegate) 
+    : delegate(move(delegate)) {}
+
+    std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
+        std::unique_ptr<DataRow> base(delegate->maybeGet(source));
+        if (base == nullptr) {
+            return nullptr;
+        }
+
+        NormalizingDataRow visitor;
+        return base->visit(visitor);
+    }
+    
+    std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<float> binary) const {
+        return delegate->getFromNaiveBinary(binary);
+    }
+
+    std::unique_ptr<DataRow> getFromBinary(std::vector<float> binary) const {
+        return delegate->getFromBinary(binary);
+    }
+
+    void skipNext(LineFactory &source) {
+        delegate->skipNext(source);
+    }
+
+    void jumpToLine(const size_t line) {
+        delegate->jumpToLine(line);
+    }
+    
+    std::unique_ptr<DataRowFactory> copy() {
+        spdlog::warn("did not expect anyone to hit this, this method only copies the delgate");
+        return delegate->copy();
+    }
 };
 
 class DenseDataRowFactory : public DataRowFactory {
