@@ -100,16 +100,17 @@ def outputUserData(topN, topU, infile, outfile):
     # RU1 ... RU_LRU: Items in RU which is also of size LCU
     with open(outfile, "w") as f:
         for user,items in PU.items():
-            l = []
-            l.append(user)
-            l.append(PU_test[user])
-            l.append(len(CU[user]))
-            l.extend(CU[user])
-            l.extend(RU[user])
+            if (len(CU[user]) != 0):
+                l = []
+                l.append(user)
+                l.append(PU_test[user])
+                l.append(len(CU[user]))
+                l.extend(CU[user])
+                l.extend(RU[user])
 
-            LU[user] = l
-            print(f"LU size: {len(LU[user])}")
-            np.savetxt(f, [np.array(l)], fmt='%f', delimiter=' ')
+                LU[user] = l
+                print(f"LU size: {len(LU[user])}")
+                np.savetxt(f, [np.array(l)], fmt='%f', delimiter=' ')
 
 def getDataset(filepath_input):
     return pd.read_csv(filepath_input, header=None, delim_whitespace=True)  # Assuming no header in the CSV
