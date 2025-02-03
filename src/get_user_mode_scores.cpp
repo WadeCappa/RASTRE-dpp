@@ -98,6 +98,9 @@ int main(int argc, char** argv) {
                 }
 
                 scores[j * ru.size() + i] = 1.0 - calc->get(i, j);
+                if (scores[j * ru.size() + i] > 1.0) {
+                    spdlog::error("score of {0:f} > 1 for j {1:d} and i {2:d}", scores[j * ru.size() + i], j, i);
+                }
             }
         }
 
@@ -107,7 +110,7 @@ int main(int argc, char** argv) {
             aggregate_scores += s;
             ilmd = std::min(ilmd, s);
         }
-        double ilad = aggregate_scores / (double)(ru.size() * 2.0);
+        double ilad = aggregate_scores / std::pow(ru.size(), 2);
         spdlog::info("User {0:d}: MRR = {1:f}, ILAD = {2:f}, ILMD = {3:f}", user_id, mrr, ilad, ilmd);
         total_mrr += mrr;
         total_ilad += ilad; 
