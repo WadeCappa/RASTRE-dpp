@@ -338,7 +338,7 @@ class NormalizedDataRowFactory : public DataRowFactory {
     private:
     std::unique_ptr<DataRowFactory> delegate;
 
-    class NormalizingDataRow : public ReturningDataRowVisitor<std::unique_ptr<DataRow>> {
+    class NormalizingDataRowVisitor : public ReturningDataRowVisitor<std::unique_ptr<DataRow>> {
         private:
         std::unique_ptr<DataRow> result;
 
@@ -349,7 +349,7 @@ class NormalizedDataRowFactory : public DataRowFactory {
         }
 
         public:
-        NormalizingDataRow() : result(nullptr) {}
+        NormalizingDataRowVisitor() : result(nullptr) {}
 
         std::unique_ptr<DataRow> get() {
             return move(result);
@@ -390,7 +390,7 @@ class NormalizedDataRowFactory : public DataRowFactory {
             return nullptr;
         }
 
-        NormalizingDataRow visitor;
+        NormalizingDataRowVisitor visitor;
         return base->visit(visitor);
     }
     
@@ -411,8 +411,8 @@ class NormalizedDataRowFactory : public DataRowFactory {
     }
     
     std::unique_ptr<DataRowFactory> copy() {
-        spdlog::warn("did not expect anyone to hit this, this method only copies the delgate");
-        return delegate->copy();
+        std::unique_ptr<DataRowFactory> base(delegate->copy());
+        return std::unique_ptr<DataRowFactory>(new NormalizedDataRowFactory(move(base)));
     }
 };
 

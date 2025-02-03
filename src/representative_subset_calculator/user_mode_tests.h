@@ -141,7 +141,7 @@ TEST_CASE("testing calculators with user-data") {
     std::unique_ptr<UserModeDataDecorator> decorator(
         UserModeDataDecorator::create(*data, *userData)
     );
-    const size_t k = userData->getCu().size();
+    const size_t k = userData->getCu().size() - 1;
     const float epsilon = 0.01;
     const double theta = 0.7;
 
