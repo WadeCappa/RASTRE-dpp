@@ -110,7 +110,8 @@ int main(int argc, char** argv) {
             aggregate_scores += s;
             ilmd = std::min(ilmd, s);
         }
-        double ilad = aggregate_scores / std::pow(ru.size(), 2);
+        // we subtract the diagonals since we don't include them in our score
+        double ilad = aggregate_scores / (std::pow(ru.size(), 2) - (double)ru.size());
         spdlog::info("User {0:d}: MRR = {1:f}, ILAD = {2:f}, ILMD = {3:f}", user_id, mrr, ilad, ilmd);
         total_mrr += mrr;
         total_ilad += ilad; 
