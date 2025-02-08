@@ -363,7 +363,6 @@ int main(int argc, char** argv) {
             for (size_t i = 0; i < new_solutions.size(); i++) {
                 solutions.push_back(UserOutputInformationSubset::create(move(new_solutions[i]), *user));
             }
-            MPI_Barrier(MPI_COMM_WORLD);
         }
     }
 
