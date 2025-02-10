@@ -51,39 +51,42 @@ static void addCmdOptions(CLI::App &app, GenUserFileAppData &appData) {
 static std::vector<size_t> getColumnsAboveThreshold(
     const BaseData& data, const size_t nonZeroThreshold
 ) {
-    class PassesColumnThresholdVisitor : public ReturningDataRowVisitor<bool> {
+    class PassesColumnThresholdVisitor : public DataRowVisitor {
         private:
-        const size_t columnUnderEvaluation;
-        bool success;
+        std::vector<size_t>& countPerColumn;
 
         public:
-        PassesColumnThresholdVisitor(const size_t columnUnderEvaluation)
-        : columnUnderEvaluation(columnUnderEvaluation), success(false) {}
+        PassesColumnThresholdVisitor(std::vector<size_t>& countPerColumn)
+        : countPerColumn(countPerColumn) {}
 
-        bool get() {
-            return success;
+        std::vector<size_t> get() {
+            return move(countPerColumn);
         }
 
         void visitDenseDataRow(const std::vector<float>& data) {
-            success = data[columnUnderEvaluation] != 0;
+            for (size_t i = 0; i < data.size(); i++) {
+                countPerColumn[i] += static_cast<bool>(data[i] != 0);
+            }
         }
 
         void visitSparseDataRow(const std::map<size_t, float>& data, size_t _totalColumns) {
-            success = data.find(columnUnderEvaluation) != data.end();
+            for (const auto & p : data) {
+                countPerColumn[p.first]++;
+            }
         }
     };
 
+    std::vector<size_t> countPerColumn(data.totalColumns());
+    PassesColumnThresholdVisitor v(countPerColumn);
+    for (size_t r = 0; r < data.totalRows(); r++) {
+        const DataRow& row(data.getRow(r));
+        row.voidVisit(v);
+    }
+
     std::vector<size_t> res;
-    for (size_t c = 0; c < data.totalColumns(); c++) {
-        PassesColumnThresholdVisitor v(c);
-        size_t count = 0;
-        for (size_t r = 0; r < data.totalRows(); r++) {
-            const DataRow& row(data.getRow(r));
-            count += static_cast<bool>(row.visit(v));
-            if (count >= nonZeroThreshold) {
-                res.push_back(c);
-                continue;
-            }
+    for (size_t i = 0; i < countPerColumn.size(); i++) {
+        if (countPerColumn[i] >= nonZeroThreshold) {
+            res.push_back(i);
         }
     }
 
@@ -122,7 +125,7 @@ static std::vector<size_t> getRowsAboveThreshold(
     std::vector<size_t> res;
     for (size_t i = 0; i < data.totalRows(); i++) {
         PassesRowThresholdVisitor v(nonZeroThreshold);
-        const DataRow& row (data.getRow(i));
+        const DataRow& row(data.getRow(i));
         if (row.visit(v)) {
             res.push_back(i);
         }
