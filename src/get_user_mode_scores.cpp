@@ -27,12 +27,6 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 
-struct UserModeAppData{
-    std::string outputFile;
-    std::string inputFile;
-    std::string userModeFile;
-};
-
 int main(int argc, char** argv) {
     LoggerHelper::setupLoggers();
     CLI::App app{"Approximates the best possible approximation set for the input dataset."};

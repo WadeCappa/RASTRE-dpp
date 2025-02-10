@@ -37,7 +37,7 @@ struct appData{
     bool stopEarly = false;
     bool loadWhileStreaming = false;
     bool sendAllToReceiver = false;
-    bool normalizeOnLoad = false;
+    bool doNotNormalizeOnLoad = false;
     
     // user mode config
     std::string userModeFile = EMPTY_STRING;
@@ -47,8 +47,8 @@ struct appData{
     int worldRank = 0;
     size_t numberOfDataRows = 0;
 
-   LoadInput loadInput;
-   GenerateInput generateInput;
+    LoadInput loadInput;
+    GenerateInput generateInput;
 } typedef AppData;
 
 class Orchestrator {
@@ -117,7 +117,7 @@ class Orchestrator {
         app.add_flag("--stopEarly", appData.stopEarly, "Used excusevly during streaming to stop the execution of the program early. If you use this in conjuntion with randgreedi, you will lose your approximation guarantee");
         app.add_option("-u,--userModeFile", appData.userModeFile, "Path to user mode data. Only set this if you are processing a dataset for a set of users.");
         app.add_option("--userModeTheta", appData.theta, "Only used during user mode. Sets the ratio of relevance to diveristy, where a value of 0.7 is a 70\% focuse on relevance.");
-        app.add_flag("--normalizeOnLoad", appData.normalizeOnLoad, "Normalize on load");
+        app.add_flag("--doNotNormalizeOnLoad", appData.doNotNormalizeOnLoad, "Normalize on load");
     
         CLI::App *loadInput = app.add_subcommand("loadInput", "loads the requested input from the provided path");
         CLI::App *genInput = app.add_subcommand("generateInput", "generates synthetic data");
@@ -276,15 +276,21 @@ class Orchestrator {
     }
 
     static std::unique_ptr<DataRowFactory> getDataRowFactory(const AppData& appData) {
+        return getDataRowFactory(appData.adjacencyListColumnCount, !appData.doNotNormalizeOnLoad);
+    }
+
+    static std::unique_ptr<DataRowFactory> getDataRowFactory(
+        const unsigned int columnCount,
+        bool normalizeOnLoad) {
         DataRowFactory *factory;
         
-        if (appData.adjacencyListColumnCount > 0) {
-            factory = dynamic_cast<DataRowFactory*>(new SparseDataRowFactory(appData.adjacencyListColumnCount));
+        if (columnCount > 0) {
+            factory = dynamic_cast<DataRowFactory*>(new SparseDataRowFactory(columnCount));
         } else {
             factory = dynamic_cast<DataRowFactory*>(new DenseDataRowFactory());
         }
 
-        if (appData.normalizeOnLoad) {
+        if (normalizeOnLoad) {
             factory = new NormalizedDataRowFactory(
                 std::unique_ptr<DataRowFactory>(factory)
             );
