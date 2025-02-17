@@ -31,7 +31,7 @@ struct GenUserFileAppData {
     std::string outputFile;
     std::string inputFile;
     float topUPercentage;
-    unsigned int nopN;
+    unsigned int topN;
 
     unsigned int adjacencyListColumnCount = 0;
 
@@ -44,11 +44,13 @@ static void addCmdOptions(CLI::App &app, GenUserFileAppData &appData) {
     app.add_option("-i,--input", appData.inputFile, "Path to input file.")->required();
     app.add_option("--rowNonZeros", appData.numberOfRowNonZeros, "The number of row nonzeros required for a row to be considered. All other rows are dropped")->required();
     app.add_option("--columnsNonZeros", appData.numberOfColumnNonZeros, "The number of column nonzeros required for a column to be considered. All other columns are dropped")->required();
+    app.add_option("--topUPercentage", appData.topUPercentage, "The percentage of users from the underlying dataset that should be evaluated.")->required();
+    app.add_option("--topN", appData.topN, "The number of elements to consider for CU per element in PU")->required();
 
     app.add_option("--adjacencyListColumnCount", appData.adjacencyListColumnCount, "To load an adjacnency list, set this value to the number of columns per row expected in the underlying matrix.");
 }
 
-static std::vector<size_t> getColumnsAboveThreshold(
+static std::unordered_set<size_t> getColumnsAboveThreshold(
     const BaseData& data, const size_t nonZeroThreshold
 ) {
     class PassesColumnThresholdVisitor : public DataRowVisitor {
@@ -83,17 +85,17 @@ static std::vector<size_t> getColumnsAboveThreshold(
         row.voidVisit(v);
     }
 
-    std::vector<size_t> res;
+    std::unordered_set<size_t> res;
     for (size_t i = 0; i < countPerColumn.size(); i++) {
         if (countPerColumn[i] >= nonZeroThreshold) {
-            res.push_back(i);
+            res.insert(i);
         }
     }
 
     return move(res);
 }
 
-static std::vector<size_t> getRowsAboveThreshold(
+static std::unordered_set<size_t> getRowsAboveThreshold(
     const BaseData& data, const size_t nonZeroThreshold
 ) {
     class PassesRowThresholdVisitor : public ReturningDataRowVisitor<bool> {
@@ -122,16 +124,51 @@ static std::vector<size_t> getRowsAboveThreshold(
         }
     };
 
-    std::vector<size_t> res;
+    std::unordered_set<size_t> res;
     for (size_t i = 0; i < data.totalRows(); i++) {
         PassesRowThresholdVisitor v(nonZeroThreshold);
         const DataRow& row(data.getRow(i));
         if (row.visit(v)) {
-            res.push_back(i);
+            res.insert(i);
         }
     }
 
     return res;
+}
+
+std::vector<size_t> rowsThatReferenceUser(
+    size_t user, const std::unordered_set<size_t>& rowsToEvaluate, const BaseData& data
+) {
+    class RowReferencesUser : public ReturningDataRowVisitor<bool> {
+        private:
+        bool success;
+        const size_t user;
+
+        public:
+        RowReferencesUser(const size_t user) : user(user), success(false) {}
+
+        bool get() {
+            return success;
+        }
+
+        void visitDenseDataRow(const std::vector<float>& data) {
+            success = data[user] != 0;
+        }
+
+        void visitSparseDataRow(const std::map<size_t, float>& data, size_t _totalColumns) {
+            success = data.find(user) != data.end();
+        }
+    };
+
+    std::vector<size_t> res;
+    RowReferencesUser v(user);
+    for (const size_t r : rowsToEvaluate) {
+        if (data.getRow(r).visit(v)) {
+            res.push_back(r);
+        }
+    }
+
+    return move(res);
 }
 
 int main(int argc, char** argv) {
@@ -142,6 +179,10 @@ int main(int argc, char** argv) {
     std::string userModeOutputFile;
     CLI11_PARSE(app, argc, argv);
 
+    if (appData.topUPercentage > 1.0) {
+        throw std::invalid_argument("topUPercentage cannot be greater than 1.0");
+    }
+
     std::ifstream inputFile;
     inputFile.open(appData.inputFile);
     std::unique_ptr<LineFactory> getter(
@@ -151,18 +192,169 @@ int main(int argc, char** argv) {
     );
 
     std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData.adjacencyListColumnCount, true));
-    std::unique_ptr<BaseData> data(FullyLoadedData::load(*factory, *getter));
+    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(*factory, *getter));
+    size_t totalUsersToEvaluate = std::floor((double)data->totalColumns() * (double)appData.topUPercentage);
     inputFile.close();
 
     spdlog::info("Finished loading dataset of size {0:d} ...", data->totalRows());
 
-    std::vector<size_t> rowsToEvaluate(getRowsAboveThreshold(*data, appData.numberOfRowNonZeros));
+    std::unordered_set<size_t> rowsToEvaluate(getRowsAboveThreshold(*data, appData.numberOfRowNonZeros));
 
     spdlog::info("found {0:d} rows above {1:d} non-zeros", rowsToEvaluate.size(), appData.numberOfRowNonZeros);
 
-    std::vector<size_t> columnsToEvaluate(getColumnsAboveThreshold(*data, appData.numberOfColumnNonZeros));
+    std::unordered_set<size_t> columnsToEvaluate(getColumnsAboveThreshold(*data, appData.numberOfColumnNonZeros));
 
     spdlog::info("found {0:d} columnes above {1:d} non-zeros", columnsToEvaluate.size(), appData.numberOfColumnNonZeros);
+
+    size_t allColumns = data->totalColumns();
+    std::unordered_set<size_t> removeSet;
+    for (size_t c = 0; c < allColumns; c++) {
+        if (columnsToEvaluate.find(c) == columnsToEvaluate.end()) {
+            removeSet.insert(c);
+        }
+    }
+
+    data = data->withoutColumns(removeSet);
+
+    spdlog::info("dropped {0:d} columns from the underlying dataset", removeSet.size());
+
+    // randomly sample topU % users
+
+    std::random_device rd; 
+    std::mt19937 eng(rd());
+    std::uniform_int_distribution<> uniformDistribution(0, columnsToEvaluate.size() - 1);
+
+    std::unordered_set<size_t> usersToEvaluate;
+
+    std::vector<size_t> v(columnsToEvaluate.begin(), columnsToEvaluate.end());
+
+    for (size_t i = 0; i < totalUsersToEvaluate; i++) {
+        usersToEvaluate.insert(v[uniformDistribution(eng)]);
+    }
+
+    spdlog::info("evalulating {0:d} users", usersToEvaluate.size());
+
+    // for each user 
+        // build PU from the rows that reference that user
+        // select a random list item that acts as our test row. We select this out of the total rows for that user
+    std::unordered_map<size_t, std::vector<size_t>> p;
+    std::unordered_map<size_t, size_t> p_test;
+    for (const size_t u : usersToEvaluate) {
+        p.insert({u, std::vector<size_t>()});
+        p_test.insert({u, 0});
+    }
+    for (const size_t u : usersToEvaluate) {
+        std::vector<size_t> pu(rowsThatReferenceUser(u, rowsToEvaluate, *data));
+
+        std::random_device rd; 
+        std::mt19937 eng(rd());
+        std::uniform_int_distribution<> uniformDistribution(0, pu.size() - 1);
+        const size_t i = uniformDistribution(eng);
+        const size_t pu_test = pu[i];
+
+        spdlog::info("pu for user {0:d} is of size {1:d} and has a test id of {2:d}", u, pu.size(), pu_test);
+
+        pu.erase(pu.begin() + i);
+        p[u] = move(pu);
+        p_test[u] = pu_test;
+    }
+
+    // for each user we build CU by
+        // for each row in PU
+            // look at the similarities of that row to all other rows.
+            // select topN rows with highest similarty, excluding the self comparison 
+            // CU = CU.union(set from step above)
+    std::unordered_map<size_t, std::unordered_set<size_t>> c;
+    for (const size_t u : usersToEvaluate) {
+        c.insert({u, std::unordered_set<size_t>()});
+    }
+
+    std::vector<size_t> userList(usersToEvaluate.begin(), usersToEvaluate.end());
+
+    #pragma omp parallel for
+    for (size_t k = 0; k < userList.size(); k++) {
+        std::unique_ptr<NaiveRelevanceCalculator> calc(NaiveRelevanceCalculator::from(*data));
+        std::unique_ptr<LazyKernelMatrix> matrix(LazyKernelMatrix::from(*data, *calc));
+
+        const size_t u = userList[k];
+
+        const std::vector<size_t>& pu = p[u];
+        std::unordered_set<size_t> cu;
+
+        for (const size_t i : pu) {
+            std::vector<std::pair<size_t, double>> scores;
+            for (const size_t j : rowsToEvaluate) {
+                if (i == j) {
+                    continue;
+                }
+
+                const double score = matrix->get(i, j);
+                scores.push_back({j, score});
+            }
+
+            std::sort(scores.begin(), scores.end(), [](auto &left, auto &right) {
+                return left.second < right.second;
+            });
+            std::reverse(scores.begin(), scores.end());
+            auto end = appData.topN > scores.size() ? scores.end() : scores.begin() + appData.topN;
+            for (auto s = scores.begin(); s != end; s++) {
+                cu.insert(s->first);
+            }
+        }
+
+        spdlog::info("cu for user {0:d} is of size {1:d}", u, cu.size());
+        c[u] = move(cu);
+    }
+
+    // RU also requires comparisons. See python script.
+    std::unordered_map<size_t, std::unordered_map<size_t, double>> r;
+    for (const size_t u : usersToEvaluate) {
+        r.insert({u, std::unordered_map<size_t, double>()});
+    }
+    #pragma omp parallel for
+    for (size_t k = 0; k < userList.size(); k++) {
+        std::unique_ptr<NaiveRelevanceCalculator> calc(NaiveRelevanceCalculator::from(*data));
+        std::unique_ptr<LazyKernelMatrix> matrix(LazyKernelMatrix::from(*data, *calc));
+
+        const size_t u = userList[k];
+        std::unordered_map<size_t, double> ru;
+        for (const size_t cu_i : c[u]) {
+            double score = 0.0;
+            for (const size_t pu_j : p[u]) {
+                score += matrix->get(cu_i, pu_j);
+            }
+            ru.insert({cu_i, score});
+        }
+
+        spdlog::info("ru for user {0:d} is of size {1:d}", u, ru.size());
+        r[u] = move(ru);
+    }
+
+    // Order of information per row
+    // UID TID LCU CU1 CU2 ... CU_LCU RU1 ... RU_LRU
+    // UID: User ID
+    // TID: Test item excluded from PU for that user
+    // LCU: Length of CU
+    // CU1 ... CU_LCU: Items in CU (total LCU items)
+    // RU1 ... RU_LRU: Items in RU which is also of size LCU
+
+    std::ofstream out;
+    out.open(appData.outputFile);
+    for (const size_t u : usersToEvaluate) {
+        out << u << " " << p_test.at(u) << " " << r.at(u).size() << " ";
+
+        std::vector<double> ruOrder;
+        for (const auto& cuAndRu : r.at(u)) {
+            out << cuAndRu.first << " ";
+            ruOrder.push_back(cuAndRu.second);
+        }
+        for (const double ru : ruOrder) {
+            out << ru << " ";
+        }
+        out << std::endl;
+        spdlog::info("wrote user {0:d} with t_id {1:d}, l_pu {2:d}, and l_cu {3:d}", u, p_test.at(u), p.at(u).size(), r.at(u).size());
+    }
+    out.close();
 
     return 0;
 }

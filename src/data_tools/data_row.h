@@ -30,8 +30,8 @@ class DenseDataRow : public DataRow {
     
     DenseDataRow(std::vector<float> input) : data(move(input)) {}
 
-    static std::unique_ptr<DataRow> of(std::vector<float> data) {
-        return std::unique_ptr<DataRow>(new DenseDataRow(move(data)));
+    static std::unique_ptr<DenseDataRow> of(std::vector<float> data) {
+        return std::unique_ptr<DenseDataRow>(new DenseDataRow(move(data)));
     }
 
     void push_back(float val) {
@@ -65,6 +65,10 @@ class SparseDataRow : public DataRow {
         rowToValue(move(map)),
         totalColumns(totalColumns) 
     {}
+
+    static std::unique_ptr<SparseDataRow> of(std::map<size_t, float> map, size_t totalColumns) {
+        return std::unique_ptr<SparseDataRow>(new SparseDataRow(move(map), totalColumns));
+    }
 
     size_t size() const {
         return this->totalColumns;

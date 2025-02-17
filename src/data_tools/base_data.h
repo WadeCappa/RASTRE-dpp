@@ -110,6 +110,53 @@ class FullyLoadedData : public BaseData {
         return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(data), cols));
     }
 
+    std::unique_ptr<FullyLoadedData> withoutColumns(const std::unordered_set<size_t>& columnsToRemove) {
+
+        class DropColumnsVisitor : public ReturningDataRowVisitor<std::unique_ptr<DataRow>> {
+            private:
+            const std::unordered_set<size_t>& columnsToRemove;
+            std::unique_ptr<DataRow> newRow = nullptr;
+
+            public:
+            DropColumnsVisitor(const std::unordered_set<size_t>& columnsToRemove) : columnsToRemove(columnsToRemove) {}
+
+            std::unique_ptr<DataRow> get() {
+                return move(newRow);
+            }
+
+            void visitDenseDataRow(const std::vector<float>& data) {
+                std::vector<float> newData;
+                for (size_t i = 0; i < data.size(); i++) {
+                    if (columnsToRemove.find(i) == columnsToRemove.end()) {
+                        newData.push_back(data[i]);
+                    }
+                }
+
+                newRow = DenseDataRow::of(move(newData));
+            }
+
+            void visitSparseDataRow(const std::map<size_t, float>& data, size_t totalColumns) {
+                std::map<size_t, float> newData;
+                for (const auto & d : data) {
+                    if (columnsToRemove.find(d.first) == columnsToRemove.end()) {
+                        newData.insert({d.first, d.second});
+                    }
+                }
+
+                newRow = SparseDataRow::of(move(newData), totalColumns - columnsToRemove.size());
+            }
+        };
+
+        std::vector<std::unique_ptr<DataRow>> newRows;
+        DropColumnsVisitor v(columnsToRemove);
+
+        for (const std::unique_ptr<DataRow>& d : data) {
+            newRows.push_back(d->visit(v));
+        }
+
+        return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(newRows), columns - columnsToRemove.size()));
+    }
+
     FullyLoadedData(std::vector<std::unique_ptr<DataRow>> raw, size_t cols) : data(move(raw)), columns(cols) {}
 
     const DataRow& getRow(size_t i) const {
