@@ -279,12 +279,13 @@ int main(int argc, char** argv) {
         const size_t u = userList[k];
 
         const std::vector<size_t>& pu = p[u];
+        const std::unordered_set<size_t> elements_in_pu(pu.begin(), pu.end());
         std::unordered_set<size_t> cu;
 
         for (const size_t i : pu) {
             std::vector<std::pair<size_t, double>> scores;
             for (const size_t j : rowsToEvaluate) {
-                if (i == j) {
+                if (i == j || elements_in_pu.find(j) != elements_in_pu.end()) {
                     continue;
                 }
 
@@ -296,7 +297,7 @@ int main(int argc, char** argv) {
                 return left.second < right.second;
             });
             std::reverse(scores.begin(), scores.end());
-            auto end = appData.topN > scores.size() ? scores.end() : scores.begin() + appData.topN;
+            auto end = appData.topN >= scores.size() ? scores.end() : scores.begin() + appData.topN;
             for (auto s = scores.begin(); s != end; s++) {
                 cu.insert(s->first);
             }
