@@ -54,7 +54,6 @@ int main(int argc, char** argv) {
     if (appData.loadInput.inputFile != EMPTY_STRING) {
         inputFile.close();
     } 
-    data->print_DEBUG();
 
     spdlog::info("Finished loading dataset of size {0:d} ...", data->totalRows());
 

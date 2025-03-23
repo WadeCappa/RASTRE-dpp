@@ -593,12 +593,6 @@ class SparseDataRowFactory : public DataRowFactory {
             return nullptr;
         }
 
-        for (size_t i = 0; i < this->totalColumns; i++) {
-            const float v = result.find(i) == result.end() ? 0.0 : result.at(i);
-            std::cout << v << " ";
-        }
-        std::cout << std::endl;
-
         return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
     }
 };

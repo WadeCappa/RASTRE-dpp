@@ -46,19 +46,8 @@ class FastSubsetCalculator : public SubsetCalculator {
 
         std::unique_ptr<NaiveKernelMatrix> kernelMatrix(NaiveKernelMatrix::from(data, calc));
         spdlog::debug("created fast kernel matrix");
-        spdlog::info("printing underlying matrix");
-        data.print_DEBUG();
 
-        spdlog::info("printing kernel matrix");
-        kernelMatrix->printDEBUG();
-        
         std::vector<float> diagonals = kernelMatrix->getDiagonals(); 
-        spdlog::debug("created fast kernel matrix");
-        for (const auto v : diagonals) {
-            std::cout << v << " ";
-        }
-        std::cout << std::endl;
-
         std::vector<std::vector<float>> c(data.totalRows(), std::vector<float>());
 
         auto bestScore = getNextHighestScore(diagonals, seen);
@@ -68,6 +57,7 @@ class FastSubsetCalculator : public SubsetCalculator {
         consumer->addRow(j, bestScore.second);
 
         while (consumer->size() < k) {
+            #pragma omp parallel for 
             for (size_t i = 0; i < data.totalRows(); i++) {
                 if (seen.find(i) != seen.end()) {
                     continue;
@@ -75,16 +65,9 @@ class FastSubsetCalculator : public SubsetCalculator {
                 
                 const float dot_product = KernelMatrix::getDotProduct(c[j], c[i]);
                 const float e = (kernelMatrix->get(j, i) - dot_product) / std::sqrt(diagonals[j]);
-                std::cout << e << " ";
                 c[i].push_back(e);
                 diagonals[i] -= std::pow(e, 2);
             }
-            std::cout << std::endl;
-
-            for (const auto v : diagonals) {
-                std::cout << v << " ";
-            }
-            std::cout << std::endl;
 
             bestScore = getNextHighestScore(diagonals, seen);
             SPDLOG_TRACE("next best score of {0:f} with seed {1:d}", bestScore.second, bestScore.first);
