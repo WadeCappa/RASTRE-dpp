@@ -27,6 +27,32 @@ class BaseData {
     virtual size_t getRemoteIndexForRow(const size_t localRowIndex) const = 0; 
     virtual size_t getLocalIndexFromGlobalIndex(const size_t globalIndex) const = 0;
 
+    void print_DEBUG() const {
+        class PrintVisitor : public DataRowVisitor {
+            public:
+            void visitDenseDataRow(const std::vector<float>& data) {
+                for (const auto & v : data) {
+                    std::cout << v << " ";
+                }
+                std::cout << std::endl;
+            }
+
+            void visitSparseDataRow(const std::map<size_t, float>& data, size_t totalColumns) {
+                for (size_t i = 0; i < totalColumns; i++) {
+                    const float val = data.find(i) == data.end() ? 0.0 : data.at(i);
+                    std::cout << val << " ";
+                }
+                std::cout << std::endl;
+            }
+        };
+
+        PrintVisitor v;
+        const size_t r = this->totalRows();
+        for (size_t i = 0; i < r; i++) {
+            this->getRow(i).voidVisit(v);
+        }
+    }
+
     Diagnostics DEBUG_getDiagnostics() const {
         size_t rows = this->totalRows();
         if (rows == 0) {

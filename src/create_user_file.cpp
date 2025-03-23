@@ -319,15 +319,21 @@ int main(int argc, char** argv) {
 
         const size_t u = userList[k];
         std::unordered_map<size_t, double> ru;
+        double magnitude = 0.0;
         for (const size_t cu_i : c[u]) {
             double score = 0.0;
             for (const size_t pu_j : p[u]) {
                 score += matrix->get(cu_i, pu_j);
             }
             ru.insert({cu_i, score});
+            magnitude += std::pow(score, 2);
         }
 
-        spdlog::info("ru for user {0:d} is of size {1:d}", u, ru.size());
+        magnitude = std::sqrt(magnitude);
+        spdlog::info("ru for user {0:d} is of size {1:d} and magnitude {2:f}", u, ru.size(), magnitude);
+        for (const size_t cu_i : c[u]) {
+            ru[cu_i] = ru.at(cu_i) / magnitude;
+        }
         r[u] = move(ru);
     }
 

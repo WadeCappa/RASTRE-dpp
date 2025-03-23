@@ -18,7 +18,7 @@ class NaiveRelevanceCalculator : public RelevanceCalculator {
     }
 
     float get(const size_t i, const size_t j) {
-        return (1.0 + this->data.getRow(i).dotProduct(this->data.getRow(j))) / 2.0;
+        return this->data.getRow(i).dotProduct(this->data.getRow(j));
     }
 };
 

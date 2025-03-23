@@ -13,7 +13,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         const std::vector<float> &diagonals;
         HeapComparitor(const std::vector<float> &diagonals) : diagonals(diagonals) {}
         bool operator()(size_t a, size_t b) {
-            return std::log(diagonals[a]) < std::log(diagonals[b]);
+            return diagonals[a] < diagonals[b];
         }
     };
 
@@ -96,8 +96,8 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
                 break;
             }
             
-            const float marginalGain = std::log(diagonals[i]);
-            const float nextScore = std::log(diagonals[priorityQueue.front()]);
+            const float marginalGain = diagonals[i];
+            const float nextScore = diagonals[priorityQueue.front()];
 
             if (marginalGain >= nextScore || consumer->size() == data.totalRows() - 1) {
                 if (marginalGain < this->epsilon) {
@@ -105,6 +105,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
                     break;
                 }
 
+                SPDLOG_TRACE("added next row {0:d} of score {1:f}", i, marginalGain);
                 consumer->addRow(i, marginalGain);
                 in_subset.push_back(i);
             } else {

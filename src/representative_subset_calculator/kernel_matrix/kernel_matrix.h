@@ -43,7 +43,7 @@ class KernelMatrix {
     static float getCoverage(std::vector<float> diagonals) {
         float res = 0;
         for (size_t index = 0; index < diagonals.size(); index++) {
-            res += std::log(diagonals[index]);
+            res += diagonals[index];
         }
 
         return res * 2;
@@ -116,7 +116,7 @@ class NaiveKernelMatrix : public KernelMatrix {
         #pragma omp parallel for
         for (size_t i = 0; i < data.totalRows(); i++) {
             for (size_t j = i; j < data.totalRows(); j++) {
-                float score = calc.get(i, j);
+                const float score = calc.get(i, j);
                 result[j][i] = score;
                 result[i][j] = score;
             }
@@ -133,5 +133,14 @@ class NaiveKernelMatrix : public KernelMatrix {
 
     float get(size_t j, size_t i) {
         return this->kernelMatrix[j][i];
+    }
+
+    void printDEBUG() const {
+        for (const auto & r : kernelMatrix) {
+            for (const auto & v : r) {
+                std::cout << v << " ";
+            }
+            std::cout << std::endl;
+        }
     }
 };

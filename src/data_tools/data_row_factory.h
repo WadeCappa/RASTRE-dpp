@@ -546,6 +546,7 @@ class SparseDataRowFactory : public DataRowFactory {
                     return nullptr;
                 }
             }
+            SPDLOG_TRACE("loaded line of {}", line.value());
 
             this->hasData = false;
 
@@ -559,10 +560,13 @@ class SparseDataRowFactory : public DataRowFactory {
                 switch (totalSeen) {
                     case 0:
                         currentRow = std::floor(number);
+                        break;
                     case 1:
                         to = std::floor(number);
+                        break;
                     case 2:
                         value = number;
+                        break;
                 }
 
                 if (stream.peek() == ',')
@@ -588,6 +592,12 @@ class SparseDataRowFactory : public DataRowFactory {
         if (skip) {
             return nullptr;
         }
+
+        for (size_t i = 0; i < this->totalColumns; i++) {
+            const float v = result.find(i) == result.end() ? 0.0 : result.at(i);
+            std::cout << v << " ";
+        }
+        std::cout << std::endl;
 
         return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
     }
