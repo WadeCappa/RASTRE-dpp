@@ -83,29 +83,27 @@ int main(int argc, char** argv) {
         const double mrr = UserScore::calculateMRR(*userMap[user_id], *subset);
 
         const std::vector<double> &ru = userMap[user_id]->getRu();
-        std::vector<double> scores(ru.size() * ru.size());
-        #pragma omp parallel for 
+        std::vector<std::vector<double>> scores(ru.size(), std::vector<double>(ru.size()));
+        double ilmd = std::numeric_limits<double>::max();
+        double aggregate_scores = 0.0;
+        // #pragma omp parallel for 
         for (size_t j = 0; j < ru.size(); j++) {
             for (size_t i = 0; i < ru.size(); i++) {
                 if (j == i) {
                     continue;
                 }
 
-                const float v = 1.0 - calc->get(i, j);
+                const float v = 1.0 - calc->get(i, j); 
                 SPDLOG_TRACE("i of {0:d} and j of {1:d} got score of {2:f}", i, j, v);
-                scores[j * ru.size() + i] = v;
-                if (scores[j * ru.size() + i] > 1.0) {
-                    spdlog::error("score of {0:f} > 1 for j {1:d} and i {2:d}", scores[j * ru.size() + i], j, i);
+                scores[j][i] = v;
+                ilmd = std::min(ilmd, (double)v);
+                aggregate_scores += v;
+                if (scores[j][i] > 1.0) {
+                    spdlog::error("score of {0:f} > 1 for j {1:d} and i {2:d}", scores[j][i], j, i);
                 }
             }
         }
 
-        double aggregate_scores = 0.0;
-        double ilmd = std::numeric_limits<double>::max();
-        for (const auto & s : scores) {
-            aggregate_scores += s;
-            ilmd = std::min(ilmd, s);
-        }
         // we subtract the diagonals since we don't include them in our score
         const double total_number_of_pairs = (std::pow(ru.size(), 2) - (double)ru.size());
         SPDLOG_DEBUG("Going to divide {0:f} by the total number of pairs of {1:f}", aggregate_scores, total_number_of_pairs);
