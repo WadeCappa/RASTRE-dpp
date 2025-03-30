@@ -13,7 +13,7 @@ class BufferBuilder : public Buffer {
     private:
     public:
     static unsigned int buildSendBuffer(
-        const SegmentedData &data, 
+        const BaseData &data, 
         const Subset &localSolution, 
         std::vector<float> &buffer
     ) {
@@ -23,8 +23,12 @@ class BufferBuilder : public Buffer {
         #pragma omp parallel for
         for (size_t localRowIndex = 0; localRowIndex < localSolution.size(); localRowIndex++) {
             ToBinaryVisitor v;
-            buffers[localRowIndex] = data.getRow(localSolution.getRow(localRowIndex)).visit(v);
-            buffers[localRowIndex].push_back(data.getRemoteIndexForRow(localSolution.getRow(localRowIndex)));
+            
+            // This is terrible tech debt. We should remove the concept of 'local seeds' from this repo
+            const size_t global_seed = data.getRemoteIndexForRow(localSolution.getRow(localRowIndex));
+            const size_t local_seed = data.getLocalIndexFromGlobalIndex(global_seed);
+            buffers[localRowIndex] = data.getRow(local_seed).visit(v);
+            buffers[localRowIndex].push_back(global_seed);
             buffers[localRowIndex].push_back(CommunicationConstants::endOfSendTag());
         }
 
@@ -83,6 +87,7 @@ class GlobalBufferLoader : public BufferLoader {
     const size_t columnsPerRowInBuffer;
     const std::vector<int> &displacements;
     const size_t worldSize;
+    const RelevanceCalculatorFactory &calcFactory;
 
     public:
     std::unique_ptr<Subset> getSolution(
@@ -91,13 +96,22 @@ class GlobalBufferLoader : public BufferLoader {
         const DataRowFactory &factory
     ) {
         this->timers.bufferDecodingTime.startTimer();
-        ReceivedData bestRows(move(this->rebuildData(factory)));
+        spdlog::debug("getting best rows");
+        std::unique_ptr<ReceivedData> bestRows(
+            ReceivedData::create(
+                move(this->rebuildData(factory))
+            )
+        );
         this->timers.bufferDecodingTime.stopTimer();
 
         timers.globalCalculationTime.startTimer();
 
-        std::unique_ptr<Subset> untranslatedSolution(calculator->getApproximationSet(move(NaiveMutableSubset::makeNew()), bestRows, k));
-        std::unique_ptr<Subset> globalResult(bestRows.translateSolution(move(untranslatedSolution)));
+        spdlog::debug("calculating global solution on received rows of size {0:d}", bestRows->totalRows());
+        std::unique_ptr<RelevanceCalculator> calc(calcFactory.build(*bestRows));
+        std::unique_ptr<Subset> untranslatedSolution(calculator->getApproximationSet(
+            NaiveMutableSubset::makeNew(), *calc, *bestRows, k)
+        );
+        std::unique_ptr<Subset> globalResult(bestRows->translateSolution(move(untranslatedSolution)));
 
         timers.globalCalculationTime.stopTimer();
 
@@ -105,9 +119,9 @@ class GlobalBufferLoader : public BufferLoader {
 
         spdlog::info("best local solution had score of {0:f} while the global solution had a score of {1:f}", bestLocal->getScore(), globalResult->getScore());
         if (globalResult->getScore() > bestLocal->getScore()) {
-            return globalResult; 
+            return move(globalResult); 
         } else {
-            return bestLocal;
+            return move(bestLocal);
         }
     }
 
@@ -115,19 +129,23 @@ class GlobalBufferLoader : public BufferLoader {
         const std::vector<float> &binaryInput, 
         const size_t columnsPerRowInBuffer,
         const std::vector<int> &displacements,
-        Timers &timers
+        Timers &timers,
+        const RelevanceCalculatorFactory &calcFactory
     ) : 
-    timers(timers),
-    binaryInput(binaryInput), 
-    columnsPerRowInBuffer(columnsPerRowInBuffer + FLOATS_FOR_ROW_INDEX_PER_COLUMN), 
-    displacements(displacements),
-    worldSize(displacements.size())
+        timers(timers),
+        binaryInput(binaryInput), 
+        columnsPerRowInBuffer(columnsPerRowInBuffer + FLOATS_FOR_ROW_INDEX_PER_COLUMN), 
+        displacements(displacements),
+        worldSize(displacements.size()),
+        calcFactory(calcFactory)
     {}
 
     private:
     std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> rebuildData(
         const DataRowFactory &factory
     ) {
+
+        spdlog::debug("rebuilding data for evaluation");
         std::vector<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> tempData(worldSize);
     
         // Because we're sending local marginals along with the data, the input data is no longer uniform.

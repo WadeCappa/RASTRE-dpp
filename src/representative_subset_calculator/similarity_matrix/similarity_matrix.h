@@ -58,7 +58,7 @@ class MutableSimilarityMatrix : public SimilarityMatrix {
 
         float res = 0;
         for (size_t index = 0; index < diagonal.rows(); index++) {
-            res += std::log(diagonal(index,index));
+            res += diagonal(index,index);
         }
 
         return res * 2;

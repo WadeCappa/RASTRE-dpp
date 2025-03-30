@@ -28,7 +28,6 @@ struct appData{
     size_t outputSetSize;
     unsigned int adjacencyListColumnCount = 0;
     bool binaryInput = false;
-    bool normalizeInput = false;
     float epsilon = -1;
     unsigned int algorithm;
     unsigned int distributedAlgorithm = 2;
@@ -38,13 +37,18 @@ struct appData{
     bool stopEarly = false;
     bool loadWhileStreaming = false;
     bool sendAllToReceiver = false;
+    bool doNotNormalizeOnLoad = false;
+    
+    // user mode config
+    std::string userModeFile = EMPTY_STRING;
+    double theta = 0.7; // defaults to 70% focus on relevance, 30% focus on diversity
 
     int worldSize = 1;
     int worldRank = 0;
     size_t numberOfDataRows = 0;
 
-   LoadInput loadInput;
-   GenerateInput generateInput;
+    LoadInput loadInput;
+    GenerateInput generateInput;
 } typedef AppData;
 
 class Orchestrator {
@@ -93,7 +97,7 @@ class Orchestrator {
 
     static nlohmann::json buildOutput(
         const AppData &appData, 
-        const Subset &solution,
+        const std::vector<std::unique_ptr<Subset>> &solution,
         const BaseData &data,
         const Timers &timers
     ) {
@@ -110,8 +114,10 @@ class Orchestrator {
         app.add_option("--adjacencyListColumnCount", appData.adjacencyListColumnCount, "To load an adjacnency list, set this value to the number of columns per row expected in the underlying matrix.");
         app.add_option("-n,--numberOfRows", appData.numberOfDataRows, "The number of total rows of data in your input file. This is needed to distribute work and is required for multi-machine mode");
         app.add_flag("--loadBinary", appData.binaryInput, "Use this flag if you want to load a binary input file.");
-        app.add_flag("--normalizeInput", appData.normalizeInput, "Use this flag to normalize each input vector.");
         app.add_flag("--stopEarly", appData.stopEarly, "Used excusevly during streaming to stop the execution of the program early. If you use this in conjuntion with randgreedi, you will lose your approximation guarantee");
+        app.add_option("-u,--userModeFile", appData.userModeFile, "Path to user mode data. Only set this if you are processing a dataset for a set of users.");
+        app.add_option("--userModeTheta", appData.theta, "Only used during user mode. Sets the ratio of relevance to diveristy, where a value of 0.7 is a 70\% focuse on relevance.");
+        app.add_flag("--doNotNormalizeOnLoad", appData.doNotNormalizeOnLoad, "Normalize on load");
     
         CLI::App *loadInput = app.add_subcommand("loadInput", "loads the requested input from the provided path");
         CLI::App *genInput = app.add_subcommand("generateInput", "generates synthetic data");
@@ -143,8 +149,10 @@ class Orchestrator {
 
         switch (appData.algorithm) {
             case 0:
+                spdlog::warn("The naive subset calculator is no longer supported and may not perform as expected");
                 return std::unique_ptr<SubsetCalculator>(new NaiveSubsetCalculator());
             case 1:
+                spdlog::warn("The lazy subset calculator is no longer supported and may not perform as expected");
                 return std::unique_ptr<SubsetCalculator>(new LazySubsetCalculator());
             case 2:
                 return std::unique_ptr<SubsetCalculator>(new FastSubsetCalculator(appData.epsilon));
@@ -173,7 +181,7 @@ class Orchestrator {
 
     static nlohmann::json buildOutputBase(
         const AppData &appData, 
-        const Subset &solution,
+        const std::vector<std::unique_ptr<Subset>> &solution,
         const BaseData &data,
         const Timers &timers
     ) { 
@@ -182,9 +190,19 @@ class Orchestrator {
             {"algorithm", algorithmToString(appData)},
             {"inputSettings", getInputSettings(appData)},
             {"epsilon", appData.epsilon},
-            {"Rows", solution.toJson()},
+            {"solutions", outputSubsetsForSolution(solution)},
             {"worldSize", appData.worldSize}
         };
+
+        return output;
+    }
+
+    static nlohmann::json outputSubsetsForSolution(const std::vector<std::unique_ptr<Subset>> &solution) {
+        nlohmann::json output;
+
+        for (const auto & subset : solution) {
+            output.push_back(subset->toJson());
+        }
 
         return output;
     }
@@ -224,7 +242,7 @@ class Orchestrator {
         }
     }
 
-    static std::unique_ptr<SegmentedData> buildMpiData(
+    static std::unique_ptr<BaseData> buildMpiData(
         const AppData& appData, 
         GeneratedLineFactory &getter,
         const std::vector<unsigned int> &rowToRank
@@ -233,7 +251,7 @@ class Orchestrator {
         return LoadedSegmentedData::loadInParallel(*factory, getter, rowToRank, appData.worldRank);
     }
 
-    static std::unique_ptr<SegmentedData> buildMpiData(
+    static std::unique_ptr<BaseData> buildMpiData(
         const AppData& appData, 
         LineFactory &getter,
         const std::vector<unsigned int> &rowToRank
@@ -258,12 +276,24 @@ class Orchestrator {
     }
 
     static std::unique_ptr<DataRowFactory> getDataRowFactory(const AppData& appData) {
+        return getDataRowFactory(appData.adjacencyListColumnCount, !appData.doNotNormalizeOnLoad);
+    }
+
+    static std::unique_ptr<DataRowFactory> getDataRowFactory(
+        const unsigned int columnCount,
+        bool normalizeOnLoad) {
         DataRowFactory *factory;
         
-        if (appData.adjacencyListColumnCount > 0) {
-            factory = dynamic_cast<DataRowFactory*>(new SparseDataRowFactory(appData.adjacencyListColumnCount));
+        if (columnCount > 0) {
+            factory = dynamic_cast<DataRowFactory*>(new SparseDataRowFactory(columnCount));
         } else {
             factory = dynamic_cast<DataRowFactory*>(new DenseDataRowFactory());
+        }
+
+        if (normalizeOnLoad) {
+            factory = new NormalizedDataRowFactory(
+                std::unique_ptr<DataRowFactory>(factory)
+            );
         }
 
         return std::unique_ptr<DataRowFactory>(factory);

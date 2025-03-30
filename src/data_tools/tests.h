@@ -1,11 +1,3 @@
-#include "data_row_visitor.h"
-#include "to_binary_visitor.h"
-#include "dot_product_visitor.h"
-#include "data_row.h"
-#include "data_row_factory.h"
-#include "../representative_subset_calculator/representative_subset.h"
-#include "base_data.h"
-
 #include <utility>
 #include <functional>
 #include <doctest/doctest.h>
@@ -77,7 +69,7 @@ static void verifyData(const BaseData& data) {
 }
 
 static void verifyData(
-    const SegmentedData& data,
+    const BaseData& data,
     const std::vector<unsigned int> rankMapping,
     const unsigned int rank
 ) {
@@ -144,7 +136,7 @@ TEST_CASE("Testing segmented dense data") {
     std::vector<unsigned int> rankMapping({0, 1, 2, 3, 2, 1});
     const int rank = 2;
 
-    std::unique_ptr<SegmentedData> data(LoadedSegmentedData::load(factory, getter, rankMapping, rank));
+    std::unique_ptr<BaseData> data(LoadedSegmentedData::load(factory, getter, rankMapping, rank));
     CHECK(data->totalRows() == 2);
     verifyData(*data.get(), rankMapping, rank);
 }
@@ -166,22 +158,22 @@ TEST_CASE("Testing ReceivedData translation and construction") {
         );
     }
 
-    ReceivedData data(move(mockReceiveData));
+    std::unique_ptr<ReceivedData> data(ReceivedData::create(move(mockReceiveData)));
 
-    CHECK(data.totalRows() == mockSolutionIndicies.size());
-    CHECK(data.totalColumns() == DENSE_DATA[0].size());
+    CHECK(data->totalRows() == mockSolutionIndicies.size());
+    CHECK(data->totalColumns() == DENSE_DATA[0].size());
 
-    for (size_t i = 0; i < data.totalRows(); i++) {
-        verifyData(data.getRow(i), mockSolutionIndicies[i]);
+    for (size_t i = 0; i < data->totalRows(); i++) {
+        verifyData(data->getRow(i), mockSolutionIndicies[i]);
     }
 
     std::unique_ptr<MutableSubset> mockSolution(NaiveMutableSubset::makeNew());
 
-    for (size_t i = 0; i < data.totalRows(); i++) {
+    for (size_t i = 0; i < data->totalRows(); i++) {
         mockSolution->addRow(i, 0);
     }
 
-    auto translated = data.translateSolution(MutableSubset::upcast(move(mockSolution)));
+    auto translated = data->translateSolution(MutableSubset::upcast(move(mockSolution)));
     CHECK(mockSolutionIndicies.size() == translated->size());
 
     int i = 0;

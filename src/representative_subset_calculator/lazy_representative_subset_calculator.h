@@ -19,8 +19,12 @@ class LazySubsetCalculator : public SubsetCalculator {
     public:
     LazySubsetCalculator() {}
 
+    /**
+     * TODO, use the relevance calculator. Right now this class is unfinished
+     */
     std::unique_ptr<Subset> getApproximationSet(
         std::unique_ptr<MutableSubset> consumer, 
+        RelevanceCalculator& _calc,
         const BaseData &data, 
         size_t k
     ) {

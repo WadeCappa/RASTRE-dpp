@@ -61,7 +61,7 @@ class SparseDotProductDataRowVisitor : public ReturningDataRowVisitor<float> {
                 dotProduct += dataIterator->second * baseIterator->second;
                 dataIterator++;
                 baseIterator++;
-            } else if (dataIterator->first > baseIterator->second) {
+            } else if (dataIterator->first > baseIterator->first) {
                 baseIterator++;
             } else  {
                 dataIterator++;

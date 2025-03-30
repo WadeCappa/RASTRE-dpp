@@ -13,18 +13,18 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         const std::vector<float> &diagonals;
         HeapComparitor(const std::vector<float> &diagonals) : diagonals(diagonals) {}
         bool operator()(size_t a, size_t b) {
-            return std::log(diagonals[a]) < std::log(diagonals[b]);
+            return diagonals[a] < diagonals[b];
         }
     };
 
     static std::vector<float> getSlice(
         const std::unordered_map<size_t, float> &row, 
-        const MutableSubset* subset, 
+        const std::vector<size_t>& subset, 
         size_t count
     ) {
         std::vector<float> res(count);
         for (size_t i = 0; i < count ; i++) {
-            res[i] = row.at(subset->getRow(i));
+            res[i] = row.at(subset[i]);
         }
 
         return res;
@@ -37,9 +37,9 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         }
     }
 
-    // TODO: Break when marginal gain is below epsilon
     std::unique_ptr<Subset> getApproximationSet(
         std::unique_ptr<MutableSubset> consumer, 
+        RelevanceCalculator& calc,
         const BaseData &data, 
         size_t k
     ) {
@@ -48,10 +48,14 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         std::vector<std::unordered_map<size_t, float>> v(data.totalRows());
         std::vector<size_t> u(data.totalRows(), 0);
         
-        // Initialize kernel matrix 
-        std::unique_ptr<LazyKernelMatrix> kernelMatrix(LazyKernelMatrix::from(data));
+        // Just needs to pass diag(e^(alpha * r_u)) for our per-user calc. Should be an opt 
+        // for the non-user case. For use during all kernel matrix opts
+        std::unique_ptr<LazyKernelMatrix> kernelMatrix(LazyKernelMatrix::from(data, calc));
+        spdlog::debug("created lazy fast kernel matrix");
         
+        // Account for user mode here
         std::vector<float> diagonals = kernelMatrix->getDiagonals();
+        spdlog::debug("got diagonals for lazy fast kernel");
         
         // Initialize priority queue
         std::vector<size_t> priorityQueue;
@@ -61,32 +65,49 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
 
         HeapComparitor comparitor(diagonals);
         std::make_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
-        
+
+        spdlog::debug("built priority queue");
+
+        std::vector<size_t> in_subset;
+
         while (consumer->size() < k) {
-            size_t i = priorityQueue.front();
+            const size_t i = priorityQueue.front();
             std::pop_heap(priorityQueue.begin(),priorityQueue.end(), comparitor); 
             priorityQueue.pop_back();
             
             // update row
             for (size_t t = u[i]; t < consumer->size(); t++) {
-
-                size_t j_t = consumer->getRow(t); 
-                float dotProduct = KernelMatrix::getDotProduct(this->getSlice(v[i], consumer.get(), t), this->getSlice(v[j_t], consumer.get(), t));                
-                v[i].insert({j_t, (kernelMatrix->get(i, j_t) - dotProduct) / std::sqrt(diagonals[j_t])});                
+                const size_t j_t = in_subset[t]; 
+                const float dotProduct = KernelMatrix::getDotProduct(
+                    this->getSlice(v[i], in_subset, t), 
+                    this->getSlice(v[j_t], in_subset, t)
+                );
+                // account for user mode in ->get()
+                const float sqrt = std::sqrt(diagonals[j_t]);
+                const float newScore = (kernelMatrix->get(i, j_t) - dotProduct) / sqrt;
+                v[i].insert({j_t, newScore});                
                 diagonals[i] -= std::pow(v[i][j_t], 2);
             }
             
             u[i] = consumer->size();
-            
-            // To ensure "Numerical stability" ¯\_(ツ)_/¯
-            if (diagonals[i] < this->epsilon) 
+
+            if (priorityQueue.size() == 0) {
+                spdlog::warn("Out of elements!");
                 break;
+            }
             
-            float marginalGain = std::log(diagonals[i]);
-            float nextScore = std::log(diagonals[priorityQueue.front()]);
+            const float marginalGain = diagonals[i];
+            const float nextScore = diagonals[priorityQueue.front()];
 
             if (marginalGain >= nextScore || consumer->size() == data.totalRows() - 1) {
+                if (marginalGain < this->epsilon) {
+                    spdlog::warn("breaking to ensure Numerical stability; score of {0:f} and size {1:d} was less than {2:f}", marginalGain, consumer->size(), this->epsilon);
+                    break;
+                }
+
+                SPDLOG_TRACE("added next row {0:d} of score {1:f}", i, marginalGain);
                 consumer->addRow(i, marginalGain);
+                in_subset.push_back(i);
             } else {
                 priorityQueue.push_back(i);
                 std::push_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);

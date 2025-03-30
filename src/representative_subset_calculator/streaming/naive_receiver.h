@@ -1,3 +1,4 @@
+#include <limits>
 
 class NaiveReceiver : public Receiver {
     private:
@@ -47,6 +48,9 @@ class NaiveReceiver : public Receiver {
             if (rankScore >= bestSolution) {
                 bestRank = i;
                 bestSolution = rankScore;
+            }
+            if (rankScore <= 0) {
+                spdlog::warn("Local solution from {0:d} had score of {1:f} which is <= 0", i, rankScore);
             }
         }
 

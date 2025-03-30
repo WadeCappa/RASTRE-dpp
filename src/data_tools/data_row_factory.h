@@ -4,6 +4,7 @@
 #include <memory>
 #include <map>
 #include <optional>
+#include <numeric>
 
 #include <random>
 
@@ -333,6 +334,88 @@ class DataRowFactory {
     virtual std::unique_ptr<DataRowFactory> copy() = 0;
 };
 
+class NormalizedDataRowFactory : public DataRowFactory {
+    private:
+    std::unique_ptr<DataRowFactory> delegate;
+
+    class NormalizingDataRowVisitor : public ReturningDataRowVisitor<std::unique_ptr<DataRow>> {
+        private:
+        std::unique_ptr<DataRow> result;
+
+        long double calcEuclidianNorm(const std::vector<float>& data) {
+            return std::sqrt(
+                std::inner_product(data.begin(), data.end(), data.begin(), 0.0L)
+            );
+        }
+
+        public:
+        NormalizingDataRowVisitor() : result(nullptr) {}
+
+        std::unique_ptr<DataRow> get() {
+            return move(result);
+        }
+
+        void visitDenseDataRow(const std::vector<float>& data) {
+            const long double eclidian_norm = calcEuclidianNorm(data);
+
+            std::vector<float> res;
+            for (const float d : data) {
+                res.push_back(d / eclidian_norm);
+            }
+            result = DenseDataRow::of(move(res));
+        }
+
+        void visitSparseDataRow(const std::map<size_t, float>& data, size_t totalColumns) {
+            std::vector<float> values;
+            for (const auto d : data) {
+                values.push_back(d.second);
+            }
+            const long double eclidian_norm = calcEuclidianNorm(values);
+
+            std::map<size_t, float> res;
+            for (const auto d : data) {
+                res.insert({d.first, d.second / eclidian_norm});
+            }
+            result = std::unique_ptr<SparseDataRow>(new SparseDataRow(move(res), totalColumns));
+        }
+    };
+
+    public:
+    NormalizedDataRowFactory(std::unique_ptr<DataRowFactory> delegate) 
+    : delegate(move(delegate)) {}
+
+    std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
+        std::unique_ptr<DataRow> base(delegate->maybeGet(source));
+        if (base == nullptr) {
+            return nullptr;
+        }
+
+        NormalizingDataRowVisitor visitor;
+        return base->visit(visitor);
+    }
+    
+    std::unique_ptr<DataRow> getFromNaiveBinary(std::vector<float> binary) const {
+        return delegate->getFromNaiveBinary(binary);
+    }
+
+    std::unique_ptr<DataRow> getFromBinary(std::vector<float> binary) const {
+        return delegate->getFromBinary(binary);
+    }
+
+    void skipNext(LineFactory &source) {
+        delegate->skipNext(source);
+    }
+
+    void jumpToLine(const size_t line) {
+        delegate->jumpToLine(line);
+    }
+    
+    std::unique_ptr<DataRowFactory> copy() {
+        std::unique_ptr<DataRowFactory> base(delegate->copy());
+        return std::unique_ptr<DataRowFactory>(new NormalizedDataRowFactory(move(base)));
+    }
+};
+
 class DenseDataRowFactory : public DataRowFactory {
     public:
     std::unique_ptr<DataRow> maybeGet(LineFactory &source) {
@@ -372,6 +455,9 @@ class DenseDataRowFactory : public DataRowFactory {
     }
 };
 
+/**
+ * This is a stateful class, we cannot re-use this between loads.
+ */
 class SparseDataRowFactory : public DataRowFactory {
     private:
     const static size_t EXPECTED_ELEMENTS_PER_LINE = 3;
@@ -460,6 +546,7 @@ class SparseDataRowFactory : public DataRowFactory {
                     return nullptr;
                 }
             }
+            SPDLOG_TRACE("loaded line of {}", line.value());
 
             this->hasData = false;
 
@@ -473,10 +560,13 @@ class SparseDataRowFactory : public DataRowFactory {
                 switch (totalSeen) {
                     case 0:
                         currentRow = std::floor(number);
+                        break;
                     case 1:
                         to = std::floor(number);
+                        break;
                     case 2:
                         value = number;
+                        break;
                 }
 
                 if (stream.peek() == ',')
