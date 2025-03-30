@@ -86,7 +86,6 @@ int main(int argc, char** argv) {
         std::vector<std::vector<double>> scores(ru.size(), std::vector<double>(ru.size()));
         double ilmd = std::numeric_limits<double>::max();
         double aggregate_scores = 0.0;
-        // #pragma omp parallel for 
         for (size_t j = 0; j < ru.size(); j++) {
             for (size_t i = 0; i < ru.size(); i++) {
                 if (j == i) {

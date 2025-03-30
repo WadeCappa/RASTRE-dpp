@@ -22,32 +22,44 @@
 #include "representative_subset_calculator/memoryProfiler/MemUsage.h"
 #include "user_mode/user_score.h"
 #include "user_mode/user_subset.h"
+#include <fstream>
+#include <sstream> 
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
 #include <fstream>
 
+const static std::string NO_FILE_SPECIFIED = "no-file-specified";
+
 struct GenUserFileAppData {
     std::string outputFile;
     std::string inputFile;
-    float topUPercentage;
     unsigned int topN;
 
     unsigned int adjacencyListColumnCount = 0;
 
     size_t numberOfRowNonZeros = 0;
     size_t numberOfColumnNonZeros = 0;
+
+    std::string userListFile = NO_FILE_SPECIFIED;
+    float topU;
 };
 
 static void addCmdOptions(CLI::App &app, GenUserFileAppData &appData) {
-    app.add_option("-o,--output", appData.outputFile, "Path to output file.")->required();
-    app.add_option("-i,--input", appData.inputFile, "Path to input file.")->required();
-    app.add_option("--rowNonZeros", appData.numberOfRowNonZeros, "The number of row nonzeros required for a row to be considered. All other rows are dropped")->required();
-    app.add_option("--columnsNonZeros", appData.numberOfColumnNonZeros, "The number of column nonzeros required for a column to be considered. All other columns are dropped")->required();
-    app.add_option("--topUPercentage", appData.topUPercentage, "The percentage of users from the underlying dataset that should be evaluated.")->required();
-    app.add_option("--topN", appData.topN, "The number of elements to consider for CU per element in PU")->required();
+    app.add_option("-o,--output", appData.outputFile, "Path to output file to write usermode data.")->required();
+    app.add_option("-i,--input", appData.inputFile, "Path to input dataset. This is the file that we'll be generating usermode date for.")->required();
 
     app.add_option("--adjacencyListColumnCount", appData.adjacencyListColumnCount, "To load an adjacnency list, set this value to the number of columns per row expected in the underlying matrix.");
+
+    app.add_option("--rowNonZeros", appData.numberOfRowNonZeros, "The number of row nonzeros required for a row to be considered. All other rows are dropped")->required();
+    app.add_option("--columnsNonZeros", appData.numberOfColumnNonZeros, "The number of column nonzeros required for a column to be considered. All other columns are dropped")->required();
+    app.add_option("--topN", appData.topN, "The number of elements to consider for CU per element in PU")->required();
+
+    CLI::App *usersFromFileCommand = app.add_subcommand("usersFromFile", "User this command if you have a set of users you want to generate usermode data for.");
+    CLI::App *topUsersCommand = app.add_subcommand("topUsers", "Use this command if you want to generate usermode data for the top users in the dataset.");
+
+    usersFromFileCommand->add_option("--userListFile", appData.userListFile, "This file should be an integer list delimited by ' '. Each integer is a user that we'll try to load from the specified dataset in --input.")->required();
+    topUsersCommand->add_option("--topU", appData.topU, "The ratio of users from the underlying dataset that should be evaluated. For example, set to 1.0 to evaluate all users, 0.05 to evaluate 5%.")->required();
 }
 
 static std::unordered_set<size_t> getColumnsAboveThreshold(
@@ -171,6 +183,53 @@ std::vector<size_t> rowsThatReferenceUser(
     return move(res);
 }
 
+std::unordered_set<size_t> loadUsersFromFile(
+    const GenUserFileAppData& appData, 
+    const FullyLoadedData& data, 
+    const std::unordered_set<size_t>& columnsToEvaluate) {
+
+    std::unordered_set<size_t> result;
+    std::ifstream input;
+    input.open(appData.userListFile);
+    std::string row;
+    while (std::getline(input, row)) {
+        std::istringstream iss(row);
+        std::string num;
+        while (std::getline(iss, num, ' ')) {
+            std::stringstream sstream(num);
+            size_t user;
+            sstream >> user;
+            if (columnsToEvaluate.find(user) == columnsToEvaluate.end()) {
+                spdlog::warn("User {0:d} could not be found in your dataset. Try lowering numberOfColumnNonZeros. Skipping user", user);
+                continue;
+            }
+            result.insert(user);
+        }
+    }
+    input.close();
+    return move(result);
+}
+
+std::unordered_set<size_t> selectTopUsers(
+    const GenUserFileAppData& appData, 
+    const FullyLoadedData& data, 
+    const std::vector<size_t>& columnsToEvaluate) {
+
+    // randomly sample topU % users
+    std::unordered_set<size_t> topUsers;
+
+    std::random_device rd; 
+    std::mt19937 eng(rd());
+    std::uniform_int_distribution<> uniformDistribution(0, columnsToEvaluate.size() - 1);
+
+    size_t totalUsersToEvaluate = std::floor((double)data.totalColumns() * (double)appData.topU);
+    for (size_t i = 0; i < totalUsersToEvaluate; i++) {
+        topUsers.insert(columnsToEvaluate[uniformDistribution(eng)]);
+    }
+
+    return move(topUsers);
+}
+
 int main(int argc, char** argv) {
     LoggerHelper::setupLoggers();
     CLI::App app{"Calculates the scores for a given output, set of user data, and input file"};
@@ -179,8 +238,8 @@ int main(int argc, char** argv) {
     std::string userModeOutputFile;
     CLI11_PARSE(app, argc, argv);
 
-    if (appData.topUPercentage > 1.0) {
-        throw std::invalid_argument("topUPercentage cannot be greater than 1.0");
+    if (appData.userListFile == NO_FILE_SPECIFIED && appData.topU > 1.0) {
+        throw std::invalid_argument("topU cannot be greater than 1.0");
     }
 
     std::ifstream inputFile;
@@ -193,7 +252,6 @@ int main(int argc, char** argv) {
 
     std::unique_ptr<DataRowFactory> factory(Orchestrator::getDataRowFactory(appData.adjacencyListColumnCount, true));
     std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(*factory, *getter));
-    size_t totalUsersToEvaluate = std::floor((double)data->totalColumns() * (double)appData.topUPercentage);
     inputFile.close();
 
     spdlog::info("Finished loading dataset of size {0:d} ...", data->totalRows());
@@ -218,19 +276,8 @@ int main(int argc, char** argv) {
 
     spdlog::info("dropped {0:d} columns from the underlying dataset", removeSet.size());
 
-    // randomly sample topU % users
-
-    std::random_device rd; 
-    std::mt19937 eng(rd());
-    std::uniform_int_distribution<> uniformDistribution(0, columnsToEvaluate.size() - 1);
-
-    std::unordered_set<size_t> usersToEvaluate;
-
     std::vector<size_t> v(columnsToEvaluate.begin(), columnsToEvaluate.end());
-
-    for (size_t i = 0; i < totalUsersToEvaluate; i++) {
-        usersToEvaluate.insert(v[uniformDistribution(eng)]);
-    }
+    std::unordered_set<size_t> usersToEvaluate(appData.userListFile == NO_FILE_SPECIFIED ? selectTopUsers(appData, *data, v) : loadUsersFromFile(appData, *data, columnsToEvaluate));
 
     spdlog::info("evalulating {0:d} users", usersToEvaluate.size());
 
