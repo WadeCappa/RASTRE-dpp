@@ -293,7 +293,6 @@ int main(int argc, char** argv) {
     for (const size_t u : usersToEvaluate) {
         std::vector<size_t> pu(rowsThatReferenceUser(u, rowsToEvaluate, *data));
 
-
         std::random_device rd; 
         std::mt19937 eng(rd());
         std::uniform_int_distribution<> uniformDistribution(0, pu.size() - 1);
@@ -319,10 +318,11 @@ int main(int argc, char** argv) {
 
     std::vector<size_t> userList(usersToEvaluate.begin(), usersToEvaluate.end());
 
+    std::unique_ptr<NaiveRelevanceCalculator> calc(NaiveRelevanceCalculator::from(*data));
+    std::unique_ptr<LazyKernelMatrix> matrix(ThreadSafeLazyKernelMatrix::from(*data, *calc));
+
     #pragma omp parallel for
     for (size_t k = 0; k < userList.size(); k++) {
-        std::unique_ptr<NaiveRelevanceCalculator> calc(NaiveRelevanceCalculator::from(*data));
-        std::unique_ptr<LazyKernelMatrix> matrix(LazyKernelMatrix::from(*data, *calc));
 
         const size_t u = userList[k];
 
@@ -341,13 +341,15 @@ int main(int argc, char** argv) {
                 scores.push_back({j, score});
             }
 
-            std::sort(scores.begin(), scores.end(), [](auto &left, auto &right) {
+            auto comp = [](auto &left, auto &right) {
                 return left.second < right.second;
-            });
-            std::reverse(scores.begin(), scores.end());
-            auto end = appData.topN >= scores.size() ? scores.end() : scores.begin() + appData.topN;
-            for (auto s = scores.begin(); s != end; s++) {
-                cu.insert(s->first);
+            };
+            std::make_heap(scores.begin(), scores.end(), comp);
+            const size_t elementsToPop = appData.topN >= scores.size() ? scores.size() : appData.topN;
+            for (size_t i = 0; i < elementsToPop; i++) {
+                cu.insert(scores.front().first);
+                std::pop_heap(scores.begin(), scores.end(), comp);
+                scores.pop_back();
             }
         }
 
@@ -362,9 +364,6 @@ int main(int argc, char** argv) {
     }
     #pragma omp parallel for
     for (size_t k = 0; k < userList.size(); k++) {
-        std::unique_ptr<NaiveRelevanceCalculator> calc(NaiveRelevanceCalculator::from(*data));
-        std::unique_ptr<LazyKernelMatrix> matrix(LazyKernelMatrix::from(*data, *calc));
-
         const size_t u = userList[k];
         std::unordered_map<size_t, double> ru;
         double magnitude = 0.0;
