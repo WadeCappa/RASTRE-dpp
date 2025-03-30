@@ -109,7 +109,7 @@ TEST_CASE("testing kernel matricies with user-mode classes") {
     std::unique_ptr<UserModeRelevanceCalculator> calc(
         UserModeRelevanceCalculator::from(*decorator, userData->getRu(), theta)
     );
-    std::unique_ptr<LazyKernelMatrix> lazyKernelMatrix(LazyKernelMatrix::from(*decorator, *calc));
+    std::unique_ptr<LazyKernelMatrix> lazyKernelMatrix(UnsafeLazyKernelMatrix::from(*decorator, *calc));
     std::unique_ptr<NaiveKernelMatrix> naiveKernelMatrix(NaiveKernelMatrix::from(*decorator, *calc));
 
     std::vector<std::vector<float>> diagonal_sets ({lazyKernelMatrix->getDiagonals(), naiveKernelMatrix->getDiagonals()});

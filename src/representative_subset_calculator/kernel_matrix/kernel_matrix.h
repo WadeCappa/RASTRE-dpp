@@ -51,6 +51,16 @@ class KernelMatrix {
 };
 
 class LazyKernelMatrix : public KernelMatrix {
+    public:
+    inline static size_t getRowKey(const size_t j, const size_t i) {
+        return std::max(j, i);
+    }
+    inline static size_t getColumnKey(const size_t j, const size_t i) {
+        return std::min(j, i);
+    }
+};
+
+class UnsafeLazyKernelMatrix : public LazyKernelMatrix {
     private:
     const BaseData &data;
 
@@ -61,16 +71,16 @@ class LazyKernelMatrix : public KernelMatrix {
     //  Use an explicit constructor to pass by value.
 
     // L[i][j] = r[i] * S[i][j] * r[j] <- for user mode
-    LazyKernelMatrix(const LazyKernelMatrix &);
+    UnsafeLazyKernelMatrix(const UnsafeLazyKernelMatrix &);
 
     public:
-    static std::unique_ptr<LazyKernelMatrix> from(
+    static std::unique_ptr<UnsafeLazyKernelMatrix> from(
         const BaseData &data, 
         RelevanceCalculator& calc) {
-        return std::make_unique<LazyKernelMatrix>(data, calc);
+        return std::make_unique<UnsafeLazyKernelMatrix>(data, calc);
     }
 
-    LazyKernelMatrix(const BaseData &data, RelevanceCalculator& calc) 
+    UnsafeLazyKernelMatrix(const BaseData &data, RelevanceCalculator& calc) 
     : 
         kernelMatrix(data.totalRows(), std::unordered_map<size_t, float>()),
         data(data),
@@ -81,17 +91,55 @@ class LazyKernelMatrix : public KernelMatrix {
         return this->data.totalRows();
     }
 
-    // This will also be affected during user mode. This means we should build the kernel matrix 
-    // with the user specific information
     float get(size_t j, size_t i) {
-        const size_t forward_key = std::max(j, i);
-        const size_t back_key = std::min(j, i);
-        if (this->kernelMatrix[forward_key].find(back_key) == this->kernelMatrix[forward_key].end()) {
-            float score = calc.get(forward_key, back_key);
-            this->kernelMatrix[forward_key].insert({back_key, score});
+        const size_t row_key = getRowKey(j, i);
+        const size_t column_key = getColumnKey(j, i);
+        if (this->kernelMatrix[row_key].find(column_key) == this->kernelMatrix[row_key].end()) {
+            float score = calc.get(row_key, column_key);
+            this->kernelMatrix[row_key].insert({column_key, score});
         }
 
-        return this->kernelMatrix[forward_key][back_key];
+        return this->kernelMatrix[row_key][column_key];
+    }
+};
+
+class ThreadSafeLazyKernelMatrix : public LazyKernelMatrix {
+    private:
+    std::unique_ptr<KernelMatrix> delegate;
+    std::vector<std::mutex> rowLocks;
+
+    // Disable pass by value. This object is too large for pass by value to make sense implicitly.
+    ThreadSafeLazyKernelMatrix(const ThreadSafeLazyKernelMatrix &);
+
+    public:
+    static std::unique_ptr<ThreadSafeLazyKernelMatrix> from(
+        const BaseData &data, 
+        RelevanceCalculator& calc) {
+        std::unique_ptr<UnsafeLazyKernelMatrix> delegate(UnsafeLazyKernelMatrix::from(data, calc));
+        std::vector<std::mutex> rowLocks(delegate->size());
+        return std::make_unique<ThreadSafeLazyKernelMatrix>(
+            move(delegate), move(rowLocks)
+        );
+    }
+
+    ThreadSafeLazyKernelMatrix(
+        std::unique_ptr<KernelMatrix> delegate, 
+        std::vector<std::mutex> rowLocks
+    ) : 
+        delegate(move(delegate)),
+        rowLocks(move(rowLocks))
+    {}
+
+    size_t size() {
+        return this->delegate->size();
+    }
+
+    float get(size_t j, size_t i) {
+        const size_t row_key = getRowKey(j, i);
+        this->rowLocks[row_key].lock();
+        const float result = this->delegate->get(j, i);
+        this->rowLocks[row_key].unlock();
+        return result;
     }
 };
 

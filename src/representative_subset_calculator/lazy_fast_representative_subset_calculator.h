@@ -50,7 +50,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         
         // Just needs to pass diag(e^(alpha * r_u)) for our per-user calc. Should be an opt 
         // for the non-user case. For use during all kernel matrix opts
-        std::unique_ptr<LazyKernelMatrix> kernelMatrix(LazyKernelMatrix::from(data, calc));
+        std::unique_ptr<LazyKernelMatrix> kernelMatrix(UnsafeLazyKernelMatrix::from(data, calc));
         spdlog::debug("created lazy fast kernel matrix");
         
         // Account for user mode here
