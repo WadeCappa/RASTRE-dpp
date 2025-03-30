@@ -254,7 +254,7 @@ int main(int argc, char** argv) {
     std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(*factory, *getter));
     inputFile.close();
 
-    spdlog::info("Finished loading dataset of size {0:d} ...", data->totalRows());
+    spdlog::info("Finished loading dataset of rows {0:d} and columns {1:d} ...", data->totalRows(), data->totalColumns());
 
     std::unordered_set<size_t> rowsToEvaluate(getRowsAboveThreshold(*data, appData.numberOfRowNonZeros));
 
@@ -292,6 +292,7 @@ int main(int argc, char** argv) {
     }
     for (const size_t u : usersToEvaluate) {
         std::vector<size_t> pu(rowsThatReferenceUser(u, rowsToEvaluate, *data));
+
 
         std::random_device rd; 
         std::mt19937 eng(rd());
