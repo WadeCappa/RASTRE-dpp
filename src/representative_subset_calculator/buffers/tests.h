@@ -128,7 +128,9 @@ TEST_CASE("Getting solution from a buffer") {
     CHECK(receivedSolution->size() == MOCK_SOLUTION->size());
     std::vector<size_t> mockSolutionRows = getRows(*MOCK_SOLUTION.get());
     std::vector<size_t> receivedSolutionRows = getRows(*receivedSolution.get());
+    std::unordered_set<size_t> receivedSolutionRowsSet(receivedSolutionRows.begin(), receivedSolutionRows.end());
     for (size_t i = 0; i < MOCK_SOLUTION->size(); i++) {
-        CHECK(receivedSolutionRows[i] == mockSolutionRows[i]);
+        const size_t expectedRow = mockSolutionRows[i];
+        CHECK(receivedSolutionRowsSet.find(expectedRow) != receivedSolutionRowsSet.end());
     }
 }

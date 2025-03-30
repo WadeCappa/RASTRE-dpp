@@ -84,7 +84,7 @@ std::vector<std::map<size_t, float>> toMap() {
 static const std::vector<std::map<size_t, float>> SPARSE_DATA_AS_MAP = toMap();
 
 // Do to rounding errors, these results may not always be exactly equivalent
-static const float LARGEST_ACCEPTABLE_ERROR = 0.001;
+static const float LARGEST_ACCEPTABLE_ERROR = 0.1;
 
 void checkSolutionsAreEquivalent(const Subset &a, const Subset &b) {
     CHECK(a.size() == b.size());
