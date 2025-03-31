@@ -1,28 +1,14 @@
-#include "log_macros.h"
-
-#include "user_mode/user_data.h"
-#include "representative_subset_calculator/streaming/communication_constants.h"
-#include "representative_subset_calculator/representative_subset.h"
-#include "data_tools/data_row_visitor.h"
-#include "data_tools/to_binary_visitor.h"
-#include "data_tools/dot_product_visitor.h"
-#include "data_tools/data_row.h"
-#include "data_tools/data_row_factory.h"
-#include "data_tools/base_data.h"
-#include "representative_subset_calculator/timers/timers.h"
-#include "data_tools/user_mode_data.h"
-#include "representative_subset_calculator/kernel_matrix/relevance_calculator.h"
-#include "representative_subset_calculator/kernel_matrix/relevance_calculator_factory.h"
-#include "representative_subset_calculator/kernel_matrix/kernel_matrix.h"
-#include "representative_subset_calculator/fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/orchestrator/orchestrator.h"
-#include "representative_subset_calculator/memoryProfiler/MemUsage.h"
-#include "user_mode/user_score.h"
-#include "user_mode/user_subset.h"
 
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
+#include "spdlog/spdlog.h"
+
+#include "log_macros.h"
+#include "representative_subset_calculator/orchestrator/orchestrator.h"
+#include "representative_subset_calculator/memoryProfiler/MemUsage.h"
+#include "user_mode/user_data.h"
+#include "data_tools/user_mode_data.h"
+#include "user_mode/user_subset.h"
 
 int main(int argc, char** argv) {
     LoggerHelper::setupLoggers();

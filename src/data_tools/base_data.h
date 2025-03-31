@@ -9,6 +9,7 @@
 #include "data_row.h"
 #include "data_row_visitor.h"
 #include "data_row_factory.h"
+#include "../representative_subset_calculator/representative_subset.h"
 
 #ifndef BASE_DATA_H
 #define BASE_DATA_H

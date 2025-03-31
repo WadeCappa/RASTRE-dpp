@@ -1,4 +1,9 @@
 
+#include "receiver_interface.h"
+#include "rank_buffer.h"
+#include "mpi_streaming_classes.h"
+#include "naive_receiver.h"
+
 #ifndef MPI_RECEIVER_H
 #define MPI_RECEIVER_H
 

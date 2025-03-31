@@ -1,7 +1,12 @@
+
 #include <queue>
 #include <future>
 #include <optional>
 #include <chrono>
+
+#include "../../data_tools/base_data.h"
+#include "../representative_subset.h"
+#include "../timers/timers.h"
 
 #ifndef STREAMING_SUBSET_H
 #define STREAMING_SUBSET_H

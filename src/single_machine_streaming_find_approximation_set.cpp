@@ -1,17 +1,16 @@
+
+#include "spdlog/spdlog.h"
 #include <CLI/CLI.hpp>
 #include <thread>
 #include <nlohmann/json.hpp>
-#include <mpi.h>
 
 #include "log_macros.h"
-
 #include "representative_subset_calculator/representative_subset.h"
 #include "representative_subset_calculator/orchestrator/orchestrator.h"
 #include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
 #include "user_mode/user_data.h"
 #include "representative_subset_calculator/timers/timers.h"
 #include "data_tools/data_row_factory.h"
-#include "log_macros.h"
 #include "representative_subset_calculator/memoryProfiler/MemUsage.h"
 #include "representative_subset_calculator/kernel_matrix/relevance_calculator_factory.h"
 #include "representative_subset_calculator/streaming/bucket_titrator.h"
