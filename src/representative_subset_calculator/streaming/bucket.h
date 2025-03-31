@@ -37,10 +37,10 @@ class ThresholdBucket
     ) : 
         threshold(threshold), 
         k(k), 
-        solution(move(nextSolution)),
-        solutionRows(move(solutionRows)),
-        d(move(d)),
-        b(move(b))
+        solution(std::move(nextSolution)),
+        solutionRows(std::move(solutionRows)),
+        d(std::move(d)),
+        b(std::move(b))
     {}
 
     bool isFull() const {
@@ -52,10 +52,10 @@ class ThresholdBucket
             new ThresholdBucket(
                 newThreshold, 
                 this->k, 
-                move(this->solution), 
-                move(this->solutionRows), 
-                move(this->d), 
-                move(this->b)
+                std::move(this->solution), 
+                std::move(this->solutionRows), 
+                std::move(this->d), 
+                std::move(this->b)
             )
         );
     }
@@ -69,7 +69,7 @@ class ThresholdBucket
     }
 
     std::unique_ptr<Subset> returnSolutionDestroyBucket() {
-        return MutableSubset::upcast(move(this->solution));
+        return MutableSubset::upcast(std::move(this->solution));
     }
 
     bool attemptInsert(size_t rowIndex, const DataRow &data) {
@@ -98,7 +98,7 @@ class ThresholdBucket
             this->solution->addRow(rowIndex, marginal);
             this->solutionRows->push_back(&data);
             this->d->push_back(d_i);
-            this->b->push_back(move(c_i));
+            this->b->push_back(std::move(c_i));
             return true;
         } 
 

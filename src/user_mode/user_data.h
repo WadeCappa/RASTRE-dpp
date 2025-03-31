@@ -6,6 +6,9 @@
 
 class UserData {
     public:
+
+    virtual ~UserData() {}
+
     /**
      * The id of the user under test
      */
@@ -51,7 +54,7 @@ class UserDataImplementation : public UserData {
         inputFile.open(path);
         std::vector<std::unique_ptr<UserData>> result(UserDataImplementation::load(inputFile));
         inputFile.close();
-        return move(result);
+        return std::move(result);
     }
 
     static std::vector<std::unique_ptr<UserData>> loadForMultiMachineMode(
@@ -64,7 +67,7 @@ class UserDataImplementation : public UserData {
             )
         );
         inputFile.close();
-        return move(result);
+        return std::move(result);
     }
 
     /**
@@ -92,12 +95,12 @@ class UserDataImplementation : public UserData {
 
             filtered_users.push_back(
                 UserDataImplementation::from(
-                    raw[u]->getUserId(), raw[u]->getTestId(), move(filtered_cu), move(filtered_ru)
+                    raw[u]->getUserId(), raw[u]->getTestId(), std::move(filtered_cu), std::move(filtered_ru)
                 )
             );
         }
 
-        return move(filtered_users);
+        return std::move(filtered_users);
     }
 
     /**
@@ -135,7 +138,7 @@ class UserDataImplementation : public UserData {
             if (cu.size() != ru.size()) {
                 spdlog::error("cu and ru are not the same size :: ru size of {0:d} and cu size of {1:d}", ru.size(), cu.size());
             }
-            result.push_back(UserDataImplementation::from(uid, tid, move(cu), move(ru)));
+            result.push_back(UserDataImplementation::from(uid, tid, std::move(cu), std::move(ru)));
         }
 
         return result;
@@ -157,7 +160,7 @@ class UserDataImplementation : public UserData {
         }
 
         return std::unique_ptr<UserData>(
-            new UserDataImplementation(uid, tid, move(cu), move(ru), move(cuToRuMapping))
+            new UserDataImplementation(uid, tid, std::move(cu), std::move(ru), std::move(cuToRuMapping))
         );
     }
 
@@ -191,9 +194,9 @@ class UserDataImplementation : public UserData {
     ) : 
         uid(uid), 
         tid(tid), 
-        cu(move(cu)), 
-        ru(move(ru)),
-        cuToRuMapping(move(cuToRuMapping)) {}
+        cu(std::move(cu)), 
+        ru(std::move(ru)),
+        cuToRuMapping(std::move(cuToRuMapping)) {}
 };
 
 #endif

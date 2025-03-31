@@ -20,7 +20,7 @@ TEST_CASE("testing loading user data from input stream") {
 
     std::vector<std::unique_ptr<UserData>> users (UserDataImplementation::load(data));
     CHECK(users.size() == 1);
-    std::unique_ptr<UserData> user(move(users[0]));
+    std::unique_ptr<UserData> user(std::move(users[0]));
     CHECK(user->getUserId() == u_id);
     CHECK(user->getTestId() == t_id);
     for (size_t i = 0; i < l_cu; i++) {
@@ -53,7 +53,7 @@ TEST_CASE("testing loading for multi-machine mode") {
         )
     );
     CHECK(users.size() == 1);
-    std::unique_ptr<UserData> user(move(users[0]));
+    std::unique_ptr<UserData> user(std::move(users[0]));
     CHECK(user->getUserId() == u_id);
     CHECK(user->getTestId() == t_id);
     CHECK(user->getCu().size() == 2);

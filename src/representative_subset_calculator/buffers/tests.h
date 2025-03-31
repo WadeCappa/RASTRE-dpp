@@ -23,7 +23,7 @@ static std::vector<std::unique_ptr<DataRow>> getRawDenseData() {
         res.push_back(std::unique_ptr<DataRow>(new DenseDataRow(d)));
     }
 
-    return move(res);
+    return std::move(res);
 };
 
 static std::vector<std::unique_ptr<DataRow>> getRawSparseData() {
@@ -33,7 +33,7 @@ static std::vector<std::unique_ptr<DataRow>> getRawSparseData() {
         res.push_back(std::unique_ptr<DataRow>(new SparseDataRow(d, SPARSE_DATA_TOTAL_COLUMNS)));
     }
 
-    return move(res);
+    return std::move(res);
 };
 
 static std::unique_ptr<BaseData> getData(
@@ -51,7 +51,7 @@ static std::unique_ptr<BaseData> getData(
 
     return std::unique_ptr<BaseData>(
         new LoadedSegmentedData(
-            move(base), move(localRowToGlobalRow), move(globalRowToLocal), columns
+            std::move(base), std::move(localRowToGlobalRow), std::move(globalRowToLocal), columns
         )
     );
 };
@@ -60,14 +60,14 @@ static std::unique_ptr<BaseData> getDenseData() {
     std::vector<std::unique_ptr<DataRow>> data(getRawDenseData());
     size_t rows = data.size();
     size_t columns = data[0]->size();
-    return getData(move(data), rows, columns);
+    return getData(std::move(data), rows, columns);
 }
 
 static std::unique_ptr<BaseData> getSparseData() {
     std::vector<std::unique_ptr<DataRow>> data(getRawSparseData());
     size_t rows = data.size();
     size_t columns = data[0]->size();
-    return getData(move(data), rows, columns);
+    return getData(std::move(data), rows, columns);
 }
 
 TEST_CASE("Testing the get total send dense data method") {
@@ -109,7 +109,7 @@ TEST_CASE("Getting solution from a buffer") {
     std::unique_ptr<BaseData> denseData(getDenseData());
 
     std::vector<float> sendBuffer;
-    unsigned int totalSendData = BufferBuilder::buildSendBuffer(*denseData, *MOCK_SOLUTION.get(), sendBuffer);
+    BufferBuilder::buildSendBuffer(*denseData, *MOCK_SOLUTION.get(), sendBuffer);
     
     std::vector<int> displacements;
     displacements.push_back(0);

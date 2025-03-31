@@ -92,12 +92,12 @@ std::unique_ptr<Subset> randGreedi(
         GlobalBufferLoader bufferLoader(receiveBuffer, data.totalColumns(), displacements, timers, calcFactory);
 
         spdlog::debug("getting global solution");
-        std::unique_ptr<Subset> globalSolution(bufferLoader.getSolution(move(globalCalculator), appData.outputSetSize, *factory.get()));
+        std::unique_ptr<Subset> globalSolution(bufferLoader.getSolution(std::move(globalCalculator), appData.outputSetSize, *factory.get()));
 
         timers.totalCalculationTime.stopTimer();
 
         spdlog::debug("rank 0 returning solution");
-        return move(globalSolution);
+        return std::move(globalSolution);
     } else {
         // used to load global timers on rank 0
         timers.totalCalculationTime.stopTimer();
@@ -144,7 +144,7 @@ std::unique_ptr<Subset> streaming(
 
         MPI_Barrier(MPI_COMM_WORLD);
 
-        return move(solution);
+        return std::move(solution);
     } else {
         spdlog::info("rank {0:d} entered streaming function and know the total columns of {1:d}", appData.worldRank, data.totalColumns());
         timers.totalCalculationTime.startTimer();
@@ -158,7 +158,7 @@ std::unique_ptr<Subset> streaming(
         timers.localCalculationTime.startTimer();
 
         std::unique_ptr<RelevanceCalculator> calc(calcFactory.build(data));
-        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(move(subset), *calc, data, appData.outputSetSize));
+        std::unique_ptr<Subset> localSolution(calculator->getApproximationSet(std::move(subset), *calc, data, appData.outputSetSize));
 
         spdlog::info("rank {0:d} finished streaming local seeds. Found {1:d} seeds of score {2:f}", appData.worldRank, localSolution->size(), localSolution->getScore());
 
@@ -216,7 +216,7 @@ std::vector<std::unique_ptr<Subset>> getSolutions(
          * 
          */
 
-    return move(solutions);
+    return std::move(solutions);
 }
 
 
@@ -335,7 +335,7 @@ int main(int argc, char** argv) {
             );
             spdlog::info("finished getting {0:d} solutions", new_solutions.size());
             for (size_t i = 0; i < new_solutions.size(); i++) {
-                solutions.push_back(UserOutputInformationSubset::create(move(new_solutions[i]), *user));
+                solutions.push_back(UserOutputInformationSubset::create(std::move(new_solutions[i]), *user));
             }
         }
     }

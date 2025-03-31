@@ -34,7 +34,7 @@ class KernelMatrix {
             res[index] = this->get(index, index);
         }
 
-        return move(res);
+        return std::move(res);
     }
 
     static float getDotProduct(const std::vector<float> &a, const std::vector<float> &b) {
@@ -123,7 +123,7 @@ class ThreadSafeLazyKernelMatrix : public LazyKernelMatrix {
         std::unique_ptr<UnsafeLazyKernelMatrix> delegate(UnsafeLazyKernelMatrix::from(data, calc));
         std::vector<std::mutex> rowLocks(delegate->size());
         return std::make_unique<ThreadSafeLazyKernelMatrix>(
-            move(delegate), move(rowLocks)
+            std::move(delegate), std::move(rowLocks)
         );
     }
 
@@ -131,8 +131,8 @@ class ThreadSafeLazyKernelMatrix : public LazyKernelMatrix {
         std::unique_ptr<KernelMatrix> delegate, 
         std::vector<std::mutex> rowLocks
     ) : 
-        delegate(move(delegate)),
-        rowLocks(move(rowLocks))
+        delegate(std::move(delegate)),
+        rowLocks(std::move(rowLocks))
     {}
 
     size_t size() {
@@ -175,10 +175,10 @@ class NaiveKernelMatrix : public KernelMatrix {
             }
         }
 
-        return std::unique_ptr<NaiveKernelMatrix>(new NaiveKernelMatrix(move(result)));
+        return std::unique_ptr<NaiveKernelMatrix>(new NaiveKernelMatrix(std::move(result)));
     }
 
-    NaiveKernelMatrix(std::vector<std::vector<float>> data) : kernelMatrix(move(data)) {}
+    NaiveKernelMatrix(std::vector<std::vector<float>> data) : kernelMatrix(std::move(data)) {}
 
     size_t size() {
         return this->kernelMatrix.size();

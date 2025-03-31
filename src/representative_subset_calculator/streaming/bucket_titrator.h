@@ -69,7 +69,7 @@ class LazyInitializingBucketTitrator : public BucketTitrator {
         SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue,
         const RelevanceCalculatorFactory& calcFactory
     ) {
-        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(std::move(seedQueue.emptyQueueIntoVector()));
 
         float deltaZero = 0.0;
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
@@ -77,7 +77,7 @@ class LazyInitializingBucketTitrator : public BucketTitrator {
             deltaZero = std::max(deltaZero, std::log(std::sqrt(PerRowRelevanceCalculator::getScore(seed->getData(), calcFactory, seed->getRow()))) * 2);
         }
 
-        seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
+        seedQueue.emptyVectorIntoQueue(std::move(pulledFromQueue));
         return deltaZero;
     }
 
@@ -86,7 +86,7 @@ class LazyInitializingBucketTitrator : public BucketTitrator {
         std::unique_ptr<BucketTitratorFactory> factory,
         const RelevanceCalculatorFactory& calcFactory
     ) : 
-        factory(move(factory)), calcFactory(calcFactory)
+        factory(std::move(factory)), calcFactory(calcFactory)
     {}
 
     bool processQueue(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
@@ -145,7 +145,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
         std::unique_ptr<ThresholdBucket> bucket
     ) : 
         totalBuckets(totalBuckets),
-        bucket(move(bucket)),
+        bucket(std::move(bucket)),
         epsilon(epsilon),
         T(T),
         t(0),
@@ -180,7 +180,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
                 totalBuckets, 
                 false,
                 maybeDeltaZero, 
-                move(bucket)
+                std::move(bucket)
             )
         );
     }
@@ -214,14 +214,14 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
             return false;
         }
         bool stillAcceptingSeeds = true;
-        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(std::move(seedQueue.emptyQueueIntoVector()));
 
         if (pulledFromQueue.size() == 0) {
             return true;
         }
 
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) {
-            std::unique_ptr<CandidateSeed> seed(move(pulledFromQueue[seedIndex]));
+            std::unique_ptr<CandidateSeed> seed(std::move(pulledFromQueue[seedIndex]));
             
             float newD0 = getDeltaFromSeed(*seed, calcFactory, knownD0);
         
@@ -237,7 +237,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
 
             if (this->bucket->attemptInsert(seed->getRow(), seed->getData())) { 
                 this->t = 0; 
-                this->seedStorage.push_back(move(seed));
+                this->seedStorage.push_back(std::move(seed));
             } else {
                 this->t += 1; 
                 if (this->t >= this->T && this->currentBucketIndex < this->totalBuckets) {
@@ -333,8 +333,8 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
         totalBuckets(totalBuckets),
         knownD0(knownD0),
         deltaZero(deltaZero),
-        buckets(move(buckets)),
-        seedStorage(move(seedStorage)),
+        buckets(std::move(buckets)),
+        seedStorage(std::move(seedStorage)),
         calcFactory(calcFactory)
     {}
 
@@ -367,7 +367,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                 totalBuckets,
                 deltaZeroAlreadyKnown,
                 maybeDeltaZero, 
-                move(buckets), 
+                std::move(buckets), 
                 std::vector<std::unique_ptr<CandidateSeed>>(), 
                 calcFactory
             )
@@ -403,7 +403,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
             return false;
         }
 
-        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(std::move(seedQueue.emptyQueueIntoVector()));
         if (pulledFromQueue.size() == 0) {
             // We know from the previous if statement that the titrator is not full
             return true;
@@ -411,7 +411,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
 
         float currentMaxThreshold = this->buckets[this->buckets.size() - 1]->getThreshold();
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) { 
-            std::unique_ptr<CandidateSeed> seed = move(pulledFromQueue[seedIndex]);
+            std::unique_ptr<CandidateSeed> seed = std::move(pulledFromQueue[seedIndex]);
             
             float newD0 = getDeltaFromSeed(*seed, calcFactory, knownD0);
 
@@ -448,7 +448,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
             }
 
             if (seedInserted) {
-                this->seedStorage.push_back(move(seed));
+                this->seedStorage.push_back(std::move(seed));
             } else if (this->isFull()) {
                 // If all buckets are full, exit early
                 spdlog::info("Titrator can't accept any more seeds. Exiting early");

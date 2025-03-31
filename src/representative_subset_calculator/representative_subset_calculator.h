@@ -39,7 +39,7 @@ class AddAllToSubsetCalculator : public SubsetCalculator {
             consumer->addRow(i, 0);
         }
     
-        return MutableSubset::upcast(move(consumer));
+        return MutableSubset::upcast(std::move(consumer));
     }
 };
 

@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
         spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
         for (size_t i = 0; i < userData.size(); i++) {
             spdlog::debug("user {0:d} has ru of size {1:d}", userData[i]->getUserId(), userData[i]->getRu().size());
-            userMap.insert({userData[i]->getUserId(), move(userData[i])});
+            userMap.insert({userData[i]->getUserId(), std::move(userData[i])});
         }
     }
 

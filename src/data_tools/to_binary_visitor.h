@@ -9,6 +9,8 @@ class ToBinaryVisitor : public ReturningDataRowVisitor<std::vector<float>> {
     std::vector<float> binary;
 
     public:
+    ToBinaryVisitor() : binary(std::vector<float>()) {}
+
     void visitDenseDataRow(const std::vector<float>& data) {
         binary = data;
     }
@@ -21,7 +23,7 @@ class ToBinaryVisitor : public ReturningDataRowVisitor<std::vector<float>> {
     }
 
     std::vector<float> get() {
-        return move(binary);
+        return std::move(binary);
     }
 };
 

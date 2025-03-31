@@ -30,7 +30,7 @@ class StreamingSubset : public MutableSubset {
         const unsigned int seedsToSend
     ) : 
         data(data), 
-        delegate(move(delegate)),
+        delegate(std::move(delegate)),
         timers(timers),
         seedsToSend(seedsToSend)
     {
@@ -81,7 +81,7 @@ class StreamingSubset : public MutableSubset {
         
         localSubset.push_back(CommunicationConstants::endOfSendTag());
 
-        std::unique_ptr<MpiSendRequest> send = std::unique_ptr<MpiSendRequest>(new MpiSendRequest(move(localSubset)));
+        std::unique_ptr<MpiSendRequest> send = std::unique_ptr<MpiSendRequest>(new MpiSendRequest(std::move(localSubset)));
         send->isend(CommunicationConstants::getStopTag());
         send->waitForISend();
         this->timers.communicationTime.stopTimer();
@@ -92,7 +92,7 @@ class StreamingSubset : public MutableSubset {
 
         if (this->delegate->size() <= this->seedsToSend) {
             ToBinaryVisitor visitor;
-            std::vector<float> rowToSend(move(this->data.getRow(row).visit(visitor)));
+            std::vector<float> rowToSend(std::move(this->data.getRow(row).visit(visitor)));
 
             // last value should be the global row index
             rowToSend.push_back(this->data.getRemoteIndexForRow(row));
@@ -104,11 +104,10 @@ class StreamingSubset : public MutableSubset {
                 timers.firstSeedTime.stopTimer();
             }
 
-            this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(move(rowToSend))));
+            this->sends.push_back(std::unique_ptr<MpiSendRequest>(new MpiSendRequest(std::move(rowToSend))));
 
             // Since we are now sending a summary of the local subset after finding all seeds, we
             // can just send seeds as we find them. We do not need to wait to send the first seed
-            bool sendingLastSeed = this->delegate->size() == this->seedsToSend;
             const int tag = CommunicationConstants::getContinueTag();
             this->sends.back()->isend(tag);
         }

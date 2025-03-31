@@ -34,12 +34,13 @@ class BufferBuilder : public Buffer {
 
         #pragma omp parallel for
         for (size_t localRowIndex = 0; localRowIndex < localSolution.size(); localRowIndex++) {
-            ToBinaryVisitor v;
-            
             // This is terrible tech debt. We should remove the concept of 'local seeds' from this repo
             const size_t global_seed = data.getRemoteIndexForRow(localSolution.getRow(localRowIndex));
             const size_t local_seed = data.getLocalIndexFromGlobalIndex(global_seed);
-            buffers[localRowIndex] = data.getRow(local_seed).visit(v);
+            {
+                ToBinaryVisitor v;
+                buffers[localRowIndex] = data.getRow(local_seed).visit(v);
+            }
             buffers[localRowIndex].push_back(global_seed);
             buffers[localRowIndex].push_back(CommunicationConstants::endOfSendTag());
         }
@@ -114,7 +115,7 @@ class GlobalBufferLoader : public BufferLoader {
         spdlog::debug("getting best rows");
         std::unique_ptr<ReceivedData> bestRows(
             ReceivedData::create(
-                move(this->rebuildData(factory))
+                std::move(this->rebuildData(factory))
             )
         );
         this->timers.bufferDecodingTime.stopTimer();
@@ -126,7 +127,7 @@ class GlobalBufferLoader : public BufferLoader {
         std::unique_ptr<Subset> untranslatedSolution(calculator->getApproximationSet(
             NaiveMutableSubset::makeNew(), *calc, *bestRows, k)
         );
-        std::unique_ptr<Subset> globalResult(bestRows->translateSolution(move(untranslatedSolution)));
+        std::unique_ptr<Subset> globalResult(bestRows->translateSolution(std::move(untranslatedSolution)));
 
         timers.globalCalculationTime.stopTimer();
 
@@ -134,9 +135,9 @@ class GlobalBufferLoader : public BufferLoader {
 
         spdlog::info("best local solution had score of {0:f} while the global solution had a score of {1:f}", bestLocal->getScore(), globalResult->getScore());
         if (globalResult->getScore() > bestLocal->getScore()) {
-            return move(globalResult); 
+            return std::move(globalResult); 
         } else {
-            return move(bestLocal);
+            return std::move(bestLocal);
         }
     }
 
@@ -175,7 +176,7 @@ class GlobalBufferLoader : public BufferLoader {
             while (index < rankStop && elementStop < rankStop) {
                 if (*elementStop == CommunicationConstants::endOfSendTag()) {
                     std::unique_ptr<DataRow> dataRow(factory.getFromNaiveBinary(
-                        move(std::vector<float>(index, elementStop - 1)))
+                        std::move(std::vector<float>(index, elementStop - 1)))
                     );
 
                     const size_t globalTag = *(elementStop - 1);
@@ -183,20 +184,20 @@ class GlobalBufferLoader : public BufferLoader {
                     elementStop++;
                     index = elementStop;
 
-                    rankData.push_back(std::make_pair(globalTag, move(dataRow)));
+                    rankData.push_back(std::make_pair(globalTag, std::move(dataRow)));
                 } else {
                     elementStop++;
                 }
             }
 
-            tempData[rank] = move(rankData);
+            tempData[rank] = std::move(rankData);
         }
     
 
         std::vector<std::pair<size_t, std::unique_ptr<DataRow>>> *newData = new std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>();
         for (auto & r : tempData) {
             for (auto & d : r) {
-                newData->push_back(move(d));
+                newData->push_back(std::move(d));
             }
         }
         return std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>>(newData);

@@ -44,7 +44,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         const unsigned int numberOfSenders
     ) {
         return std::unique_ptr<NaiveCandidateConsumer>(
-            new NaiveCandidateConsumer(move(titrator), numberOfSenders)
+            new NaiveCandidateConsumer(std::move(titrator), numberOfSenders)
         );
     }
 
@@ -52,7 +52,7 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         std::unique_ptr<BucketTitrator> titrator,
         const unsigned int numberOfSenders
     ) : 
-        titrator(move(titrator)),
+        titrator(std::move(titrator)),
         numberOfSenders(numberOfSenders)
     {}
 
@@ -78,14 +78,14 @@ class NaiveCandidateConsumer : public CandidateConsumer {
 
     private:
     void findFirstSeedsFromSenders(SynchronousQueue<std::unique_ptr<CandidateSeed>> &seedQueue) {
-        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(move(seedQueue.emptyQueueIntoVector()));
+        std::vector<std::unique_ptr<CandidateSeed>> pulledFromQueue(std::move(seedQueue.emptyQueueIntoVector()));
 
         for (size_t i = 0; i < pulledFromQueue.size(); i++) {
             std::unique_ptr<CandidateSeed>& seed(pulledFromQueue[i]);
             this->seenFirstElement.insert(seed->getOriginRank());
         }
 
-        seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
+        seedQueue.emptyVectorIntoQueue(std::move(pulledFromQueue));
     }
 };
 

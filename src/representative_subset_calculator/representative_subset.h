@@ -27,7 +27,7 @@ class MutableSubset : public Subset {
 
     static std::unique_ptr<Subset> upcast(std::unique_ptr<MutableSubset> mutableSubset) {
         mutableSubset->finalize();
-        return std::unique_ptr<Subset>(move(mutableSubset));
+        return std::unique_ptr<Subset>(std::move(mutableSubset));
     }
 };
 
@@ -85,7 +85,7 @@ std::unique_ptr<Subset> Subset::ofCopy(
     const std::vector<size_t> rows, 
     const float score
 ) {
-    return std::unique_ptr<Subset>(new NaiveMutableSubset(move(rows), score));
+    return std::unique_ptr<Subset>(new NaiveMutableSubset(std::move(rows), score));
 }
 
 std::unique_ptr<Subset> Subset::of(
