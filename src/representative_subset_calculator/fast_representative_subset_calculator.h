@@ -1,7 +1,15 @@
-#include <Eigen/Dense>
 #include <vector>
 #include <math.h>
 #include <unordered_set>
+
+#include "../data_tools/base_data.h"
+#include "representative_subset_calculator.h"
+#include "kernel_matrix/relevance_calculator.h"
+#include "kernel_matrix/kernel_matrix.h"
+#include "representative_subset.h"
+
+#ifndef FAST_REPRESENTATIVE_SUBSET_CALCULATOR_H
+#define FAST_REPRESENTATIVE_SUBSET_CALCULATOR_H
 
 class FastSubsetCalculator : public SubsetCalculator {
     private:
@@ -85,3 +93,5 @@ class FastSubsetCalculator : public SubsetCalculator {
         return MutableSubset::upcast(move(consumer));
     }
 };
+
+#endif

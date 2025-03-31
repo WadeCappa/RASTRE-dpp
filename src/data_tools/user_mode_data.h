@@ -1,4 +1,9 @@
 
+#include "base_data.h"
+#include "../user_mode/user_data.h"
+
+#ifndef USER_MODE_DATA_H
+#define USER_MODE_DATA_H
 
 class UserModeDataDecorator : public BaseData {
     private:
@@ -48,3 +53,5 @@ class UserModeDataDecorator : public BaseData {
         const BaseData &delegate, const UserData &userData, std::unordered_map<size_t, size_t> globalRowToLocalRow
     ) : delegate(delegate), userData(userData), globalRowToLocalRow(move(globalRowToLocalRow)) {}
 };
+
+#endif

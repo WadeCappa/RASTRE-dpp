@@ -1,4 +1,10 @@
+
 #include <unordered_map>
+
+#include "../../data_tools/base_data.h"
+
+#ifndef RELEVANCE_CALCULATOR_H
+#define RELEVANCE_CALCULATOR_H
 
 class RelevanceCalculator {
     public:
@@ -73,3 +79,5 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
         return 0.5 * (theta / (1.0 - theta));
     }
 };
+
+#endif

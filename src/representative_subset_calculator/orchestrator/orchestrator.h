@@ -1,11 +1,16 @@
 #include <CLI/CLI.hpp>
 #include <nlohmann/json.hpp>
 #include <limits.h>
-
 #include<cstdlib>
-
 #include <random>
 #include <optional>
+
+#include "../fast_representative_subset_calculator.h"
+#include "../lazy_fast_representative_subset_calculator.h"
+#include "../timers/timers.h"
+
+#ifndef ORCHESTRATOR_H
+#define ORCHESTRATOR_H
 
 const static std::string EMPTY_STRING = "\n";
 const static float DEFAULT_GENERATED_SPARSITY = -1;
@@ -149,11 +154,9 @@ class Orchestrator {
 
         switch (appData.algorithm) {
             case 0:
-                spdlog::warn("The naive subset calculator is no longer supported and may not perform as expected");
-                return std::unique_ptr<SubsetCalculator>(new NaiveSubsetCalculator());
+                throw std::invalid_argument("The naive subset calculator is no longer supported and may not perform as expected. Use algorithm 3 or 2.");
             case 1:
-                spdlog::warn("The lazy subset calculator is no longer supported and may not perform as expected");
-                return std::unique_ptr<SubsetCalculator>(new LazySubsetCalculator());
+                throw std::invalid_argument("The naive subset calculator is no longer supported and may not perform as expected. Use algorithm 3 or 2.");
             case 2:
                 return std::unique_ptr<SubsetCalculator>(new FastSubsetCalculator(appData.epsilon));
             case 3: 
@@ -299,3 +302,5 @@ class Orchestrator {
         return std::unique_ptr<DataRowFactory>(factory);
     }
 };
+
+#endif

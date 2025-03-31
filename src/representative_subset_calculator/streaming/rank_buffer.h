@@ -1,4 +1,6 @@
 
+#ifndef RANK_BUFFER_H
+#define RANK_BUFFER_H
 
 class RankBuffer {
     public:
@@ -9,3 +11,5 @@ class RankBuffer {
     virtual float getLocalSolutionScore() const = 0;
     virtual std::unique_ptr<Subset> getLocalSolutionDestroyBuffer() = 0;
 };
+
+#endif

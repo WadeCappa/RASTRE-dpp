@@ -1,4 +1,11 @@
 
+#include "../../data_tools/base_data.h"
+#include "../../user_mode/user_data.h"
+#include "relevance_calculator.h"
+
+#ifndef RELEVANCE_CALCULATOR_FACTOR_H
+#define RELEVANCE_CALCULATOR_FACTOR_H
+
 class RelevanceCalculatorFactory {
     public:
     virtual ~RelevanceCalculatorFactory() {}
@@ -88,3 +95,5 @@ class PerRowRelevanceCalculator {
         return factory.build(data)->get(0, 0);
     }
 };
+
+#endif

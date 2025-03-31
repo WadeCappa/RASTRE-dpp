@@ -1,4 +1,14 @@
+
 #include <unordered_set>
+
+#include "candidate_seed.h"
+#include "synchronous_queue.h"
+#include "../representative_subset.h"
+#include "../timers/timers.h"
+#include "bucket_titrator.h"
+
+#ifndef CANDIDATE_CONSUMER_H
+#define CANDIDATE_CONSUMER_H
 
 class CandidateConsumer {
     public:
@@ -78,3 +88,5 @@ class NaiveCandidateConsumer : public CandidateConsumer {
         seedQueue.emptyVectorIntoQueue(move(pulledFromQueue));
     }
 };
+
+#endif

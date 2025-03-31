@@ -1,4 +1,9 @@
 
+#include "data_row_visitor.h"
+
+#ifndef TO_BINARY_VISITOR_H
+#define TO_BINARY_VISITOR_H
+
 class ToBinaryVisitor : public ReturningDataRowVisitor<std::vector<float>> {
     private:
     std::vector<float> binary;
@@ -19,3 +24,5 @@ class ToBinaryVisitor : public ReturningDataRowVisitor<std::vector<float>> {
         return move(binary);
     }
 };
+
+#endif

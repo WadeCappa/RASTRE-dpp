@@ -14,8 +14,6 @@
 #include "representative_subset_calculator/kernel_matrix/relevance_calculator.h"
 #include "representative_subset_calculator/kernel_matrix/relevance_calculator_factory.h"
 #include "representative_subset_calculator/kernel_matrix/kernel_matrix.h"
-#include "representative_subset_calculator/naive_representative_subset_calculator.h"
-#include "representative_subset_calculator/lazy_representative_subset_calculator.h"
 #include "representative_subset_calculator/fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
 #include "representative_subset_calculator/orchestrator/orchestrator.h"
@@ -98,8 +96,6 @@ void checkSolutionsAreEquivalent(const Subset &a, const Subset &b) {
 
 #include "representative_subset_calculator/correctness_comparison_tests.h"
 #include "data_tools/tests.h"
-
-#include "representative_subset_calculator/similarity_matrix/tests.h"
 
 #include "representative_subset_calculator/kernel_matrix/tests.h"
 #include "representative_subset_calculator/orchestrator/tests.h"

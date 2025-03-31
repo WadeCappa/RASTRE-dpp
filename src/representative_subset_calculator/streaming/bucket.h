@@ -1,6 +1,9 @@
 #include <vector>
 #include <memory>
 
+#ifndef BUCKET_H
+#define BUCKET_H
+
 class ThresholdBucket 
 {
     private:
@@ -107,3 +110,5 @@ class ThresholdBucket
         return marginalGain >= (((this->threshold / 2) - this->solution->getScore()) / (this->k - this->solution->size()));
     }
 };
+
+#endif

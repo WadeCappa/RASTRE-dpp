@@ -1,8 +1,13 @@
-#include <Eigen/Dense>
 
 #include <vector>
 #include <memory>
 #include <unordered_map>
+
+#include "relevance_calculator.h"
+#include "../../data_tools/base_data.h"
+
+#ifndef KERNEL_MATRIX_H
+#define KERNEL_MATRIX_H
 
 class KernelMatrix {
     public:
@@ -192,3 +197,5 @@ class NaiveKernelMatrix : public KernelMatrix {
         }
     }
 };
+
+#endif

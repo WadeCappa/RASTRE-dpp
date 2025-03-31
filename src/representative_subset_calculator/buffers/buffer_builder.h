@@ -1,4 +1,16 @@
 
+#include "../../data_tools/base_data.h"
+#include "../representative_subset.h"
+#include "../../data_tools/to_binary_visitor.h"
+#include "../streaming/communication_constants.h"
+#include "../representative_subset_calculator.h"
+#include "../../data_tools/data_row_factory.h"
+#include "../kernel_matrix/relevance_calculator_factory.h"
+#include "../representative_subset.h"
+
+#ifndef BUFFER_BUILDER_H
+#define BUFFER_BUILDER_H
+
 class Buffer {
     private:
     protected:
@@ -62,7 +74,10 @@ class BufferBuilder : public Buffer {
         receiveBuffer.resize(totalData);
     }
 
-    static void buildDisplacementBuffer(const std::vector<int> &sendSizes, std::vector<int> &displacements) {
+    static void buildDisplacementBuffer(
+        const std::vector<int> &sendSizes, 
+        std::vector<int> &displacements
+    ) {
         unsigned int seenData = 0;
         for (const auto & s : sendSizes) {
             displacements.push_back(seenData);
@@ -216,3 +231,5 @@ class GlobalBufferLoader : public BufferLoader {
         return Subset::of(rows, bestRankScore);
     }
 };
+
+#endif

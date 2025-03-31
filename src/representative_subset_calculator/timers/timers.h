@@ -1,7 +1,9 @@
 #include <chrono>
 #include <vector>
-
 #include <nlohmann/json.hpp>
+
+#ifndef TIMERS_H
+#define TIMERS_H
 
 class Timers {
     public:
@@ -62,3 +64,5 @@ class Timers {
         return output;
     }
 };
+
+#endif

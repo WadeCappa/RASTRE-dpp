@@ -5,8 +5,13 @@
 #include <map>
 #include <optional>
 #include <numeric>
-
 #include <random>
+
+#include "data_row.h"
+#include "data_row_visitor.h"
+
+#ifndef DATA_ROW_FACTOR_H
+#define DATA_ROW_FACTOR_H
 
 class RandomNumberGenerator {
     public:
@@ -596,3 +601,5 @@ class SparseDataRowFactory : public DataRowFactory {
         return std::unique_ptr<DataRow>(new SparseDataRow(move(result), this->totalColumns));
     }
 };
+
+#endif

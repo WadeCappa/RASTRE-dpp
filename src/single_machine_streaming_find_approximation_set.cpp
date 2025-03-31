@@ -1,41 +1,24 @@
-#include "log_macros.h"
 
-#include "user_mode/user_data.h"
-#include "representative_subset_calculator/streaming/communication_constants.h"
+#include "spdlog/spdlog.h"
+#include <CLI/CLI.hpp>
+#include <thread>
+#include <nlohmann/json.hpp>
+
+#include "log_macros.h"
 #include "representative_subset_calculator/representative_subset.h"
-#include "data_tools/data_row_visitor.h"
-#include "data_tools/dot_product_visitor.h"
-#include "data_tools/to_binary_visitor.h"
-#include "data_tools/data_row.h"
-#include "data_tools/data_row_factory.h"
-#include "data_tools/base_data.h"
+#include "representative_subset_calculator/orchestrator/orchestrator.h"
+#include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
+#include "user_mode/user_data.h"
 #include "representative_subset_calculator/timers/timers.h"
-#include "data_tools/user_mode_data.h"
-#include "representative_subset_calculator/kernel_matrix/relevance_calculator.h"
+#include "data_tools/data_row_factory.h"
+#include "representative_subset_calculator/memoryProfiler/MemUsage.h"
 #include "representative_subset_calculator/kernel_matrix/relevance_calculator_factory.h"
-#include "representative_subset_calculator/kernel_matrix/kernel_matrix.h"
-#include "representative_subset_calculator/naive_representative_subset_calculator.h"
-#include "representative_subset_calculator/lazy_representative_subset_calculator.h"
-#include "representative_subset_calculator/fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/lazy_fast_representative_subset_calculator.h"
-#include "representative_subset_calculator/streaming/synchronous_queue.h"
-#include "representative_subset_calculator/streaming/bucket.h"
-#include "representative_subset_calculator/streaming/candidate_seed.h"
 #include "representative_subset_calculator/streaming/bucket_titrator.h"
 #include "representative_subset_calculator/streaming/candidate_consumer.h"
-#include "representative_subset_calculator/orchestrator/mpi_orchestrator.h"
-#include "representative_subset_calculator/buffers/buffer_builder.h"
-#include "representative_subset_calculator/memoryProfiler/MemUsage.h"
 #include "representative_subset_calculator/streaming/receiver_interface.h"
 #include "representative_subset_calculator/streaming/loading_receiver.h"
 #include "representative_subset_calculator/streaming/greedy_streamer.h"
-#include "user_mode/user_score.h"
 #include "user_mode/user_subset.h"
-
-#include <CLI/CLI.hpp>
-#include <nlohmann/json.hpp>
-#include <random>
-#include <algorithm>
 
 // Put this somewhere more sane
 const unsigned int DEFAULT_VALUE = -1;

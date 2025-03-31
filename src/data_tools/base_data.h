@@ -6,6 +6,14 @@
 #include <cassert>
 #include <bits/stdc++.h> 
 
+#include "data_row.h"
+#include "data_row_visitor.h"
+#include "data_row_factory.h"
+#include "../representative_subset_calculator/representative_subset.h"
+
+#ifndef BASE_DATA_H
+#define BASE_DATA_H
+
 struct diagnostics {
     float sparsity;
     size_t numberOfNonEmptyCells;
@@ -408,3 +416,5 @@ class ReceivedData : public BaseData {
         columns(this->base->at(0).second->size())
     {}
 };
+
+#endif

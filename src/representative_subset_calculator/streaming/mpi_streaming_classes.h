@@ -1,7 +1,12 @@
+
+#include <mpi.h>
 #include <queue>
 #include <future>
 #include <optional>
 #include <chrono>
+
+#ifndef MPI_SEND_REQUEST_H
+#define MPI_SEND_REQUEST_H
 
 class MpiSendRequest {
     private:
@@ -136,3 +141,5 @@ class MpiRankBuffer : public RankBuffer {
         return new CandidateSeed(globalRowIndex, this->factory.getFromBinary(move(data)), this->rank);
     }
 };
+
+#endif

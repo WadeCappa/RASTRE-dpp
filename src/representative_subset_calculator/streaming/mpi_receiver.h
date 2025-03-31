@@ -1,4 +1,12 @@
 
+#include "receiver_interface.h"
+#include "rank_buffer.h"
+#include "mpi_streaming_classes.h"
+#include "naive_receiver.h"
+
+#ifndef MPI_RECEIVER_H
+#define MPI_RECEIVER_H
+
 /**
  * This class is basically just a constructor for our NaiveReceiver class. We 
  * have seperated these classes so that our test suite doesn't need to implement MPI
@@ -37,3 +45,5 @@ class MpiReceiver : public Receiver {
         return move(res);
     }
 };
+
+#endif

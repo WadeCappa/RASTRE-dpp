@@ -1,6 +1,6 @@
 
-
-
+#ifndef COMMUNICATION_CONSTANTS_H
+#define COMMUNICATION_CONSTANTS_H
 
 class CommunicationConstants {
     public:
@@ -16,3 +16,5 @@ class CommunicationConstants {
         return -1;
     }
 };
+
+#endif

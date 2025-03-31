@@ -1,5 +1,8 @@
 #include <limits>
 
+#ifndef NAIVE_RECEIVER_H
+#define NAIVE_RECEIVER_H
+
 class NaiveReceiver : public Receiver {
     private:
     std::vector<std::unique_ptr<RankBuffer>> buffers;
@@ -57,3 +60,5 @@ class NaiveReceiver : public Receiver {
         return move(this->buffers[bestRank]->getLocalSolutionDestroyBuffer());
     }
 };
+
+#endif
