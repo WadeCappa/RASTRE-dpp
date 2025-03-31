@@ -119,7 +119,7 @@ TEST_CASE("Getting solution from a buffer") {
     GlobalBufferLoader bufferLoader(sendBuffer, denseData->totalColumns(), displacements, timers, calc);
     std::unique_ptr<Subset> receivedSolution(
         bufferLoader.getSolution(
-            std::unique_ptr<SubsetCalculator>(new LazyFastSubsetCalculator(0.001)), 
+            std::unique_ptr<SubsetCalculator>(new FastSubsetCalculator(0.0001)), 
             MOCK_SOLUTION->size(),
             DenseDataRowFactory()
         )
