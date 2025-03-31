@@ -1,5 +1,7 @@
+#include "../../data_tools/data_row.h"
 
-
+#ifndef CANDIDATE_SEED_H
+#define CANDIDATE_SEED_H
 
 class CandidateSeed {
     private:
@@ -30,3 +32,5 @@ class CandidateSeed {
         return this->originRank;
     }
 };
+
+#endif

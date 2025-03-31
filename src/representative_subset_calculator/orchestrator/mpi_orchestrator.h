@@ -1,6 +1,14 @@
-#include "orchestrator.h"
+
 #include <algorithm>
 #include <mpi.h>
+
+#include "orchestrator.h"
+#include "../streaming/bucket_titrator.h"
+#include "../../data_tools/base_data.h"
+#include "../streaming/candidate_consumer.h"
+
+#ifndef MPI_ORCHESTRATOR_H
+#define MPI_ORCHESTRATOR_H
 
 class MpiOrchestrator : public Orchestrator {
 
@@ -130,3 +138,5 @@ class MpiOrchestrator : public Orchestrator {
         return std::unique_ptr<NaiveCandidateConsumer>(new NaiveCandidateConsumer(move(titrator), appData.sendAllToReceiver ? 0 : numSenders));
     }
 };
+
+#endif

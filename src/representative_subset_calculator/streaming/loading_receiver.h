@@ -1,4 +1,15 @@
 
+#include <unordered_set>
+
+#include "../../data_tools/data_row.h"
+#include "../../data_tools/data_row_factory.h"
+#include "../../user_mode/user_data.h"
+#include "../representative_subset.h"
+#include "candidate_seed.h"
+#include "receiver_interface.h"
+
+#ifndef LOADING_RECEIVER_H
+#define LOADING_RECEIVER_H
 
 class LoadingReceiver : public Receiver {
     private:
@@ -87,3 +98,5 @@ class UserModeReceiver : public Receiver {
         return move(delegate->getBestReceivedSolution());
     }
 };
+
+#endif

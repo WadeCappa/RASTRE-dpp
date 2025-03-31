@@ -3,6 +3,9 @@
 #include <optional>
 #include <chrono>
 
+#ifndef MPI_SEND_REQUEST_H
+#define MPI_SEND_REQUEST_H
+
 class MpiSendRequest {
     private:
     const std::vector<float> rowToSend;
@@ -136,3 +139,5 @@ class MpiRankBuffer : public RankBuffer {
         return new CandidateSeed(globalRowIndex, this->factory.getFromBinary(move(data)), this->rank);
     }
 };
+
+#endif

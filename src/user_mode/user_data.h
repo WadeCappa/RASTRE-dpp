@@ -1,6 +1,9 @@
 #include <fstream>
 #include <sstream> 
 
+#ifndef USER_DATA_H
+#define USER_DATA_H
+
 class UserData {
     public:
     /**
@@ -192,3 +195,5 @@ class UserDataImplementation : public UserData {
         ru(move(ru)),
         cuToRuMapping(move(cuToRuMapping)) {}
 };
+
+#endif

@@ -1,4 +1,7 @@
 
+#ifndef LOG_MACROS_H
+#define LOG_MACROS_H
+
 #if defined(LOG_DEBUG)
     #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_DEBUG
 #endif
@@ -21,3 +24,5 @@ class LoggerHelper {
         #endif
     }
 };
+
+#endif

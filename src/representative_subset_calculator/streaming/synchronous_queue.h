@@ -1,6 +1,9 @@
 #include <mutex>
 #include <deque>
 
+#ifndef SYNCHRONOUS_QUEUE_H
+#define SYNCHRONOUS_QUEUE_H
+
 template <typename T>
 class SynchronousQueue {
     private:
@@ -56,3 +59,5 @@ class SynchronousQueue {
         return size == 0;
     }
 };
+
+#endif

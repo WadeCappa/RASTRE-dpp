@@ -1,5 +1,11 @@
+
 #include <optional>
 #include <iostream>
+
+#include "data_row_visitor.h"
+
+#ifndef DOT_PRODUCT_VISITOR_H
+#define DOT_PRODUCT_VISITOR_H
 
 class DenseDotProductDataRowVisitor : public ReturningDataRowVisitor<float> {
     private:
@@ -75,3 +81,5 @@ class SparseDotProductDataRowVisitor : public ReturningDataRowVisitor<float> {
         return this->result.value();
     }
 };
+
+#endif

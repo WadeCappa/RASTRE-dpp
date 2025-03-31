@@ -1,6 +1,9 @@
 #include <vector>
 #include <nlohmann/json.hpp>
 
+#ifndef REPRESENTATIVE_SUBSET_H
+#define REPRESENTATIVE_SUBSET_H
+
 class Subset {
     public:
     virtual ~Subset() {}
@@ -97,3 +100,5 @@ std::unique_ptr<Subset> Subset::empty() {
     std::vector<size_t> emptyRows;
     return Subset::of(emptyRows, 0);
 }
+
+#endif

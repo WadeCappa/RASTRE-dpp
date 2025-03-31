@@ -1,3 +1,7 @@
+
+#ifndef USER_SUBSET_H
+#define USER_SUBSET_H
+
 class UserOutputInformationSubset : public Subset {
     private:
     std::unique_ptr<Subset> delegate;
@@ -71,3 +75,5 @@ class UserOutputInformationSubset : public Subset {
         return delegate->end();
     }
 };
+
+#endif

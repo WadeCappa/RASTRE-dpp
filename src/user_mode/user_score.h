@@ -1,3 +1,7 @@
+
+#ifndef USER_SCORE_H
+#define USER_SCORE_H
+
 class UserScore {
     public:
     static double calculateMRR(const UserData& userData, const Subset& subset) {
@@ -15,3 +19,5 @@ class UserScore {
         return 0.0;
     }
 };
+
+#endif

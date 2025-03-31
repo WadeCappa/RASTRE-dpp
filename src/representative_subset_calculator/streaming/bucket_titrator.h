@@ -1,3 +1,13 @@
+
+#include "../kernel_matrix/relevance_calculator_factory.h"
+#include "synchronous_queue.h"
+#include "candidate_seed.h"
+#include "bucket.h"
+#include "../representative_subset.h"
+
+#ifndef BUCKET_TITRATOR_H
+#define BUCKET_TITRATOR_H
+
 class BucketTitrator {
     public:
     virtual ~BucketTitrator() {}
@@ -502,3 +512,5 @@ class SieveStreamingBucketTitratorFactory : public BucketTitratorFactory {
         return SieveStreamingBucketTitrator::createWithDynamicBuckets(numThreads, epsilon, k, calcFactory);
     }
 };
+
+#endif

@@ -1,4 +1,11 @@
+
 #include <vector>
+
+#include "representative_subset.h"
+#include "kernel_matrix/relevance_calculator.h"
+
+#ifndef REPRESENTATIVE_SUBSET_CALCULATOR_H
+#define REPRESENTATIVE_SUBSET_CALCULATOR_H
 
 class SubsetCalculator {
     public:
@@ -35,3 +42,5 @@ class AddAllToSubsetCalculator : public SubsetCalculator {
         return MutableSubset::upcast(move(consumer));
     }
 };
+
+#endif

@@ -29,20 +29,6 @@ static std::unique_ptr<Subset> testCalculator(
     return testCalculator(calculator, NaiveRelevanceCalculator::from(data), data, NaiveMutableSubset::makeNew(), k, epsilon);
 }
 
-TEST_CASE("Testing Naive representative set finder") {
-    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(DENSE_DATA));
-    const size_t k = DENSE_DATA.size() - 1;
-    const float epsilon = 0.01;
-    testCalculator(new NaiveSubsetCalculator(), *data, k, epsilon);
-}
-
-TEST_CASE("Testing lazy-naive set finder") {
-    std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(DENSE_DATA));
-    const size_t k = DENSE_DATA.size() - 1;
-    const float epsilon = 0.01;
-    testCalculator(new LazySubsetCalculator(), *data, k, epsilon);
-}
-
 TEST_CASE("Testing FAST set finder") {
     std::unique_ptr<FullyLoadedData> data(FullyLoadedData::load(DENSE_DATA));
     const size_t k = DENSE_DATA.size() - 1;

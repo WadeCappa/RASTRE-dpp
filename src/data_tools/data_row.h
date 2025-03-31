@@ -3,6 +3,12 @@
 #include <iostream>
 #include <memory>
 
+#include "data_row_visitor.h"
+#include "dot_product_visitor.h"
+
+#ifndef DATA_ROW_H
+#define DATA_ROW_H
+
 static const std::string DELIMETER = ",";
 
 class DataRow {
@@ -83,3 +89,5 @@ class SparseDataRow : public DataRow {
         visitor.visitSparseDataRow(rowToValue, this->totalColumns);
     }
 };
+
+#endif

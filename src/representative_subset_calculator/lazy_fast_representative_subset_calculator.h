@@ -1,9 +1,13 @@
-#include <Eigen/Dense>
 #include <vector>
 #include <math.h>
 #include <unordered_set>
 #include <unordered_map>
 #include <optional>
+
+#include "representative_subset_calculator.h"
+
+#ifndef LAZY_FAST_REPRESENTATIVE_SUBSET_CALCULATOR_H
+#define LAZY_FAST_REPRESENTATIVE_SUBSET_CALCULATOR_H
 
 class LazyFastSubsetCalculator : public SubsetCalculator {
     private:
@@ -116,3 +120,5 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
         return MutableSubset::upcast(move(consumer));
     }
 };
+
+#endif

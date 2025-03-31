@@ -3,6 +3,9 @@
 #include <optional>
 #include <chrono>
 
+#ifndef STREAMING_SUBSET_H
+#define STREAMING_SUBSET_H
+
 class StreamingSubset : public MutableSubset {
     private:
     const BaseData &data;
@@ -106,3 +109,5 @@ class StreamingSubset : public MutableSubset {
         }
     }
 };
+
+#endif

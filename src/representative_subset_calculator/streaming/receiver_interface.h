@@ -1,5 +1,11 @@
 #include <atomic>
 
+#include "candidate_seed.h"
+#include "../representative_subset.h"
+
+#ifndef RECEIVER_INTERFACE_H
+#define RECEIVER_INTERFACE_H
+
 class Receiver {
     public:
     virtual ~Receiver() {}
@@ -8,3 +14,5 @@ class Receiver {
     virtual std::unique_ptr<CandidateSeed> receiveNextSeed(std::atomic_bool &stillReceiving) = 0;
     virtual std::unique_ptr<Subset> getBestReceivedSolution() = 0;
 };
+
+#endif

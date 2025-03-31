@@ -1,5 +1,15 @@
+
 #include <omp.h>
 #include <atomic>
+
+#include "candidate_consumer.h"
+#include "../representative_subset.h"
+#include "candidate_seed.h"
+#include "../timers/timers.h"
+#include "receiver_interface.h"
+
+#ifndef GREEDY_STREAMER_H
+#define GREEDY_STREAMER_H
 
 class GreedyStreamer {
     public:
@@ -91,3 +101,5 @@ class SeiveGreedyStreamer : public GreedyStreamer {
         }
     }
 };
+
+#endif

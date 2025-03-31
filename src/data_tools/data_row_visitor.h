@@ -1,6 +1,9 @@
 #include <map>
 #include <vector>
 
+#ifndef DATA_ROW_VISITOR_H
+#define DATA_ROW_VISITOR_H
+
 class DataRowVisitor {
     public:
     virtual ~DataRowVisitor() {}
@@ -13,3 +16,5 @@ class ReturningDataRowVisitor : public DataRowVisitor {
     public:
     virtual T get() = 0;
 };
+
+#endif
