@@ -1,1 +1,1 @@
-clang-tidy src/* -header-filter=.*
+clang-tidy -system-headers -header-filter=.* src/*.cpp

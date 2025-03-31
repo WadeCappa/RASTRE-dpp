@@ -108,7 +108,6 @@ class StreamingSubset : public MutableSubset {
 
             // Since we are now sending a summary of the local subset after finding all seeds, we
             // can just send seeds as we find them. We do not need to wait to send the first seed
-            bool sendingLastSeed = this->delegate->size() == this->seedsToSend;
             const int tag = CommunicationConstants::getContinueTag();
             this->sends.back()->isend(tag);
         }

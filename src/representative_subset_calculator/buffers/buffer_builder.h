@@ -34,12 +34,13 @@ class BufferBuilder : public Buffer {
 
         #pragma omp parallel for
         for (size_t localRowIndex = 0; localRowIndex < localSolution.size(); localRowIndex++) {
-            ToBinaryVisitor v;
-            
             // This is terrible tech debt. We should remove the concept of 'local seeds' from this repo
             const size_t global_seed = data.getRemoteIndexForRow(localSolution.getRow(localRowIndex));
             const size_t local_seed = data.getLocalIndexFromGlobalIndex(global_seed);
-            buffers[localRowIndex] = data.getRow(local_seed).visit(v);
+            {
+                ToBinaryVisitor v;
+                buffers[localRowIndex] = data.getRow(local_seed).visit(v);
+            }
             buffers[localRowIndex].push_back(global_seed);
             buffers[localRowIndex].push_back(CommunicationConstants::endOfSendTag());
         }

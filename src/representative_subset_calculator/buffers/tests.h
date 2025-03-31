@@ -109,7 +109,7 @@ TEST_CASE("Getting solution from a buffer") {
     std::unique_ptr<BaseData> denseData(getDenseData());
 
     std::vector<float> sendBuffer;
-    unsigned int totalSendData = BufferBuilder::buildSendBuffer(*denseData, *MOCK_SOLUTION.get(), sendBuffer);
+    BufferBuilder::buildSendBuffer(*denseData, *MOCK_SOLUTION.get(), sendBuffer);
     
     std::vector<int> displacements;
     displacements.push_back(0);
