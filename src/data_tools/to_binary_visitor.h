@@ -21,7 +21,7 @@ class ToBinaryVisitor : public ReturningDataRowVisitor<std::vector<float>> {
     }
 
     std::vector<float> get() {
-        return move(binary);
+        return std::move(binary);
     }
 };
 

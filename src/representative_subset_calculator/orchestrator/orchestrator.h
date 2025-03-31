@@ -233,14 +233,14 @@ class Orchestrator {
                     appData.generateInput.genRows,
                     appData.generateInput.genCols,
                     appData.generateInput.sparsity,
-                    move(rng),
-                    move(sparsityRng)
+                    std::move(rng),
+                    std::move(sparsityRng)
             );
         } else {
             return GeneratedDenseLineFactory::create(
                 appData.generateInput.genRows,
                 appData.generateInput.genCols,
-                move(rng)
+                std::move(rng)
             );
         }
     }

@@ -97,7 +97,7 @@ std::unique_ptr<Subset> randGreedi(
         timers.totalCalculationTime.stopTimer();
 
         spdlog::debug("rank 0 returning solution");
-        return move(globalSolution);
+        return std::move(globalSolution);
     } else {
         // used to load global timers on rank 0
         timers.totalCalculationTime.stopTimer();
@@ -144,7 +144,7 @@ std::unique_ptr<Subset> streaming(
 
         MPI_Barrier(MPI_COMM_WORLD);
 
-        return move(solution);
+        return std::move(solution);
     } else {
         spdlog::info("rank {0:d} entered streaming function and know the total columns of {1:d}", appData.worldRank, data.totalColumns());
         timers.totalCalculationTime.startTimer();
@@ -216,7 +216,7 @@ std::vector<std::unique_ptr<Subset>> getSolutions(
          * 
          */
 
-    return move(solutions);
+    return std::move(solutions);
 }
 
 

@@ -23,7 +23,7 @@ static std::vector<std::unique_ptr<DataRow>> getRawDenseData() {
         res.push_back(std::unique_ptr<DataRow>(new DenseDataRow(d)));
     }
 
-    return move(res);
+    return std::move(res);
 };
 
 static std::vector<std::unique_ptr<DataRow>> getRawSparseData() {
@@ -33,7 +33,7 @@ static std::vector<std::unique_ptr<DataRow>> getRawSparseData() {
         res.push_back(std::unique_ptr<DataRow>(new SparseDataRow(d, SPARSE_DATA_TOTAL_COLUMNS)));
     }
 
-    return move(res);
+    return std::move(res);
 };
 
 static std::unique_ptr<BaseData> getData(
@@ -51,7 +51,7 @@ static std::unique_ptr<BaseData> getData(
 
     return std::unique_ptr<BaseData>(
         new LoadedSegmentedData(
-            move(base), move(localRowToGlobalRow), move(globalRowToLocal), columns
+            std::move(base), std::move(localRowToGlobalRow), std::move(globalRowToLocal), columns
         )
     );
 };

@@ -54,7 +54,7 @@ class NormalRandomNumberGenerator : public RandomNumberGenerator {
     static std::unique_ptr<RandomNumberGenerator> create(const long unsigned int seed) {
         std::default_random_engine eng(seed);
         std::normal_distribution<float> distribution;
-        return std::unique_ptr<RandomNumberGenerator>(new NormalRandomNumberGenerator(move(eng), move(distribution)));
+        return std::unique_ptr<RandomNumberGenerator>(new NormalRandomNumberGenerator(move(eng), std::move(distribution)));
     }
     
     void skipNextElements(size_t elementsToSkip) {
@@ -84,7 +84,7 @@ class UniformRandomNumberGenerator : public RandomNumberGenerator {
     static std::unique_ptr<RandomNumberGenerator> create(const long unsigned int seed) {
         std::default_random_engine eng(seed);
         std::uniform_real_distribution<float> distribution(0.0, 1.0);
-        return std::unique_ptr<RandomNumberGenerator>(new UniformRandomNumberGenerator(move(eng), move(distribution)));
+        return std::unique_ptr<RandomNumberGenerator>(new UniformRandomNumberGenerator(move(eng), std::move(distribution)));
     }
     
     void skipNextElements(size_t elementsToSkip) {
@@ -126,7 +126,7 @@ class FromFileLineFactory : public LineFactory {
             return std::nullopt;
         }
 
-        return move(data);
+        return std::move(data);
     }
 };
 
@@ -163,7 +163,7 @@ class GeneratedDenseLineFactory : public GeneratedLineFactory {
         const size_t numColumns,
         std::unique_ptr<RandomNumberGenerator> rng,
         size_t startingRow) {
-        return std::unique_ptr<GeneratedDenseLineFactory>(new GeneratedDenseLineFactory(numRows, numColumns, move(rng), startingRow));
+        return std::unique_ptr<GeneratedDenseLineFactory>(new GeneratedDenseLineFactory(numRows, numColumns, std::move(rng), startingRow));
     }
 
     public:
@@ -171,7 +171,7 @@ class GeneratedDenseLineFactory : public GeneratedLineFactory {
         const size_t numRows,
         const size_t numColumns,
         std::unique_ptr<RandomNumberGenerator> rng) {
-        return create(numRows, numColumns, move(rng), 0);
+        return create(numRows, numColumns, std::move(rng), 0);
     }
     
     void skipNext() {
@@ -246,7 +246,7 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
         const size_t currentRow,
         const size_t currentColumn) {
         return std::unique_ptr<GeneratedSparseLineFactory>(new GeneratedSparseLineFactory(
-            numRows, numColumns, sparsity, move(edgeValueRng), move(includeEdgeRng), currentRow, currentColumn
+            numRows, numColumns, sparsity, std::move(edgeValueRng), std::move(includeEdgeRng), currentRow, currentColumn
         ));
     }
 
@@ -257,7 +257,7 @@ class GeneratedSparseLineFactory : public GeneratedLineFactory {
         const float sparsity,
         std::unique_ptr<RandomNumberGenerator> edgeValueRng,
         std::unique_ptr<RandomNumberGenerator> includeEdgeRng) {
-        return create(numRows, numColumns, sparsity, move(edgeValueRng), move(includeEdgeRng), 0, 0);
+        return create(numRows, numColumns, sparsity, std::move(edgeValueRng), std::move(includeEdgeRng), 0, 0);
     }
 
     void skipNext() {
@@ -357,7 +357,7 @@ class NormalizedDataRowFactory : public DataRowFactory {
         NormalizingDataRowVisitor() : result(nullptr) {}
 
         std::unique_ptr<DataRow> get() {
-            return move(result);
+            return std::move(result);
         }
 
         void visitDenseDataRow(const std::vector<float>& data) {

@@ -22,7 +22,7 @@ class UserModeDataDecorator : public BaseData {
         }
 
         return std::unique_ptr<UserModeDataDecorator>(
-            new UserModeDataDecorator(delegate, userData, move(globalRowToLocalRow))
+            new UserModeDataDecorator(delegate, userData, std::move(globalRowToLocalRow))
         );
     }
 

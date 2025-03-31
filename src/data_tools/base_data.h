@@ -155,7 +155,7 @@ class FullyLoadedData : public BaseData {
             DropColumnsVisitor(const std::unordered_set<size_t>& columnsToRemove) : columnsToRemove(columnsToRemove) {}
 
             std::unique_ptr<DataRow> get() {
-                return move(newRow);
+                return std::move(newRow);
             }
 
             void visitDenseDataRow(const std::vector<float>& data) {
@@ -268,12 +268,12 @@ class LoadedSegmentedData : public BaseData {
                 throw std::invalid_argument("Retrieved nullptr which is unexpected in a parellel load. The number of rows you have provided was incorrect.");
             }
 
-            data[i] = move(nextRow);
+            data[i] = std::move(nextRow);
         }
 
         const size_t columns = localRowToGlobalRow.size() > 0 ? data.back()->size() : 0;
         return std::unique_ptr<BaseData>(
-            new LoadedSegmentedData(move(data), move(localRowToGlobalRow), move(globalRowToLocalRow), columns)
+            new LoadedSegmentedData(move(data), std::move(localRowToGlobalRow), std::move(globalRowToLocalRow), columns)
         );
     }
 
@@ -313,7 +313,7 @@ class LoadedSegmentedData : public BaseData {
         }
 
         return std::unique_ptr<BaseData>(
-            new LoadedSegmentedData(move(data), move(localRowToGlobalRow), move(globalRowToLocalRow), columns)
+            new LoadedSegmentedData(move(data), std::move(localRowToGlobalRow), std::move(globalRowToLocalRow), columns)
         );
     }
 
@@ -370,7 +370,7 @@ class ReceivedData : public BaseData {
         }
 
         return std::unique_ptr<ReceivedData>(
-            new ReceivedData(move(input), move(globalRowToLocalRow))
+            new ReceivedData(move(input), std::move(globalRowToLocalRow))
         );
     }
 

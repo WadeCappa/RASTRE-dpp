@@ -180,7 +180,7 @@ class ThreeSieveBucketTitrator : public BucketTitrator {
                 totalBuckets, 
                 false,
                 maybeDeltaZero, 
-                move(bucket)
+                std::move(bucket)
             )
         );
     }
@@ -367,7 +367,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
                 totalBuckets,
                 deltaZeroAlreadyKnown,
                 maybeDeltaZero, 
-                move(buckets), 
+                std::move(buckets), 
                 std::vector<std::unique_ptr<CandidateSeed>>(), 
                 calcFactory
             )
@@ -411,7 +411,7 @@ class SieveStreamingBucketTitrator : public BucketTitrator {
 
         float currentMaxThreshold = this->buckets[this->buckets.size() - 1]->getThreshold();
         for (size_t seedIndex = 0; seedIndex < pulledFromQueue.size(); seedIndex++) { 
-            std::unique_ptr<CandidateSeed> seed = move(pulledFromQueue[seedIndex]);
+            std::unique_ptr<CandidateSeed> seed = std::move(pulledFromQueue[seedIndex]);
             
             float newD0 = getDeltaFromSeed(*seed, calcFactory, knownD0);
 

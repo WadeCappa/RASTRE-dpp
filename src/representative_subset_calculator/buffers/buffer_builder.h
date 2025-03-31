@@ -114,7 +114,7 @@ class GlobalBufferLoader : public BufferLoader {
         spdlog::debug("getting best rows");
         std::unique_ptr<ReceivedData> bestRows(
             ReceivedData::create(
-                move(this->rebuildData(factory))
+                std::move(this->rebuildData(factory))
             )
         );
         this->timers.bufferDecodingTime.stopTimer();
@@ -134,9 +134,9 @@ class GlobalBufferLoader : public BufferLoader {
 
         spdlog::info("best local solution had score of {0:f} while the global solution had a score of {1:f}", bestLocal->getScore(), globalResult->getScore());
         if (globalResult->getScore() > bestLocal->getScore()) {
-            return move(globalResult); 
+            return std::move(globalResult); 
         } else {
-            return move(bestLocal);
+            return std::move(bestLocal);
         }
     }
 
@@ -175,7 +175,7 @@ class GlobalBufferLoader : public BufferLoader {
             while (index < rankStop && elementStop < rankStop) {
                 if (*elementStop == CommunicationConstants::endOfSendTag()) {
                     std::unique_ptr<DataRow> dataRow(factory.getFromNaiveBinary(
-                        move(std::vector<float>(index, elementStop - 1)))
+                        std::move(std::vector<float>(index, elementStop - 1)))
                     );
 
                     const size_t globalTag = *(elementStop - 1);
@@ -183,13 +183,13 @@ class GlobalBufferLoader : public BufferLoader {
                     elementStop++;
                     index = elementStop;
 
-                    rankData.push_back(std::make_pair(globalTag, move(dataRow)));
+                    rankData.push_back(std::make_pair(globalTag, std::move(dataRow)));
                 } else {
                     elementStop++;
                 }
             }
 
-            tempData[rank] = move(rankData);
+            tempData[rank] = std::move(rankData);
         }
     
 

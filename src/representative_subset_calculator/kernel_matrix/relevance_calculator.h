@@ -49,7 +49,7 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
         return std::unique_ptr<UserModeRelevanceCalculator>(
             new UserModeRelevanceCalculator(
                 NaiveRelevanceCalculator::from(data), 
-                move(userData), 
+                std::move(userData), 
                 alpha
             )
         );

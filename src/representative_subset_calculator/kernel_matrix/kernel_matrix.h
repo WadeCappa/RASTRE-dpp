@@ -34,7 +34,7 @@ class KernelMatrix {
             res[index] = this->get(index, index);
         }
 
-        return move(res);
+        return std::move(res);
     }
 
     static float getDotProduct(const std::vector<float> &a, const std::vector<float> &b) {
@@ -123,7 +123,7 @@ class ThreadSafeLazyKernelMatrix : public LazyKernelMatrix {
         std::unique_ptr<UnsafeLazyKernelMatrix> delegate(UnsafeLazyKernelMatrix::from(data, calc));
         std::vector<std::mutex> rowLocks(delegate->size());
         return std::make_unique<ThreadSafeLazyKernelMatrix>(
-            move(delegate), move(rowLocks)
+            std::move(delegate), std::move(rowLocks)
         );
     }
 

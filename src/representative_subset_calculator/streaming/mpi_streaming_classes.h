@@ -91,7 +91,7 @@ class MpiRankBuffer : public RankBuffer {
     }
 
     std::unique_ptr<Subset> getLocalSolutionDestroyBuffer() {
-        return move(MutableSubset::upcast(move(this->rankSolution)));
+        return std::move(MutableSubset::upcast(move(this->rankSolution)));
     }
 
     private:

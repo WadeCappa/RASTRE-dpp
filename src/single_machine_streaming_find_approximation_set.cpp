@@ -55,11 +55,11 @@ std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
     );
     std::unique_ptr<NaiveCandidateConsumer> consumer(new NaiveCandidateConsumer(move(titrator), 1));
 
-    std::unique_ptr<Receiver> receiver(new LoadingReceiver(move(factory), move(getter)));
+    std::unique_ptr<Receiver> receiver(new LoadingReceiver(move(factory), std::move(getter)));
 
     if (user.has_value()) {
         std::unique_ptr<Receiver> usermode_receiver(UserModeReceiver::create(move(receiver), *user.value()));
-        receiver = move(usermode_receiver);
+        receiver = std::move(usermode_receiver);
     }
 
     SeiveGreedyStreamer streamer(*receiver, *consumer.get(), timers, !appData.stopEarly);
@@ -121,7 +121,7 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
             continue;
         }
 
-        auto element = std::unique_ptr<CandidateSeed>(new CandidateSeed(globalRow, move(nextRow), 1));
+        auto element = std::unique_ptr<CandidateSeed>(new CandidateSeed(globalRow, std::move(nextRow), 1));
         elements.push_back(move(element));
 
         globalRow++;
@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
     size_t dummyColumns = 0;  // A placeholder for columns, set to 0 or any valid number.
 
     LoadedSegmentedData dummySegmentedData(
-        std::move(dummyData), std::move(dummyRowMapping), move(emptyMapping), dummyColumns
+        std::move(dummyData), std::move(dummyRowMapping), std::move(emptyMapping), dummyColumns
     );
 
     nlohmann::json result = Orchestrator::buildOutput(

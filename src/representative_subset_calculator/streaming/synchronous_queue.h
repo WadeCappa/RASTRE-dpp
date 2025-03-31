@@ -15,11 +15,11 @@ class SynchronousQueue {
 
     T pop() {
         this->lock.lock();
-        T res = move(this->base.front());
+        T res = std::move(this->base.front());
         this->base.pop_front();
         this->lock.unlock();
 
-        return move(res);
+        return std::move(res);
     }
 
     void push(T val) {
@@ -41,7 +41,7 @@ class SynchronousQueue {
         }
         this->lock.unlock();
 
-        return move(res);
+        return std::move(res);
     }
 
     void emptyVectorIntoQueue(std::vector<T> vals) {

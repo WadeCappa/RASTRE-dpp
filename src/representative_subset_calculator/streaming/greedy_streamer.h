@@ -48,7 +48,7 @@ class SeiveGreedyStreamer : public GreedyStreamer {
         spdlog::info("streaming solution has score of {0:f} and size of {1:d}", streamingSolution->getScore(), streamingSolution->size());
         spdlog::info("best local solution has score of {0:f} and size of {1:d}", bestLocalSolution->getScore(), bestLocalSolution->size());
 
-        return bestLocalSolution->getScore() > streamingSolution->getScore() ? move(bestLocalSolution) : move(streamingSolution);
+        return bestLocalSolution->getScore() > streamingSolution->getScore() ? std::move(bestLocalSolution) : std::move(streamingSolution);
     }
 
     private:

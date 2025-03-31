@@ -42,7 +42,7 @@ class MpiReceiver : public Receiver {
             );
         }
 
-        return move(res);
+        return std::move(res);
     }
 };
 

@@ -20,14 +20,14 @@ std::vector<std::unique_ptr<BucketTitrator>> getTitrators(const RelevanceCalcula
     std::vector<std::unique_ptr<BucketTitrator>> res;
     res.push_back(SieveStreamingBucketTitrator::createWithDynamicBuckets(1, EPSILON, DENSE_DATA.size(), calcFactory));
     res.push_back(ThreeSieveBucketTitrator::createWithDynamicBuckets(EPSILON, T, DENSE_DATA.size(), calcFactory));
-    return move(res);
+    return std::move(res);
 }
 
 std::vector<std::unique_ptr<BucketTitratorFactory>> getTitratorFactories(const RelevanceCalculatorFactory& calcFactory) {
     std::vector<std::unique_ptr<BucketTitratorFactory>> res;
     res.push_back(std::unique_ptr<BucketTitratorFactory>(new SieveStreamingBucketTitratorFactory(1, EPSILON, DENSE_DATA.size(), calcFactory)));
     res.push_back(std::unique_ptr<BucketTitratorFactory>(new ThreeSeiveBucketTitratorFactory(EPSILON, T, DENSE_DATA.size(), calcFactory)));
-    return move(res);
+    return std::move(res);
 }
 
 std::unique_ptr<CandidateSeed> buildSeed(const size_t row, const unsigned int rank) {
@@ -140,7 +140,7 @@ class FakeRankBuffer : public RankBuffer {
     }
 
     std::unique_ptr<Subset> getLocalSolutionDestroyBuffer() {
-        return move(this->seeds);
+        return std::move(this->seeds);
     }
 };
 
@@ -184,7 +184,7 @@ std::unique_ptr<Subset> getSolution(std::unique_ptr<BucketTitrator> titrator, co
     NaiveReceiver receiver(buildFakeBuffers(worldSize));
     std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(move(titrator), worldSize));
     std::unique_ptr<Subset> solution((SeiveGreedyStreamer(receiver, *consumer, timers, false)).resolveStream());
-    return move(solution);
+    return std::move(solution);
 }
 
 void evaluateTitrator(std::unique_ptr<BucketTitrator> titrator) {
@@ -362,5 +362,5 @@ TEST_CASE("Comparing titrators") {
         std::unique_ptr<BucketTitrator> decorator(new LazyInitializingBucketTitrator(move(titrators[i]), calcFactory));
         solutions.push_back(getSolution(move(decorator), worldSize));
     }
-    assertSolutionsEqual(move(solutions[0]), move(solutions[1]), DENSE_DATA.size());
+    assertSolutionsEqual(move(solutions[0]), std::move(solutions[1]), DENSE_DATA.size());
 }

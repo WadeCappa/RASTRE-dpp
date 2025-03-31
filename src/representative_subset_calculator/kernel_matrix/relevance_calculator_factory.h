@@ -42,7 +42,7 @@ class UserModeNaiveRelevanceCalculatorFactory : public RelevanceCalculatorFactor
             relativeRu.push_back(globalRowToRu.at(globalRow));
         }
 
-        return UserModeRelevanceCalculator::from(d, move(relativeRu), theta);
+        return UserModeRelevanceCalculator::from(d, std::move(relativeRu), theta);
     }
 };
 

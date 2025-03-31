@@ -72,7 +72,7 @@ static std::unordered_set<size_t> getColumnsAboveThreshold(
         : countPerColumn(countPerColumn) {}
 
         std::vector<size_t> get() {
-            return move(countPerColumn);
+            return std::move(countPerColumn);
         }
 
         void visitDenseDataRow(const std::vector<float>& data) {
@@ -102,7 +102,7 @@ static std::unordered_set<size_t> getColumnsAboveThreshold(
         }
     }
 
-    return move(res);
+    return std::move(res);
 }
 
 static std::unordered_set<size_t> getRowsAboveThreshold(
@@ -178,7 +178,7 @@ std::vector<size_t> rowsThatReferenceUser(
         }
     }
 
-    return move(res);
+    return std::move(res);
 }
 
 std::unordered_set<size_t> loadUsersFromFile(
@@ -205,7 +205,7 @@ std::unordered_set<size_t> loadUsersFromFile(
         }
     }
     input.close();
-    return move(result);
+    return std::move(result);
 }
 
 std::unordered_set<size_t> selectTopUsers(
@@ -225,7 +225,7 @@ std::unordered_set<size_t> selectTopUsers(
         topUsers.insert(columnsToEvaluate[uniformDistribution(eng)]);
     }
 
-    return move(topUsers);
+    return std::move(topUsers);
 }
 
 int main(int argc, char** argv) {
@@ -300,7 +300,7 @@ int main(int argc, char** argv) {
         spdlog::info("pu for user {0:d} is of size {1:d} and has a test id of {2:d}", u, pu.size(), pu_test);
 
         pu.erase(pu.begin() + i);
-        p[u] = move(pu);
+        p[u] = std::move(pu);
         p_test[u] = pu_test;
     }
 
@@ -352,7 +352,7 @@ int main(int argc, char** argv) {
         }
 
         spdlog::info("cu for user {0:d} is of size {1:d}", u, cu.size());
-        c[u] = move(cu);
+        c[u] = std::move(cu);
     }
 
     // RU also requires comparisons. See python script.
@@ -379,7 +379,7 @@ int main(int argc, char** argv) {
         for (const size_t cu_i : c[u]) {
             ru[cu_i] = ru.at(cu_i) / magnitude;
         }
-        r[u] = move(ru);
+        r[u] = std::move(ru);
     }
 
     // Order of information per row

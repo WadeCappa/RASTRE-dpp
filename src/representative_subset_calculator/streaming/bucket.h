@@ -52,10 +52,10 @@ class ThresholdBucket
             new ThresholdBucket(
                 newThreshold, 
                 this->k, 
-                move(this->solution), 
-                move(this->solutionRows), 
-                move(this->d), 
-                move(this->b)
+                std::move(this->solution), 
+                std::move(this->solutionRows), 
+                std::move(this->d), 
+                std::move(this->b)
             )
         );
     }

@@ -21,7 +21,7 @@ class UserOutputInformationSubset : public Subset {
         
         return std::unique_ptr<UserOutputInformationSubset>(
             new UserOutputInformationSubset(
-                move(delegate), 
+                std::move(delegate), 
                 userData.getUserId(), 
                 userData.getTestId()
             )

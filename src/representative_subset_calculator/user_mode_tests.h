@@ -29,7 +29,7 @@ TEST_CASE("testing segmented data + user_mode data") {
     }
 
     LoadedSegmentedData segmentedData(
-        move(data), 
+        std::move(data), 
         std::vector<size_t>({0, 2, 4}), 
         std::unordered_map<size_t, size_t>(), 
         DENSE_DATA[0].size()

@@ -18,7 +18,7 @@ static std::unique_ptr<Subset> testCalculator(
     }
 
     delete calculator;
-    return move(res);
+    return std::move(res);
 }
 
 static std::unique_ptr<Subset> testCalculator(

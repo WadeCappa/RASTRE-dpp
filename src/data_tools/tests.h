@@ -48,7 +48,7 @@ static std::vector<std::unique_ptr<DataRow>> loadData(DataRowFactory &factory, s
         nextRow = factory.maybeGet(getter);
     }
 
-    return move(res);
+    return std::move(res);
 }
 
 static void verifyData(const DataRow& row, const size_t expectedRow) {

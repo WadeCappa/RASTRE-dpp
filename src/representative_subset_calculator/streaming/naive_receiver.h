@@ -57,7 +57,7 @@ class NaiveReceiver : public Receiver {
             }
         }
 
-        return move(this->buffers[bestRank]->getLocalSolutionDestroyBuffer());
+        return std::move(this->buffers[bestRank]->getLocalSolutionDestroyBuffer());
     }
 };
 
