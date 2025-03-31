@@ -13,7 +13,7 @@ class UserOutputInformationSubset : public Subset {
         std::unique_ptr<Subset> delegate, 
         unsigned long long userId,
         unsigned long long testId 
-    ) : delegate(move(delegate)), userId(userId), testId(testId) {}
+    ) : delegate(std::move(delegate)), userId(userId), testId(testId) {}
 
     static std::unique_ptr<UserOutputInformationSubset> create(
         std::unique_ptr<Subset> delegate, 
@@ -39,7 +39,7 @@ class UserOutputInformationSubset : public Subset {
         
         return std::unique_ptr<UserOutputInformationSubset>(
             new UserOutputInformationSubset(
-                Subset::ofCopy(move(globalRows), delegate->getScore()), 
+                Subset::ofCopy(std::move(globalRows), delegate->getScore()), 
                 userData.getUserId(), 
                 userData.getTestId()
             )

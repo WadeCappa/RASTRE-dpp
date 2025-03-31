@@ -126,7 +126,7 @@ class GlobalBufferLoader : public BufferLoader {
         std::unique_ptr<Subset> untranslatedSolution(calculator->getApproximationSet(
             NaiveMutableSubset::makeNew(), *calc, *bestRows, k)
         );
-        std::unique_ptr<Subset> globalResult(bestRows->translateSolution(move(untranslatedSolution)));
+        std::unique_ptr<Subset> globalResult(bestRows->translateSolution(std::move(untranslatedSolution)));
 
         timers.globalCalculationTime.stopTimer();
 
@@ -196,7 +196,7 @@ class GlobalBufferLoader : public BufferLoader {
         std::vector<std::pair<size_t, std::unique_ptr<DataRow>>> *newData = new std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>();
         for (auto & r : tempData) {
             for (auto & d : r) {
-                newData->push_back(move(d));
+                newData->push_back(std::move(d));
             }
         }
         return std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>>(newData);

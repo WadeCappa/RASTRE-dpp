@@ -15,7 +15,7 @@ class CandidateSeed {
         std::unique_ptr<DataRow> data,
         const unsigned int rank
     ) : 
-        data(move(data)), 
+        data(std::move(data)), 
         globalRow(row),
         originRank(rank)
     {}

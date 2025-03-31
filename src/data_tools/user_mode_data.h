@@ -51,7 +51,7 @@ class UserModeDataDecorator : public BaseData {
     private:
     UserModeDataDecorator(
         const BaseData &delegate, const UserData &userData, std::unordered_map<size_t, size_t> globalRowToLocalRow
-    ) : delegate(delegate), userData(userData), globalRowToLocalRow(move(globalRowToLocalRow)) {}
+    ) : delegate(delegate), userData(userData), globalRowToLocalRow(std::move(globalRowToLocalRow)) {}
 };
 
 #endif

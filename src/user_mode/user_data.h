@@ -7,7 +7,7 @@
 class UserData {
     public:
 
-    virtual ~UserData();
+    virtual ~UserData() {}
 
     /**
      * The id of the user under test
@@ -194,9 +194,9 @@ class UserDataImplementation : public UserData {
     ) : 
         uid(uid), 
         tid(tid), 
-        cu(move(cu)), 
-        ru(move(ru)),
-        cuToRuMapping(move(cuToRuMapping)) {}
+        cu(std::move(cu)), 
+        ru(std::move(ru)),
+        cuToRuMapping(std::move(cuToRuMapping)) {}
 };
 
 #endif

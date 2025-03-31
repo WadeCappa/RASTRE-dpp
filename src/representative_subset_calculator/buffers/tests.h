@@ -60,14 +60,14 @@ static std::unique_ptr<BaseData> getDenseData() {
     std::vector<std::unique_ptr<DataRow>> data(getRawDenseData());
     size_t rows = data.size();
     size_t columns = data[0]->size();
-    return getData(move(data), rows, columns);
+    return getData(std::move(data), rows, columns);
 }
 
 static std::unique_ptr<BaseData> getSparseData() {
     std::vector<std::unique_ptr<DataRow>> data(getRawSparseData());
     size_t rows = data.size();
     size_t columns = data[0]->size();
-    return getData(move(data), rows, columns);
+    return getData(std::move(data), rows, columns);
 }
 
 TEST_CASE("Testing the get total send dense data method") {

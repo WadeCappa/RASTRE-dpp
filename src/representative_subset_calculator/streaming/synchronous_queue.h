@@ -24,7 +24,7 @@ class SynchronousQueue {
 
     void push(T val) {
         this->lock.lock();
-        this->base.push_back(move(val));
+        this->base.push_back(std::move(val));
         this->lock.unlock();
     }
 
@@ -36,7 +36,7 @@ class SynchronousQueue {
         std::vector<T> res;
         this->lock.lock();
         while (this->base.size() > 0) {
-            res.push_back(move(this->base.front()));
+            res.push_back(std::move(this->base.front()));
             this->base.pop_front();
         }
         this->lock.unlock();
@@ -47,7 +47,7 @@ class SynchronousQueue {
     void emptyVectorIntoQueue(std::vector<T> vals) {
         this->lock.lock();
         for (size_t i = 0; i < vals.size(); i++) {
-            this->base.push_back(move(vals[i]));
+            this->base.push_back(std::move(vals[i]));
         }
         this->lock.unlock();
     }

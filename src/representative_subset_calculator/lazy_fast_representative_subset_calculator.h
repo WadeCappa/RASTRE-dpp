@@ -117,7 +117,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
                 std::push_heap(priorityQueue.begin(), priorityQueue.end(), comparitor);
             }
         }
-        return MutableSubset::upcast(move(consumer));
+        return MutableSubset::upcast(std::move(consumer));
     }
 };
 

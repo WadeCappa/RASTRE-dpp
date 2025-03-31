@@ -13,7 +13,7 @@ class NaiveReceiver : public Receiver {
     NaiveReceiver(
         std::vector<std::unique_ptr<RankBuffer>> buffers
     ) : 
-        buffers(move(buffers)),
+        buffers(std::move(buffers)),
         listeningToRank(0),
         numberOfProcessorsStillReceiving(this->buffers.size())
     {}

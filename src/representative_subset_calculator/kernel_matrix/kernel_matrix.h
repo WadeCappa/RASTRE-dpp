@@ -131,8 +131,8 @@ class ThreadSafeLazyKernelMatrix : public LazyKernelMatrix {
         std::unique_ptr<KernelMatrix> delegate, 
         std::vector<std::mutex> rowLocks
     ) : 
-        delegate(move(delegate)),
-        rowLocks(move(rowLocks))
+        delegate(std::move(delegate)),
+        rowLocks(std::move(rowLocks))
     {}
 
     size_t size() {
@@ -175,10 +175,10 @@ class NaiveKernelMatrix : public KernelMatrix {
             }
         }
 
-        return std::unique_ptr<NaiveKernelMatrix>(new NaiveKernelMatrix(move(result)));
+        return std::unique_ptr<NaiveKernelMatrix>(new NaiveKernelMatrix(std::move(result)));
     }
 
-    NaiveKernelMatrix(std::vector<std::vector<float>> data) : kernelMatrix(move(data)) {}
+    NaiveKernelMatrix(std::vector<std::vector<float>> data) : kernelMatrix(std::move(data)) {}
 
     size_t size() {
         return this->kernelMatrix.size();

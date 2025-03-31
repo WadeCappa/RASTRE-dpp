@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
             std::unique_ptr<Subset> solution(calculator->getApproximationSet(
                 NaiveMutableSubset::makeNew(), *userCalc, *decorator, appData.outputSetSize)
             );
-            solutions.push_back(UserOutputInformationSubset::translate(move(solution), *user));
+            solutions.push_back(UserOutputInformationSubset::translate(std::move(solution), *user));
             spdlog::info("Found solution of size {0:d} and score {1:f}", solutions.back()->size(), solutions.back()->getScore());
         }
     }

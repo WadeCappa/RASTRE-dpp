@@ -133,9 +133,9 @@ class MpiOrchestrator : public Orchestrator {
         if (appData.sendAllToReceiver) {
             titrator = std::unique_ptr<BucketTitrator>(titratorFactory->createWithDynamicBuckets());
         } else {
-            titrator = std::unique_ptr<BucketTitrator>(new LazyInitializingBucketTitrator(move(titratorFactory), calcFactory));
+            titrator = std::unique_ptr<BucketTitrator>(new LazyInitializingBucketTitrator(std::move(titratorFactory), calcFactory));
         }
-        return std::unique_ptr<NaiveCandidateConsumer>(new NaiveCandidateConsumer(move(titrator), appData.sendAllToReceiver ? 0 : numSenders));
+        return std::unique_ptr<NaiveCandidateConsumer>(new NaiveCandidateConsumer(std::move(titrator), appData.sendAllToReceiver ? 0 : numSenders));
     }
 };
 

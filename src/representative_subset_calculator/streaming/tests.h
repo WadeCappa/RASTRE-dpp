@@ -54,7 +54,7 @@ std::unique_ptr<BucketTitrator> getTitrator(
 }
 
 std::unique_ptr<NaiveCandidateConsumer> getConsumer(std::unique_ptr<BucketTitrator> titrator, size_t worldSize) {
-    return NaiveCandidateConsumer::from(move(titrator), worldSize);
+    return NaiveCandidateConsumer::from(std::move(titrator), worldSize);
 }
 
 class FakeReceiver : public Receiver {
@@ -104,7 +104,7 @@ class FakeRankBuffer : public RankBuffer {
     ) : 
         rank(rank), 
         offset(offset),
-        seeds(move(seeds)),
+        seeds(std::move(seeds)),
         seedsSent(0),
         wait(0)
     {}
@@ -163,8 +163,8 @@ void assertSolutionsEqual(std::unique_ptr<Subset> a, std::unique_ptr<Subset> b, 
     CHECK(a->size() == b->size());
     CHECK(a->getScore() > b->getScore() - LARGEST_ACCEPTABLE_ERROR);
     CHECK(a->getScore() < b->getScore() + LARGEST_ACCEPTABLE_ERROR);
-    assertSolutionIsValid(move(a), dataSize);
-    assertSolutionIsValid(move(b), dataSize);
+    assertSolutionIsValid(std::move(a), dataSize);
+    assertSolutionIsValid(std::move(b), dataSize);
 }
 
 std::vector<std::unique_ptr<RankBuffer>> buildFakeBuffers(const unsigned int worldSize) {
@@ -182,7 +182,7 @@ std::unique_ptr<Subset> getSolution(std::unique_ptr<BucketTitrator> titrator, co
     Timers timers;
     
     NaiveReceiver receiver(buildFakeBuffers(worldSize));
-    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(move(titrator), worldSize));
+    std::unique_ptr<NaiveCandidateConsumer> consumer(getConsumer(std::move(titrator), worldSize));
     std::unique_ptr<Subset> solution((SeiveGreedyStreamer(receiver, *consumer, timers, false)).resolveStream());
     return std::move(solution);
 }
@@ -192,7 +192,7 @@ void evaluateTitrator(std::unique_ptr<BucketTitrator> titrator) {
     const size_t dataSize = DENSE_DATA.size();
     const unsigned int worldSize = dataSize / 2;
 
-    assertSolutionIsValid(getSolution(move(titrator), worldSize), dataSize);
+    assertSolutionIsValid(getSolution(std::move(titrator), worldSize), dataSize);
 }
 
 TEST_CASE("Bucket can insert at threshold") {
@@ -246,7 +246,7 @@ TEST_CASE("Consumer can process seeds") {
     std::unique_ptr<CandidateSeed> seed(buildSeed());
     const unsigned int globalRow = seed->getRow();
 
-    queue.push(move(seed));
+    queue.push(std::move(seed));
     consumer->accept(queue, timers);
 
     std::unique_ptr<Subset> solution(consumer->getBestSolutionDestroyConsumer());
@@ -268,7 +268,7 @@ TEST_CASE("Consumer can find a solution") {
     }
 
     std::unique_ptr<Subset> solution(consumer->getBestSolutionDestroyConsumer());
-    assertSolutionIsValid(move(solution), DENSE_DATA.size());
+    assertSolutionIsValid(std::move(solution), DENSE_DATA.size());
 }
 
 TEST_CASE("Test fake receiver") {
@@ -298,7 +298,7 @@ TEST_CASE("Testing streaming with fake receiver") {
     Timers timers;
     SeiveGreedyStreamer streamer(receiver, *consumer, timers, false);
     std::unique_ptr<Subset> solution(streamer.resolveStream());
-    assertSolutionIsValid(move(solution), DENSE_DATA.size());
+    assertSolutionIsValid(std::move(solution), DENSE_DATA.size());
 }
 
 TEST_CASE("Testing the fake buffer") {
@@ -340,7 +340,7 @@ TEST_CASE("Testing end to end without MPI") {
     NaiveRelevanceCalculatorFactory calcFactory;
     std::vector<std::unique_ptr<BucketTitratorFactory>> titrators(getTitratorFactories(calcFactory));
     for (size_t i = 0; i < titrators.size(); i++) {
-        evaluateTitrator(move(titrators[i]->createWithDynamicBuckets()));
+        evaluateTitrator(std::move(titrators[i]->createWithDynamicBuckets()));
     }
 }
 
@@ -348,8 +348,8 @@ TEST_CASE("Streaming with decorator") {
     NaiveRelevanceCalculatorFactory calcFactory;
     std::vector<std::unique_ptr<BucketTitratorFactory>> titrators(getTitratorFactories(calcFactory));
     for (size_t i = 0; i < titrators.size(); i++) {
-        std::unique_ptr<BucketTitrator> decorator(new LazyInitializingBucketTitrator(move(titrators[i]), calcFactory));
-        evaluateTitrator(move(decorator));
+        std::unique_ptr<BucketTitrator> decorator(new LazyInitializingBucketTitrator(std::move(titrators[i]), calcFactory));
+        evaluateTitrator(std::move(decorator));
     }
 }
 
@@ -359,8 +359,8 @@ TEST_CASE("Comparing titrators") {
     const size_t worldSize = 1;
     std::vector<std::unique_ptr<Subset>> solutions;
     for (size_t i = 0; i < titrators.size(); i++) {
-        std::unique_ptr<BucketTitrator> decorator(new LazyInitializingBucketTitrator(move(titrators[i]), calcFactory));
-        solutions.push_back(getSolution(move(decorator), worldSize));
+        std::unique_ptr<BucketTitrator> decorator(new LazyInitializingBucketTitrator(std::move(titrators[i]), calcFactory));
+        solutions.push_back(getSolution(std::move(decorator), worldSize));
     }
-    assertSolutionsEqual(move(solutions[0]), std::move(solutions[1]), DENSE_DATA.size());
+    assertSolutionsEqual(std::move(solutions[0]), std::move(solutions[1]), DENSE_DATA.size());
 }

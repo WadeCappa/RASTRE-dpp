@@ -25,7 +25,7 @@ TEST_CASE("testing segmented data + user_mode data") {
     // only grab every other row
     for (size_t i = 0; i < DENSE_DATA.size(); i+=2) {
         std::vector<float> v(DENSE_DATA[i]);
-        data.push_back(std::unique_ptr<DataRow>(new DenseDataRow(move(v))));
+        data.push_back(std::unique_ptr<DataRow>(new DenseDataRow(std::move(v))));
     }
 
     LoadedSegmentedData segmentedData(
@@ -85,7 +85,7 @@ TEST_CASE("testing translating subset") {
      * The consumer should contain global row indicies, not rows scoped to a user
      */
     std::unique_ptr<UserOutputInformationSubset> translated(
-        UserOutputInformationSubset::translate(move(consumer), *userData)
+        UserOutputInformationSubset::translate(std::move(consumer), *userData)
     );
     for (size_t r = 0; r < decorator->totalRows(); r++) {
         const size_t row_from_data = decorator->getRemoteIndexForRow(r);
@@ -164,10 +164,10 @@ TEST_CASE("testing calculators with user-data") {
     checkSolutionsAreEquivalent(*fastRes, *lazyFastRes);
 
     std::unique_ptr<UserOutputInformationSubset> translatedFast(
-        UserOutputInformationSubset::translate(move(fastRes), *userData)
+        UserOutputInformationSubset::translate(std::move(fastRes), *userData)
     );
     std::unique_ptr<UserOutputInformationSubset> translatedLazyFast(
-        UserOutputInformationSubset::translate(move(lazyFastRes), *userData)
+        UserOutputInformationSubset::translate(std::move(lazyFastRes), *userData)
     );
 
     CHECK(UserScore::calculateMRR(*userData, *translatedFast) > 0);

@@ -44,7 +44,7 @@ static std::vector<std::unique_ptr<DataRow>> loadData(DataRowFactory &factory, s
     FromFileLineFactory getter(data);
     std::unique_ptr<DataRow> nextRow(factory.maybeGet(getter));
     while (nextRow != nullptr) {
-        res.push_back(move(nextRow));
+        res.push_back(std::move(nextRow));
         nextRow = factory.maybeGet(getter);
     }
 
@@ -95,7 +95,7 @@ TEST_CASE("Testing loading dense data") {
     auto data = loadData(denseFactory, inputStream);
 
     CHECK(data.size() == DENSE_DATA.size());
-    verifyData(move(data));
+    verifyData(std::move(data));
 }
 
 TEST_CASE("Testing loading sparse data") {
@@ -106,7 +106,7 @@ TEST_CASE("Testing loading sparse data") {
     auto data = loadData(sparseFactory, inputStream);
 
     CHECK(data.size() == SPARSE_DATA_AS_MAP.size());
-    verifyData(move(data));
+    verifyData(std::move(data));
 }
 
 TEST_CASE("Testing dense base data") {
@@ -158,7 +158,7 @@ TEST_CASE("Testing ReceivedData translation and construction") {
         );
     }
 
-    std::unique_ptr<ReceivedData> data(ReceivedData::create(move(mockReceiveData)));
+    std::unique_ptr<ReceivedData> data(ReceivedData::create(std::move(mockReceiveData)));
 
     CHECK(data->totalRows() == mockSolutionIndicies.size());
     CHECK(data->totalColumns() == DENSE_DATA[0].size());
@@ -173,7 +173,7 @@ TEST_CASE("Testing ReceivedData translation and construction") {
         mockSolution->addRow(i, 0);
     }
 
-    auto translated = data->translateSolution(MutableSubset::upcast(move(mockSolution)));
+    auto translated = data->translateSolution(MutableSubset::upcast(std::move(mockSolution)));
     CHECK(mockSolutionIndicies.size() == translated->size());
 
     int i = 0;
@@ -209,7 +209,7 @@ TEST_CASE("Testing sparse binary to data row conversion") {
     
         // Try loading from binary
         SparseDataRowFactory factory(SPARSE_DATA_TOTAL_COLUMNS);
-        std::unique_ptr<DataRow> fromBinaryRow(factory.getFromBinary(move(newBinary)));
+        std::unique_ptr<DataRow> fromBinaryRow(factory.getFromBinary(std::move(newBinary)));
         DataRowVerifier visitor(i);
         fromBinaryRow->voidVisit(visitor);
     }

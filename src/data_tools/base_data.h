@@ -127,21 +127,21 @@ class FullyLoadedData : public BaseData {
                 columns = nextRow->size();
             }
 
-            data.push_back(move(nextRow));
+            data.push_back(std::move(nextRow));
         }
 
-        return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(data), columns));
+        return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(std::move(data), columns));
     }
 
     static std::unique_ptr<FullyLoadedData> load(std::vector<std::vector<float>> raw) {
         std::vector<std::unique_ptr<DataRow>> data;
         for (std::vector<float> v : raw) {
-            data.push_back(std::unique_ptr<DataRow>(new DenseDataRow(move(v))));
+            data.push_back(std::unique_ptr<DataRow>(new DenseDataRow(std::move(v))));
         }
 
         size_t cols = data[0]->size();
 
-        return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(data), cols));
+        return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(std::move(data), cols));
     }
 
     std::unique_ptr<FullyLoadedData> withoutColumns(const std::unordered_set<size_t>& columnsToRemove) {
@@ -166,7 +166,7 @@ class FullyLoadedData : public BaseData {
                     }
                 }
 
-                newRow = DenseDataRow::of(move(newData));
+                newRow = DenseDataRow::of(std::move(newData));
             }
 
             void visitSparseDataRow(const std::map<size_t, float>& data, size_t totalColumns) {
@@ -177,7 +177,7 @@ class FullyLoadedData : public BaseData {
                     }
                 }
 
-                newRow = SparseDataRow::of(move(newData), totalColumns - columnsToRemove.size());
+                newRow = SparseDataRow::of(std::move(newData), totalColumns - columnsToRemove.size());
             }
         };
 
@@ -188,10 +188,10 @@ class FullyLoadedData : public BaseData {
             newRows.push_back(d->visit(v));
         }
 
-        return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(move(newRows), columns - columnsToRemove.size()));
+        return std::unique_ptr<FullyLoadedData>(new FullyLoadedData(std::move(newRows), columns - columnsToRemove.size()));
     }
 
-    FullyLoadedData(std::vector<std::unique_ptr<DataRow>> raw, size_t cols) : data(move(raw)), columns(cols) {}
+    FullyLoadedData(std::vector<std::unique_ptr<DataRow>> raw, size_t cols) : data(std::move(raw)), columns(cols) {}
 
     const DataRow& getRow(size_t i) const {
         return *(this->data[i]);
@@ -273,7 +273,7 @@ class LoadedSegmentedData : public BaseData {
 
         const size_t columns = localRowToGlobalRow.size() > 0 ? data.back()->size() : 0;
         return std::unique_ptr<BaseData>(
-            new LoadedSegmentedData(move(data), std::move(localRowToGlobalRow), std::move(globalRowToLocalRow), columns)
+            new LoadedSegmentedData(std::move(data), std::move(localRowToGlobalRow), std::move(globalRowToLocalRow), columns)
         );
     }
 
@@ -302,7 +302,7 @@ class LoadedSegmentedData : public BaseData {
                     columns = nextRow->size();
                 }
 
-                data.push_back(move(nextRow));
+                data.push_back(std::move(nextRow));
                 globalRowToLocalRow.insert({globalRow, localRowToGlobalRow.size()});
                 localRowToGlobalRow.push_back(globalRow);
             }
@@ -313,7 +313,7 @@ class LoadedSegmentedData : public BaseData {
         }
 
         return std::unique_ptr<BaseData>(
-            new LoadedSegmentedData(move(data), std::move(localRowToGlobalRow), std::move(globalRowToLocalRow), columns)
+            new LoadedSegmentedData(std::move(data), std::move(localRowToGlobalRow), std::move(globalRowToLocalRow), columns)
         );
     }
 
@@ -322,7 +322,7 @@ class LoadedSegmentedData : public BaseData {
         std::vector<size_t> localRowToGlobalRow,
         std::unordered_map<size_t, size_t> globalRowToLocalRow,
         size_t columns
-    ) : data(move(raw)), localRowToGlobalRow(move(localRowToGlobalRow)), globalRowToLocalRow(move(globalRowToLocalRow)), columns(columns) {}
+    ) : data(std::move(raw)), localRowToGlobalRow(std::move(localRowToGlobalRow)), globalRowToLocalRow(std::move(globalRowToLocalRow)), columns(columns) {}
 
     const DataRow& getRow(size_t i) const {
         return *(this->data[i]);
@@ -370,7 +370,7 @@ class ReceivedData : public BaseData {
         }
 
         return std::unique_ptr<ReceivedData>(
-            new ReceivedData(move(input), std::move(globalRowToLocalRow))
+            new ReceivedData(std::move(input), std::move(globalRowToLocalRow))
         );
     }
 
@@ -410,8 +410,8 @@ class ReceivedData : public BaseData {
         std::unique_ptr<std::vector<std::pair<size_t, std::unique_ptr<DataRow>>>> input,
         std::unordered_map<size_t, size_t> globalRowToLocalRow
     ) : 
-        base(move(input)),
-        globalRowToLocalRow(move(globalRowToLocalRow)),
+        base(std::move(input)),
+        globalRowToLocalRow(std::move(globalRowToLocalRow)),
         rows(this->base->size()), 
         columns(this->base->at(0).second->size())
     {}

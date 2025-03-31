@@ -6,7 +6,7 @@ static std::unique_ptr<Subset> testCalculator(
     std::unique_ptr<MutableSubset> consumer, 
     const size_t k,
     const float epsilon) {
-    std::unique_ptr<Subset> res = calculator->getApproximationSet(move(consumer), *relevanceCalculator, data, k);
+    std::unique_ptr<Subset> res = calculator->getApproximationSet(std::move(consumer), *relevanceCalculator, data, k);
 
     CHECK(res->size() == k);
     std::set<size_t> seen;

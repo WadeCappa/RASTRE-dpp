@@ -69,7 +69,7 @@ class UserModeRelevanceCalculator : public RelevanceCalculator {
         std::unique_ptr<RelevanceCalculator> delegate, 
         const std::vector<double> ru,
         const double alpha
-    ) : delegate(move(delegate)), ru(move(ru)), alpha(alpha) {}
+    ) : delegate(std::move(delegate)), ru(std::move(ru)), alpha(alpha) {}
 
     double getRu(size_t i) const {
         return std::exp(this->alpha * this->ru[i]);

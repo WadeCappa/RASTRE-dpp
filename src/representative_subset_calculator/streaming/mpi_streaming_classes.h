@@ -15,7 +15,7 @@ class MpiSendRequest {
 
     public:
     MpiSendRequest(std::vector<float> rowToSend) 
-    : rowToSend(move(rowToSend)) {}
+    : rowToSend(std::move(rowToSend)) {}
 
     void isend(const unsigned int tag) {
         MPI_Isend(rowToSend.data(), rowToSend.size(), MPI_FLOAT, 0, tag, MPI_COMM_WORLD, &request);
@@ -91,7 +91,7 @@ class MpiRankBuffer : public RankBuffer {
     }
 
     std::unique_ptr<Subset> getLocalSolutionDestroyBuffer() {
-        return std::move(MutableSubset::upcast(move(this->rankSolution)));
+        return std::move(MutableSubset::upcast(std::move(this->rankSolution)));
     }
 
     private:
@@ -119,7 +119,7 @@ class MpiRankBuffer : public RankBuffer {
         // TODO: This byte cast might be wrong now that we're sending floats. You need to double check this.
         const double marginal = *(endOfData - 1);
         std::vector<size_t> seeds(this->buffer.begin(), endOfData - 1);
-        this->rankSolution = std::unique_ptr<MutableSubset>(new NaiveMutableSubset(move(seeds), marginal));
+        this->rankSolution = std::unique_ptr<MutableSubset>(new NaiveMutableSubset(std::move(seeds), marginal));
     }
 
     CandidateSeed* extractSeedFromBuffer() {
@@ -138,7 +138,7 @@ class MpiRankBuffer : public RankBuffer {
         // TODO: This byte cast might be wrong now that we're sending floats. You need to double check this.
         const size_t globalRowIndex = static_cast<size_t>(*(endOfData - 1));
         std::vector<float> data(this->buffer.begin(), endOfData - 1);
-        return new CandidateSeed(globalRowIndex, this->factory.getFromBinary(move(data)), this->rank);
+        return new CandidateSeed(globalRowIndex, this->factory.getFromBinary(std::move(data)), this->rank);
     }
 };
 

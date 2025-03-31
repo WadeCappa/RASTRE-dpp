@@ -23,7 +23,7 @@ class LoadingReceiver : public Receiver {
     LoadingReceiver(
         std::unique_ptr<DataRowFactory> factory, 
         std::unique_ptr<LineFactory> getter
-    ) : factory(move(factory)), getter(move(getter)), globalRow(0), knownColumns(0) {}
+    ) : factory(std::move(factory)), getter(std::move(getter)), globalRow(0), knownColumns(0) {}
 
     std::unique_ptr<CandidateSeed> receiveNextSeed(std::atomic_bool &stillReceiving) {
         std::unique_ptr<DataRow> nextRow(factory->maybeGet(*getter));
@@ -64,7 +64,7 @@ class UserModeReceiver : public Receiver {
         const UserData& user,
         const std::unordered_set<unsigned long long> user_set
     ) : 
-        delegate(move(delegate)),
+        delegate(std::move(delegate)),
         user(user),
         user_set(user_set)
     {}
@@ -77,7 +77,7 @@ class UserModeReceiver : public Receiver {
         std::unordered_set<unsigned long long> user_set(
             user.getCu().begin(),
             user.getCu().end());
-        return std::unique_ptr<UserModeReceiver>(new UserModeReceiver(move(delegate), user, std::move(user_set)));
+        return std::unique_ptr<UserModeReceiver>(new UserModeReceiver(std::move(delegate), user, std::move(user_set)));
     }
 
     std::unique_ptr<CandidateSeed> receiveNextSeed(std::atomic_bool &stillReceiving) {

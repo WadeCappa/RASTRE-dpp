@@ -74,7 +74,7 @@ class SeiveGreedyStreamer : public GreedyStreamer {
                         break;
                     }
                     if (nextSeed != nullptr) { 
-                        this->queue.push(move(nextSeed));
+                        this->queue.push(std::move(nextSeed));
                     } else {
                         SPDLOG_DEBUG("received nullptr");
                     }

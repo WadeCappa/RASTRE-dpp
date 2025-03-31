@@ -53,12 +53,12 @@ std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
     std::unique_ptr<BucketTitrator> titrator(
         MpiOrchestrator::buildTitratorFactory(appData, omp_get_num_threads() - 1, *calcFactory)->createWithDynamicBuckets()
     );
-    std::unique_ptr<NaiveCandidateConsumer> consumer(new NaiveCandidateConsumer(move(titrator), 1));
+    std::unique_ptr<NaiveCandidateConsumer> consumer(new NaiveCandidateConsumer(std::move(titrator), 1));
 
-    std::unique_ptr<Receiver> receiver(new LoadingReceiver(move(factory), std::move(getter)));
+    std::unique_ptr<Receiver> receiver(new LoadingReceiver(std::move(factory), std::move(getter)));
 
     if (user.has_value()) {
-        std::unique_ptr<Receiver> usermode_receiver(UserModeReceiver::create(move(receiver), *user.value()));
+        std::unique_ptr<Receiver> usermode_receiver(UserModeReceiver::create(std::move(receiver), *user.value()));
         receiver = std::move(usermode_receiver);
     }
 
@@ -75,7 +75,7 @@ std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
     
     timers.totalCalculationTime.stopTimer();
 
-    return std::make_pair(move(solution), memUsage);
+    return std::make_pair(std::move(solution), memUsage);
 }
 
 std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
@@ -122,7 +122,7 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
         }
 
         auto element = std::unique_ptr<CandidateSeed>(new CandidateSeed(globalRow, std::move(nextRow), 1));
-        elements.push_back(move(element));
+        elements.push_back(std::move(element));
 
         globalRow++;
     }
@@ -140,7 +140,7 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
     std::mt19937 g(rd()); 
     std::shuffle(elements.begin(), elements.end(), g);
     for (auto& element : elements) {
-        queue.push(move(element)); // Move elements into the queue
+        queue.push(std::move(element)); // Move elements into the queue
     }        
 
     spdlog::info("Randomized dataset...");
@@ -168,7 +168,7 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
     timers.totalCalculationTime.stopTimer();
 
     std::unique_ptr<Subset> solution(titrator->getBestSolutionDestroyTitrator());
-    return std::make_pair(move(solution), memUsage);
+    return std::make_pair(std::move(solution), memUsage);
 }
 
 int main(int argc, char** argv) {
@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
                 loadWhileCalculating(appData, std::nullopt, timers) : 
                 loadThenCalculate(appData, std::nullopt, timers);
         spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution.first->size(), solution.first->getScore());
-        solutions.push_back(move(solution.first));
+        solutions.push_back(std::move(solution.first));
     } else {
         for (const auto & user : userData) {
             std::pair<std::unique_ptr<Subset>, size_t> solution = 
@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
                     loadWhileCalculating(appData, user.get(), timers) : 
                     loadThenCalculate(appData, user.get(), timers);
             spdlog::info("Finished streaming and found solution of size {0:d} and score {1:f}", solution.first->size(), solution.first->getScore());
-            solutions.push_back(UserOutputInformationSubset::translate(move(solution.first), *user));
+            solutions.push_back(UserOutputInformationSubset::translate(std::move(solution.first), *user));
         }
     }
     

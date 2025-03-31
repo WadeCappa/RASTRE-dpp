@@ -82,7 +82,7 @@ class FastSubsetCalculator : public SubsetCalculator {
 
             if (bestScore.second <= this->epsilon) {
                 spdlog::warn("score of {0:f} was less than {1:f}", bestScore.second, this->epsilon);
-                return MutableSubset::upcast(move(consumer));
+                return MutableSubset::upcast(std::move(consumer));
             }
 
             j = bestScore.first;
@@ -90,7 +90,7 @@ class FastSubsetCalculator : public SubsetCalculator {
             consumer->addRow(j, bestScore.second);
         }
     
-        return MutableSubset::upcast(move(consumer));
+        return MutableSubset::upcast(std::move(consumer));
     }
 };
 
