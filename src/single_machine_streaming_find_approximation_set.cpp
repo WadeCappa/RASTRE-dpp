@@ -166,7 +166,7 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
     size_t memUsage = getPeakRSS()- baseline;
     
     timers.totalCalculationTime.stopTimer();
-
+    spdlog::info("mem usage of {0:d}", memUsage);
     std::unique_ptr<Subset> solution(titrator->getBestSolutionDestroyTitrator());
     return std::make_pair(std::move(solution), memUsage);
 }
