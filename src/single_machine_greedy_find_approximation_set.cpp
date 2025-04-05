@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
 
     timers.totalCalculationTime.stopTimer();
     auto memUsage = getPeakRSS()- baseline;
-    spdlog::info("mem usage of %d", memUsage);
+    spdlog::info("mem usage of {0:d}", memUsage);
     nlohmann::json result = Orchestrator::buildOutput(appData, solutions, *data.get(), timers);
     std::ofstream outputFile;
     outputFile.open(appData.outputFile);
