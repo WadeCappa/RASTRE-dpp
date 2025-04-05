@@ -87,7 +87,7 @@ class FastSubsetCalculator : public SubsetCalculator {
 
             j = bestScore.first;
             seen.insert(j);
-            consumer->addRow(j, bestScore.second);
+            consumer->addRow(j, std::log(bestScore.second));
         }
     
         return MutableSubset::upcast(std::move(consumer));
