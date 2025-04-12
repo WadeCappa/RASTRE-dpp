@@ -371,7 +371,7 @@ int main(int argc, char** argv) {
                 score += matrix->get(cu_i, pu_j);
             }
             ru.insert({cu_i, score});
-            magnitude += std::pow(score, 2);
+            magnitude += 1;
         }
 
         magnitude = std::sqrt(magnitude);
