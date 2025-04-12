@@ -1,49 +1,93 @@
 
 #include <string>
 
+#include <nlohmann/json.hpp>
+
 #include "app_data_constants.h"
 
 #ifndef APP_DATA_H
 #define APP_DATA_H
 
-struct appData{
+struct AppData{
     public:
 
     struct loadInput {
-        const std::string inputFile = NO_FILE_DEFAULT;
+        std::string inputFile = NO_FILE_DEFAULT;
     } typedef LoadInput;
 
     struct generateInput {
-        const int generationStrategy = 0;
-        const size_t genRows = 0;
-        const size_t genCols = 0;
-        const float sparsity = DEFAULT_GENERATED_SPARSITY;
-        const long unsigned int seed = -1;
+        int generationStrategy = 0;
+        size_t genRows = 0;
+        size_t genCols = 0;
+        float sparsity = DEFAULT_GENERATED_SPARSITY;
+        long unsigned int seed = -1;
     } typedef GenerateInput;
 
-    const std::string outputFile;
-    const size_t outputSetSize;
-    const unsigned int adjacencyListColumnCount = 0;
-    const bool binaryInput = false;
-    const float epsilon = -1;
-    const unsigned int algorithm;
-    const unsigned int distributedAlgorithm = 2;
-    const float distributedEpsilon = 0.13;
-    const unsigned int threeSieveT;
-    const float alpha = 1;
-    const bool stopEarly = false;
-    const bool loadWhileStreaming = false;
-    const bool sendAllToReceiver = false;
-    const bool doNotNormalizeOnLoad = false;
+    std::string outputFile;
+    size_t outputSetSize;
+    unsigned int adjacencyListColumnCount = 0;
+    bool binaryInput = false;
+    float epsilon = -1;
+    unsigned int algorithm;
+    unsigned int distributedAlgorithm = 2;
+    float distributedEpsilon = 0.13;
+    unsigned int threeSieveT;
+    float alpha = 1;
+    bool stopEarly = false;
+    bool loadWhileStreaming = false;
+    bool sendAllToReceiver = false;
+    bool doNotNormalizeOnLoad = false;
     
     // user mode config
-    const std::string userModeFile = NO_FILE_DEFAULT;
-    const double theta = 0.7; // defaults to 70% focus on relevance, 30% focus on diversity
-    const int worldSize = 1;
-    const int worldRank = 0;
-    const size_t numberOfDataRows = 0;
-    const LoadInput loadInput;
-    const GenerateInput generateInput;
-} typedef AppData;
+    std::string userModeFile = NO_FILE_DEFAULT;
+    double theta = 0.7; // defaults to 70% focus on relevance, 30% focus on diversity
+    int worldSize = 1;
+    int worldRank = 0;
+    size_t numberOfDataRows = 0;
+    LoadInput loadInput;
+    GenerateInput generateInput;
+
+    static nlohmann::json toJson(const AppData& appData) {
+        nlohmann::json output {
+            {"k", appData.outputSetSize}, 
+            {"algorithm", algorithmToString(appData)},
+            {"inputSettings", getInputSettings(appData)},
+            {"epsilon", appData.epsilon},
+            {"worldSize", appData.worldSize}
+        };
+        return output;
+    }
+    
+    private: 
+    static std::string algorithmToString(const AppData &appData) {
+        switch (appData.algorithm) {
+            case 0:
+                return "naive greedy";
+            case 1:
+                return "lazy greedy";
+            case 2:
+                return "fast greedy";
+            case 3:
+                return "lazy fast greedy";
+            case 4:
+                return "streaming";
+            default:
+                throw new std::invalid_argument("Could not find algorithm");
+        }
+    }
+
+    static nlohmann::json getInputSettings(const AppData &appData) {
+        nlohmann::json output {
+            {"inputFile", appData.loadInput.inputFile},
+            {"generationStrategy", appData.generateInput.generationStrategy}, 
+            {"generatedRows", appData.generateInput.genRows},
+            {"generatedCols", appData.generateInput.genCols},
+            {"seed", appData.generateInput.seed},
+            {"sparsity", appData.generateInput.sparsity}
+        };
+
+        return output;
+    }
+};
 
 #endif

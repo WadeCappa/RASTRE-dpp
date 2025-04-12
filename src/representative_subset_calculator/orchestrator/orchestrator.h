@@ -15,23 +15,6 @@
 
 class Orchestrator {
     public:
-    static std::string algorithmToString(const AppData &appData) {
-        switch (appData.algorithm) {
-            case 0:
-                return "naive greedy";
-            case 1:
-                return "lazy greedy";
-            case 2:
-                return "fast greedy";
-            case 3:
-                return "lazy fast greedy";
-            case 4:
-                return "streaming";
-            default:
-                throw new std::invalid_argument("Could not find algorithm");
-        }
-    }
-
     static nlohmann::json buildDatasetJson(const BaseData &data, const AppData &appData) {
         Diagnostics diagnostics = data.DEBUG_getDiagnostics();
         nlohmann::json output {
@@ -39,19 +22,6 @@ class Orchestrator {
             {"columns", data.totalColumns()},
             {"sparsity", diagnostics.sparsity},
             {"nonEmptyCells", diagnostics.numberOfNonEmptyCells}
-        };
-
-        return output;
-    }
-
-    static nlohmann::json getInputSettings(const AppData &appData) {
-        nlohmann::json output {
-            {"inputFile", appData.loadInput.inputFile},
-            {"generationStrategy", appData.generateInput.generationStrategy}, 
-            {"generatedRows", appData.generateInput.genRows},
-            {"generatedCols", appData.generateInput.genCols},
-            {"seed", appData.generateInput.seed},
-            {"sparsity", appData.generateInput.sparsity}
         };
 
         return output;
@@ -145,14 +115,10 @@ class Orchestrator {
         const BaseData &data,
         const Timers &timers
     ) { 
-        nlohmann::json output {
-            {"k", appData.outputSetSize}, 
-            {"algorithm", algorithmToString(appData)},
-            {"inputSettings", getInputSettings(appData)},
-            {"epsilon", appData.epsilon},
-            {"solutions", outputSubsetsForSolution(solution)},
-            {"worldSize", appData.worldSize}
-        };
+        nlohmann::json output(AppData::toJson(appData));
+        output.update(nlohmann::json {
+            {"solutions", outputSubsetsForSolution(solution)}
+        });
 
         return output;
     }
