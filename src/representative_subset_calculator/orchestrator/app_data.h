@@ -14,7 +14,6 @@ struct appData{
     } typedef LoadInput;
 
     struct generateInput {
-        // should be an enum
         const int generationStrategy = 0;
         const size_t genRows = 0;
         const size_t genCols = 0;
