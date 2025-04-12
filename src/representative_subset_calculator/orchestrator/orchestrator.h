@@ -8,53 +8,10 @@
 #include "../fast_representative_subset_calculator.h"
 #include "../lazy_fast_representative_subset_calculator.h"
 #include "../timers/timers.h"
+#include "app_data.h"
 
 #ifndef ORCHESTRATOR_H
 #define ORCHESTRATOR_H
-
-const static std::string EMPTY_STRING = "\n";
-const static float DEFAULT_GENERATED_SPARSITY = -1;
-
-struct loadInput {
-    std::string inputFile = EMPTY_STRING;
-} typedef LoadInput;
-
-struct generateInput {
-    // should be an enum
-    int generationStrategy = 0;
-    size_t genRows = 0;
-    size_t genCols = 0;
-    float sparsity = DEFAULT_GENERATED_SPARSITY;
-    long unsigned int seed = -1;
-} typedef GenerateInput;
-
-struct appData{
-    std::string outputFile;
-    size_t outputSetSize;
-    unsigned int adjacencyListColumnCount = 0;
-    bool binaryInput = false;
-    float epsilon = -1;
-    unsigned int algorithm;
-    unsigned int distributedAlgorithm = 2;
-    float distributedEpsilon = 0.13;
-    unsigned int threeSieveT;
-    float alpha = 1;
-    bool stopEarly = false;
-    bool loadWhileStreaming = false;
-    bool sendAllToReceiver = false;
-    bool doNotNormalizeOnLoad = false;
-    
-    // user mode config
-    std::string userModeFile = EMPTY_STRING;
-    double theta = 0.7; // defaults to 70% focus on relevance, 30% focus on diversity
-
-    int worldSize = 1;
-    int worldRank = 0;
-    size_t numberOfDataRows = 0;
-
-    LoadInput loadInput;
-    GenerateInput generateInput;
-} typedef AppData;
 
 class Orchestrator {
     public:
