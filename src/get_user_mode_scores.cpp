@@ -22,10 +22,19 @@ int main(int argc, char** argv) {
 
     // Put this somewhere more sane
     const unsigned int DEFAULT_VALUE = -1;
+
+    std::ifstream file(userModeOutputFile);
+    nlohmann::json userModeOutputData(nlohmann::json::parse(file));
+    const auto & solutions = userModeOutputData["solutions"];
     
+    size_t total_solutions = solutions.size();
+    std::vector<double> mrr_per_user(total_solutions, 0.0);
+    std::vector<double> ilad_per_user(total_solutions, 0.0);
+    std::vector<double> ilmd_per_user(total_solutions, 0.0);
+
     std::unique_ptr<LineFactory> getter;
     std::ifstream inputFile;
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+    if (appData.loadInput.inputFile != NO_FILE_DEFAULT) {
         inputFile.open(appData.loadInput.inputFile);
         getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
     } else if (appData.generateInput.seed != DEFAULT_VALUE) {
@@ -33,14 +42,14 @@ int main(int argc, char** argv) {
     }
 
     std::unique_ptr<BaseData> data(Orchestrator::loadData(appData, *getter.get()));
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+    if (appData.loadInput.inputFile != NO_FILE_DEFAULT) {
         inputFile.close();
     } 
 
     spdlog::info("Finished loading dataset of size {0:d} ...", data->totalRows());
 
     std::map<unsigned long long, std::unique_ptr<UserData>> userMap;
-    if (appData.userModeFile != EMPTY_STRING) {
+    if (appData.userModeFile != NO_FILE_DEFAULT) {
         std::vector<std::unique_ptr<UserData>> userData (UserDataImplementation::load(appData.userModeFile));
         spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
         for (size_t i = 0; i < userData.size(); i++) {
@@ -49,14 +58,11 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::ifstream file(userModeOutputFile);
-    nlohmann::json userModeOutputData(nlohmann::json::parse(file));
-
-    double total_mrr = 0.0, total_ilad = 0.0, total_ilmd = 0.0;
-    size_t total_solutions = userModeOutputData["solutions"].size();
     std::unique_ptr<RelevanceCalculator> calc(NaiveRelevanceCalculator::from(*data));
 
-    for (const auto & solution : userModeOutputData["solutions"]) {
+    #pragma omp parallel for
+    for (size_t i = 0; i < solutions.size(); i++) {
+        const auto & solution = solutions[i];
         unsigned long long user_id = solution["userId"];
         auto userSolution = solution["solution"];
         std::vector<size_t> rows(userSolution["rows"].begin(), userSolution["rows"].end());
@@ -90,9 +96,16 @@ int main(int argc, char** argv) {
         SPDLOG_DEBUG("Going to divide {0:f} by the total number of pairs of {1:f}", aggregate_scores, total_number_of_pairs);
         double ilad = aggregate_scores / total_number_of_pairs;
         spdlog::info("User {0:d}: MRR = {1:f}, ILAD = {2:f}, ILMD = {3:f}", user_id, mrr, ilad, ilmd);
-        total_mrr += mrr;
-        total_ilad += ilad; 
-        total_ilmd += ilmd;
+        mrr_per_user[i] = mrr;
+        ilad_per_user[i] = ilad;
+        ilmd_per_user[i] = ilmd;
+    }
+
+    double total_mrr = 0.0, total_ilad = 0.0, total_ilmd = 0.0;
+    for (size_t i = 0; i < solutions.size(); i++) {
+        total_mrr += mrr_per_user[i];
+        total_ilad += ilad_per_user[i];
+        total_ilmd += ilmd_per_user[i];
     }
 
     spdlog::info(

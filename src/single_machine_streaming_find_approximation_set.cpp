@@ -32,7 +32,7 @@ std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
 
     std::unique_ptr<LineFactory> getter;
     std::ifstream inputFile;
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+    if (appData.loadInput.inputFile != NO_FILE_DEFAULT) {
         inputFile.open(appData.loadInput.inputFile);
         getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
     } else if (appData.generateInput.seed != DEFAULT_VALUE) {
@@ -69,7 +69,7 @@ std::pair<std::unique_ptr<Subset>, size_t> loadWhileCalculating(
 
     size_t memUsage = getPeakRSS()- baseline;
 
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+    if (appData.loadInput.inputFile != NO_FILE_DEFAULT) {
         inputFile.close();
     } 
     
@@ -87,7 +87,7 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
 
     std::unique_ptr<LineFactory> getter;
     std::ifstream inputFile;
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+    if (appData.loadInput.inputFile != NO_FILE_DEFAULT) {
         inputFile.open(appData.loadInput.inputFile);
         getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
     } else if (appData.generateInput.seed != DEFAULT_VALUE) {
@@ -129,7 +129,7 @@ std::pair<std::unique_ptr<Subset>, size_t> loadThenCalculate(
     timers.loadingDatasetTime.stopTimer();
     size_t memUsageOnLoad = getPeakRSS()- loadBaseline;
 
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+    if (appData.loadInput.inputFile != NO_FILE_DEFAULT) {
         inputFile.close();
     } 
     
@@ -183,7 +183,7 @@ int main(int argc, char** argv) {
     spdlog::info("Starting standalone streaming...");
 
     std::vector<std::unique_ptr<UserData>> userData;
-    if (appData.userModeFile != EMPTY_STRING) {
+    if (appData.userModeFile != NO_FILE_DEFAULT) {
         userData = UserDataImplementation::load(appData.userModeFile);
         spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
     }

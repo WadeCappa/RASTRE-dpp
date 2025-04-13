@@ -9,6 +9,7 @@
 #include "user_mode/user_data.h"
 #include "data_tools/user_mode_data.h"
 #include "user_mode/user_subset.h"
+#include "representative_subset_calculator/orchestrator/app_data_constants.h"
 
 int main(int argc, char** argv) {
     LoggerHelper::setupLoggers();
@@ -31,7 +32,7 @@ int main(int argc, char** argv) {
     
     std::unique_ptr<LineFactory> getter;
     std::ifstream inputFile;
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+    if (appData.loadInput.inputFile != NO_FILE_DEFAULT) {
         inputFile.open(appData.loadInput.inputFile);
         getter = std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile));
     } else if (appData.generateInput.seed != DEFAULT_VALUE) {
@@ -39,14 +40,14 @@ int main(int argc, char** argv) {
     }
 
     std::unique_ptr<BaseData> data(Orchestrator::loadData(appData, *getter.get()));
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+    if (appData.loadInput.inputFile != NO_FILE_DEFAULT) {
         inputFile.close();
     } 
 
     spdlog::info("Finished loading dataset of size {0:d} ...", data->totalRows());
 
     std::vector<std::unique_ptr<UserData>> userData;
-    if (appData.userModeFile != EMPTY_STRING) {
+    if (appData.userModeFile != NO_FILE_DEFAULT) {
         userData = UserDataImplementation::load(appData.userModeFile);
         spdlog::info("Finished loading user data for {0:d} users ...", userData.size());
     }
