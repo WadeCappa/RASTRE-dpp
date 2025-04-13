@@ -49,7 +49,6 @@ class Orchestrator {
         app.add_flag("--stopEarly", appData.stopEarly, "Used excusevly during streaming to stop the execution of the program early. If you use this in conjuntion with randgreedi, you will lose your approximation guarantee");
         app.add_option("-u,--userModeFile", appData.userModeFile, "Path to user mode data. Only set this if you are processing a dataset for a set of users.");
         app.add_option("--userModeTheta", appData.theta, "Only used during user mode. Sets the ratio of relevance to diveristy, where a value of 0.7 is a 70\% focuse on relevance.");
-        app.add_flag("--doNotNormalizeOnLoad", appData.doNotNormalizeOnLoad, "Normalize on load");
     
         CLI::App *loadInput = app.add_subcommand("loadInput", "loads the requested input from the provided path");
         CLI::App *genInput = app.add_subcommand("generateInput", "generates synthetic data");
@@ -202,7 +201,7 @@ class Orchestrator {
     }
 
     static std::unique_ptr<DataRowFactory> getDataRowFactory(const AppData& appData) {
-        return getDataRowFactory(appData.adjacencyListColumnCount, !appData.doNotNormalizeOnLoad);
+        return getDataRowFactory(appData.adjacencyListColumnCount, appData.userModeFile != NO_FILE_DEFAULT);
     }
 
     static std::unique_ptr<DataRowFactory> getDataRowFactory(

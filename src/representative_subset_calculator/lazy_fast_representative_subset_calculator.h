@@ -110,7 +110,7 @@ class LazyFastSubsetCalculator : public SubsetCalculator {
                 }
 
                 SPDLOG_TRACE("added next row {0:d} of score {1:f}", i, marginalGain);
-                consumer->addRow(i, marginalGain);
+                consumer->addRow(i, std::log(marginalGain));
                 in_subset.push_back(i);
             } else {
                 priorityQueue.push_back(i);

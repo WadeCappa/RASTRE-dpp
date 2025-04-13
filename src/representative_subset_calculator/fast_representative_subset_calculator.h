@@ -62,7 +62,7 @@ class FastSubsetCalculator : public SubsetCalculator {
         SPDLOG_TRACE("first seed is {0:d} of score {1:f}", bestScore.first, bestScore.second);
         size_t j = bestScore.first;
         seen.insert(j);
-        consumer->addRow(j, bestScore.second);
+        consumer->addRow(j, std::log(bestScore.second));
 
         while (consumer->size() < k) {
             #pragma omp parallel for 
@@ -87,7 +87,7 @@ class FastSubsetCalculator : public SubsetCalculator {
 
             j = bestScore.first;
             seen.insert(j);
-            consumer->addRow(j, bestScore.second);
+            consumer->addRow(j, std::log(bestScore.second));
         }
     
         return MutableSubset::upcast(std::move(consumer));
