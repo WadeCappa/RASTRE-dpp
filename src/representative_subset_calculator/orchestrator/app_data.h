@@ -36,7 +36,6 @@ struct AppData{
     bool stopEarly = false;
     bool loadWhileStreaming = false;
     bool sendAllToReceiver = false;
-    bool doNotNormalizeOnLoad = false;
     
     // user mode config
     std::string userModeFile = NO_FILE_DEFAULT;
