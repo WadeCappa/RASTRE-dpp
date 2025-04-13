@@ -268,7 +268,7 @@ int main(int argc, char** argv) {
 
     spdlog::info("Starting load for rank {0:d}", appData.worldRank);
     std::unique_ptr<BaseData> data;
-    if (appData.loadInput.inputFile != EMPTY_STRING) {
+    if (appData.loadInput.inputFile != NO_FILE_DEFAULT) {
         std::ifstream inputFile;
         inputFile.open(appData.loadInput.inputFile);
         std::unique_ptr<LineFactory> getter(std::unique_ptr<FromFileLineFactory>(new FromFileLineFactory(inputFile)));
@@ -298,7 +298,7 @@ int main(int argc, char** argv) {
     timers.barrierTime.stopTimer();
 
     std::vector<std::unique_ptr<UserData>> userData;
-    if (appData.userModeFile != EMPTY_STRING) {
+    if (appData.userModeFile != NO_FILE_DEFAULT) {
         // load all user-data for the global node since we don't know what we'll be evaluating when 
         // data ends up on node 0
         userData = appData.worldRank != 0 ? 
